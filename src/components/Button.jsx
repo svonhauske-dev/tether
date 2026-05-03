@@ -20,7 +20,7 @@ export default function Button({
     alignItems: "center",
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
-    fontFamily: "inherit",
+    fontFamily: typography.fontBody,
     ...(disabled ? { opacity: 0.5 } : {}),
     ...(fullWidth ? { width: "100%" } : {}),
   };

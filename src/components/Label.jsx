@@ -5,6 +5,7 @@ export default function Label({ htmlFor, style, children }) {
     <label
       htmlFor={htmlFor}
       style={{
+        fontFamily: typography.fontBody,
         fontSize: typography.label,
         color: colors.textSecondary,
         marginBottom: spacing.xs,

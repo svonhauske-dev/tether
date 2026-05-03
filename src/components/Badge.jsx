@@ -9,6 +9,7 @@ const VARIANTS = {
 
 export default function Badge({ variant = "neutral", style, children }) {
   const base = {
+    fontFamily: typography.fontBody,
     fontSize: typography.label,
     borderRadius: radius.xs,
     padding: `2px ${spacing.xs}px`,

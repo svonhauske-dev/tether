@@ -3,7 +3,7 @@ import {
   colors, spacing, radius, typography, touch, layout,
   ghostButtonStyle,
 } from "./design-system";
-import { Settings } from "lucide-react";
+import { Settings, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "./components/Button";
 import Input from "./components/Input";
 import Card from "./components/Card";
@@ -11,6 +11,9 @@ import Badge from "./components/Badge";
 import Label from "./components/Label";
 import BottomSheet from "./components/BottomSheet";
 import SettingsModal from "./components/SettingsModal";
+import { ToastProvider, useToast } from "./components/ToastContext";
+import Toast from "./components/Toast";
+import ManageSupplementsSheet from "./components/ManageSupplementsSheet";
 
 const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
@@ -25,7 +28,16 @@ async function supa(method, path, body, token) {
     "Prefer": "resolution=merge-duplicates,return=representation",
   };
   const res = await fetch(SUPA_URL + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  return res.ok ? res.json() : null;
+  if (!res.ok) {
+    let detail = null;
+    try { detail = await res.json(); } catch {}
+    const err = new Error(`Request failed: ${res.status}`);
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
+  }
+  if (res.status === 204) return null;
+  return res.json();
 }
 
 async function getSession() {
@@ -240,9 +252,15 @@ function SignIn({ onSignIn }) {
         <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
         <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Protocol Tracker</div>
         <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />built around your life.</div>
-        <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" style={{ textAlign: "center" }} />
-        <Input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" style={{ textAlign: "center", marginTop: spacing.xs }} />
-        <Button variant="primary" fullWidth onClick={handleSubmit} disabled={loading} style={{ marginTop: spacing.md }}>
+        <div style={{ marginBottom: spacing.md, textAlign: "left" }}>
+          <Label>Email</Label>
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" />
+        </div>
+        <div style={{ marginBottom: spacing.md, textAlign: "left" }}>
+          <Label>Password</Label>
+          <Input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" />
+        </div>
+        <Button variant="primary" fullWidth onClick={handleSubmit} disabled={loading}>
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </Button>
         <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
@@ -655,9 +673,17 @@ export default function App() {
 
   useEffect(() => { getSession().then(u => { setUser(u); setAuthLoading(false); }); }, []);
 
-  if (authLoading) return <Loader text="Loading…" />;
-  if (!user) return <SignIn onSignIn={u => setUser(u)} />;
-  return <ProtocolApp user={user} token={token()} onSignOut={() => { signOut(); setUser(null); }} />;
+  return (
+    <ToastProvider>
+      {authLoading
+        ? <Loader text="Loading…" />
+        : !user
+          ? <SignIn onSignIn={u => setUser(u)} />
+          : <ProtocolApp user={user} token={token()} onSignOut={() => { signOut(); setUser(null); }} />
+      }
+      <Toast />
+    </ToastProvider>
+  );
 }
 
 // ── ProtocolApp ───────────────────────────────────────────────────────────────
@@ -685,9 +711,13 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [anchorBehavior, setAnchorBehavior] = useState("flexible");
   const [consistentTime, setConsistentTime] = useState("07:00");
   const [showSettings, setShowSettings]     = useState(false);
+  const [showManage, setShowManage]         = useState(false);
+  const [pendingDeletes, setPendingDeletes] = useState({});
   const saveTimer = useRef(null);
+  const { show: showToast } = useToast();
 
-  const slotOffsets = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
+  const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
+  const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
 
   const dk       = dateKey(viewDate);
   const isToday  = dateKey(viewDate) === dateKey(TODAY);
@@ -706,51 +736,55 @@ function ProtocolApp({ user, token, onSignOut }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [s, log, sched] = await Promise.all([
-        dbGetSupps(token),
-        dbGetLog(dk, token),
-        dbGetSchedule(token),
-      ]);
-      const migrated = [];
-      const toWrite  = [];
-      for (const supp of (s || [])) {
-        let out = supp;
-        if (out.slots?.includes("fasted")) {
-          out = { ...out, slots: out.slots.map(sl => sl === "fasted" ? "pre_breakfast" : sl) };
+      try {
+        const [s, log, sched] = await Promise.all([
+          dbGetSupps(token),
+          dbGetLog(dk, token),
+          dbGetSchedule(token),
+        ]);
+        const migrated = [];
+        const toWrite  = [];
+        for (const supp of (s || [])) {
+          let out = supp;
+          if (out.slots?.includes("fasted")) {
+            out = { ...out, slots: out.slots.map(sl => sl === "fasted" ? "pre_breakfast" : sl) };
+          }
+          if ((out.category === "Injectable" || out.category === "Topical") && !out.timePreference) {
+            out = { ...out, timePreference: "Anytime" };
+          }
+          migrated.push(out);
+          if (out !== supp) toWrite.push(out);
         }
-        if ((out.category === "Injectable" || out.category === "Topical") && !out.timePreference) {
-          out = { ...out, timePreference: "Anytime" };
+        setSupps(migrated);
+        for (const supp of toWrite) {
+          try { await dbUpdateSupp(supp, token); } catch (e) { console.warn("Migration write failed for", supp.id, e); }
         }
-        migrated.push(out);
-        if (out !== supp) toWrite.push(out);
-      }
-      setSupps(migrated);
-      for (const supp of toWrite) {
-        try { await dbUpdateSupp(supp, token); } catch (e) { console.warn("Migration write failed for", supp.id, e); }
-      }
-      if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
-      if (log?.checked)   setChecked(log.checked);
-      if (sched?.schedule_type) setScheduleMode(sched.schedule_type);
+        if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
+        if (log?.checked)   setChecked(log.checked);
+        if (sched?.schedule_type) setScheduleMode(sched.schedule_type);
 
-      let behavior = "flexible";
-      let cTime    = "07:00";
-      if (sched?.offsets) {
-        const { _anchor_behavior, _consistent_time, ...savedConfig } = sched.offsets;
-        if (_anchor_behavior) { behavior = _anchor_behavior; setAnchorBehavior(_anchor_behavior); }
-        if (_consistent_time) { cTime = _consistent_time;   setConsistentTime(_consistent_time); }
-        setScheduleConfig({
-          ...DEFAULT_CONFIG,
-          ...savedConfig,
-          fixed_times: { ...DEFAULT_CONFIG.fixed_times, ...(savedConfig.fixed_times || {}) },
-        });
-      }
+        let behavior = "flexible";
+        let cTime    = "07:00";
+        if (sched?.offsets) {
+          const { _anchor_behavior, _consistent_time, ...savedConfig } = sched.offsets;
+          if (_anchor_behavior) { behavior = _anchor_behavior; setAnchorBehavior(_anchor_behavior); }
+          if (_consistent_time) { cTime = _consistent_time;   setConsistentTime(_consistent_time); }
+          setScheduleConfig({
+            ...DEFAULT_CONFIG,
+            ...savedConfig,
+            fixed_times: { ...DEFAULT_CONFIG.fixed_times, ...(savedConfig.fixed_times || {}) },
+          });
+        }
 
-      // auto-set pill time for consistent mode if not already logged today
-      if (behavior === "consistent" && !log?.pill_time) {
-        setPillTimes(pt => ({ ...pt, [dk]: cTime }));
+        // auto-set pill time for consistent mode if not already logged today
+        if (behavior === "consistent" && !log?.pill_time) {
+          setPillTimes(pt => ({ ...pt, [dk]: cTime }));
+        }
+      } catch (e) {
+        console.error("Initial load failed:", e);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     })();
   }, [token]);
 
@@ -767,7 +801,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       if (!log) return;
       if (log.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log.checked)   setChecked(c => ({ ...c, ...log.checked }));
-    });
+    }).catch(e => console.error(e));
   }, [dk]);
 
   // Auto-save
@@ -777,7 +811,7 @@ function ProtocolApp({ user, token, onSignOut }) {
     saveTimer.current = setTimeout(() => {
       const pt = pillTimes[dk];
       const dayChecked = Object.fromEntries(Object.entries(checked).filter(([k]) => k.startsWith(dk)));
-      dbUpsertLog({ user_id: user.id, log_date: dk, pill_time: pt || null, checked: dayChecked }, token);
+      dbUpsertLog({ user_id: user.id, log_date: dk, pill_time: pt || null, checked: dayChecked }, token).catch(e => console.error(e));
     }, 800);
   }, [checked, pillTimes, dk, loading]);
 
@@ -815,7 +849,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   const slotTimeStr     = (sid) => { const t = getSlotTime(sid); return t ? fmtTime(t) : "--:--"; };
   const toggleCheck     = (sid, suppId) => { const k = `${dk}_${sid}_${suppId}`; setChecked(c => ({ ...c, [k]: !c[k] })); };
   const isChecked       = (sid, suppId) => !!checked[`${dk}_${sid}_${suppId}`];
-  const getSuppsForSlot = (sid) => supps.filter(s => s.slots.includes(sid) && s.days.includes(viewDay));
+  const getSuppsForSlot = (sid) => visibleSupps.filter(s => s.slots.includes(sid) && s.days.includes(viewDay));
 
   const startDay = () => {
     if (isFuture) return;
@@ -855,28 +889,94 @@ function ProtocolApp({ user, token, onSignOut }) {
     if (!form.name.trim()) return;
     const cat = form.category || "Oral";
     if (editingId) {
-      await dbUpdateSupp({ ...form, category: cat, id: editingId }, token);
-      setSupps(s => s.map(x => x.id === editingId ? { ...form, category: cat, id: editingId } : x));
+      try {
+        await dbUpdateSupp({ ...form, category: cat, id: editingId }, token);
+        setSupps(s => s.map(x => x.id === editingId ? { ...form, category: cat, id: editingId } : x));
+        showToast(`Updated ${form.name}`);
+      } catch (err) {
+        showToast("Couldn't save — try again");
+        console.error(err);
+        return;
+      }
     } else {
-      const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: form.days, category: cat, timePreference: form.timePreference || "Anytime", user_id: user.id }, token);
-      if (rows?.[0]) setSupps(s => [...s, rows[0]]);
+      try {
+        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: form.days, category: cat, timePreference: form.timePreference || "Anytime", user_id: user.id }, token);
+        if (rows?.[0]) setSupps(s => [...s, rows[0]]);
+        showToast(`Added ${form.name}`);
+      } catch (err) {
+        showToast("Couldn't save — try again");
+        console.error(err);
+        return;
+      }
     }
     closeForm();
   };
 
   const deleteSupp = async () => {
     if (!editingId) return;
-    await dbDeleteSupp(editingId, token);
-    setSupps(s => s.filter(x => x.id !== editingId));
-    closeForm();
+    const supp = supps.find(s => s.id === editingId);
+    if (!supp) return;
+    try {
+      await dbDeleteSupp(editingId, token);
+      setSupps(s => s.filter(x => x.id !== editingId));
+      closeForm();
+      showToast(`Deleted ${supp.name}`);
+    } catch (err) {
+      showToast("Couldn't delete — try again");
+      console.error(err);
+    }
   };
 
   const saveSchedule = async (mode, config, behavior, cTime) => {
     const offsets = { ...config, _anchor_behavior: behavior, _consistent_time: cTime };
-    await dbSaveSchedule({ user_id: user.id, schedule_type: mode, offsets }, token);
-    setAnchorBehavior(behavior);
-    setConsistentTime(cTime);
+    try {
+      await dbSaveSchedule({ user_id: user.id, schedule_type: mode, offsets }, token);
+      setAnchorBehavior(behavior);
+      setConsistentTime(cTime);
+      showToast("Schedule updated");
+    } catch (err) {
+      showToast("Couldn't save — try again");
+      console.error(err);
+      return;
+    }
     setShowSchedule(false);
+  };
+
+  const undoDelete = (suppId) => {
+    setPendingDeletes(p => {
+      const entry = p[suppId];
+      if (entry) clearTimeout(entry.timeoutId);
+      const next = { ...p }; delete next[suppId]; return next;
+    });
+  };
+
+  const requestDelete = (supp) => {
+    if (pendingDeletes[supp.id]) return; // already pending, no-op
+    const timeoutId = setTimeout(async () => {
+      try {
+        await dbDeleteSupp(supp.id, token);
+        setSupps(s => s.filter(x => x.id !== supp.id));
+      } catch (err) {
+        showToast("Couldn't delete — try again");
+        console.error(err);
+      } finally {
+        setPendingDeletes(p => { const next = { ...p }; delete next[supp.id]; return next; });
+      }
+    }, 5000);
+    setPendingDeletes(p => ({ ...p, [supp.id]: { supp, timeoutId } }));
+    showToast(`Deleted ${supp.name}`, {
+      icon: <Trash2 size={16} />,
+      duration: 5000,
+      action: { label: "Undo", onClick: () => undoDelete(supp.id) },
+    });
+  };
+
+  const handleSignOut = () => {
+    Object.values(pendingDeletes).forEach(({ supp, timeoutId }) => {
+      clearTimeout(timeoutId);
+      dbDeleteSupp(supp.id, token);
+    });
+    onSignOut();
   };
 
   const r = 30, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
@@ -902,13 +1002,13 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
-        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)} style={{ width: touch.min, height: touch.min, fontSize: typography.title, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}>‹</Button>
+        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)} style={{ width: touch.min, height: touch.min, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}><ChevronLeft size={24} color={colors.textSecondary} /></Button>
         <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
           <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
           <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
           <div style={{ fontSize: typography.caption2, color: colors.textFaint, marginTop: 2, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
         </div>
-        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)} style={{ width: touch.min, height: touch.min, fontSize: typography.title, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}>›</Button>
+        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)} style={{ width: touch.min, height: touch.min, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}><ChevronRight size={24} color={colors.textSecondary} /></Button>
       </div>
 
       {/* Add row */}
@@ -965,7 +1065,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Main slot list */}
       <div style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>
-        {supps.length === 0 ? (
+        {visibleSupps.length === 0 ? (
           <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
             <div style={{ fontSize: typography.hero, marginBottom: spacing.md }}>💊</div>
             <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
@@ -995,8 +1095,16 @@ function ProtocolApp({ user, token, onSignOut }) {
         open={showSettings}
         onClose={() => setShowSettings(false)}
         notifStatus={notifStatus}
-        onEnableNotifications={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }}
-        onSignOut={onSignOut}
+        onEnableNotifications={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); return r; }}
+        onOpenManage={() => { setShowSettings(false); setShowManage(true); }}
+        onSignOut={handleSignOut}
+      />
+      <ManageSupplementsSheet
+        open={showManage}
+        onClose={() => setShowManage(false)}
+        supplements={visibleSupps}
+        onEdit={(supp) => openEdit(supp)}
+        onDelete={requestDelete}
       />
       <BottomSheet open={formOpen} onClose={closeForm} title={editingId ? "Edit supplement" : "New supplement"}>
         <EditForm form={form} setForm={setForm} editingId={editingId} onSubmit={submitForm} onCancel={closeForm} onDelete={deleteSupp} />

@@ -9,7 +9,7 @@ export default function Input({ variant = "text", width, style, type, ...rest })
     border: `1px solid ${colors.borderStrong}`,
     borderRadius: radius.sm,
     fontSize: typography.body,
-    fontFamily: "inherit",
+    fontFamily: typography.fontBody,
     outline: "none",
     WebkitAppearance: "none",
     boxSizing: "border-box",

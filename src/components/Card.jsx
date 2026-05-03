@@ -1,4 +1,4 @@
-import { colors, spacing, radius } from "../design-system";
+import { colors, spacing, radius, typography } from "../design-system";
 
 const VARIANTS = {
   default:  { background: colors.bgCard,     border: `1px solid ${colors.borderSubtle}` },
@@ -9,6 +9,7 @@ const VARIANTS = {
 
 export default function Card({ variant = "default", onClick, style, children }) {
   const base = {
+    fontFamily: typography.fontBody,
     borderRadius: radius.md,
     padding: `${spacing.sm}px ${spacing.md}px`,
     marginBottom: spacing.xs,
