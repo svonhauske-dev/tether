@@ -538,10 +538,11 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
-            <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal window</span>
+            <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal supplements</span>
             <input type="number" min="0" max="120" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)} style={numInputStyle} />
             <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: 60 }}>min before</span>
           </div>
+          <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>How many minutes before each meal to take pre-meal supplements</div>
         </div>
       )}
 
