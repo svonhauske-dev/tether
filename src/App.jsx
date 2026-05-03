@@ -619,7 +619,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
               {slot.label}
               {sc.badge && <span style={badgeStyle(sc.badge.bg, sc.badge.color)}>{sc.badge.label}</span>}
             </div>
-            <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2 }}>{allDone && !expanded ? `${slotSupps.length} supplement${slotSupps.length !== 1 ? "s" : ""} done` : slot.sublabel}</div>
+            <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2, minHeight: 16 }}>{allDone && !expanded ? `${slotSupps.length} supplement${slotSupps.length !== 1 ? "s" : ""} done` : slot.sublabel}</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
@@ -632,7 +632,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
           {slotSupps.map((supp, i) => {
             const done = isChecked(slot.id, supp.id);
             return (
-              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid ${colors.divider}` : "none" }}>
+              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid ${colors.divider}` : "none", minHeight: 52 }}>
                 <div onClick={() => { if (!isFuture) toggleCheck(slot.id, supp.id); }} style={{ width: 24, height: 24, borderRadius: radius.sm, flexShrink: 0, border: `1.5px solid ${done ? colors.accent : colors.borderStrong}`, background: done ? colors.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: isFuture ? "default" : "pointer" }}>
                   {done && <span style={{ color: colors.textPrimary, fontSize: typography.label, fontWeight: typography.bold }}>✓</span>}
                 </div>
@@ -643,8 +643,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
                       <span style={{ fontSize: typography.label, background: colors.accentDim, color: colors.accent, borderRadius: radius.xs, padding: "1px 5px", fontWeight: typography.semibold, letterSpacing: "0.04em", flexShrink: 0 }}>Rx</span>
                     )}
                   </div>
-                  <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2 }}>{supp.dose}</div>
-                  {supp.notes && <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxs }}>{supp.notes}</div>}
+                  <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2, minHeight: 14 }}>{supp.dose}{supp.notes ? " · " + supp.notes : ""}</div>
                 </div>
                 <button onClick={e => { e.stopPropagation(); openEdit(supp); }} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, color: colors.textSecondary, flexShrink: 0, minHeight: touch.min, display: "flex", alignItems: "center" }}>Edit</button>
               </div>
@@ -912,7 +911,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Hero card */}
       <div style={heroCard}>
-        <div style={{ display: "flex", alignItems: "center", gap: spacing.md, marginBottom: (heroHasTime || scheduleMode === "fixed") ? spacing.md : 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.md, marginBottom: spacing.md, minHeight: 120 }}>
           <div style={{ flex: 1 }}>
             {scheduleMode === "fixed" ? (
               <div>
@@ -948,20 +947,20 @@ function ProtocolApp({ user, token, onSignOut }) {
               </div>
             )}
           </div>
-          <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0 }}>
+          <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0, width: 72, height: 72, display: "block" }}>
             <circle cx="36" cy="36" r={r} fill="none" stroke={colors.borderBase} strokeWidth="5" />
             <circle cx="36" cy="36" r={r} fill="none" stroke={colors.accent} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
             <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={colors.textPrimary} fontSize={typography.caption} fontWeight={typography.bold}>{pct}%</text>
           </svg>
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing.xs }}>
-          <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing.sm, marginTop: spacing.sm, minHeight: 36 }}>
+          <div style={{ flex: 1 }}>
             {notifStatus === "default"     && <button onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.full, cursor: "pointer", border: `1px solid ${colors.accentBorder}`, background: colors.accentDim, color: colors.accent, fontWeight: typography.semibold }}>Enable reminders</button>}
             {notifStatus === "granted"     && <span style={{ fontSize: typography.caption, color: colors.accent, fontWeight: typography.medium }}>Reminders on</span>}
             {notifStatus === "denied"      && <span style={{ fontSize: typography.caption, color: colors.danger }}>Reminders blocked</span>}
             {notifStatus === "unsupported" && <span style={{ fontSize: typography.caption, color: colors.textMuted }}>Add to home screen for reminders</span>}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: spacing.xs }}>
+          <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, minWidth: 100, justifyContent: "flex-end" }}>
             {streak > 0 && <div style={{ display: "flex", alignItems: "center", gap: spacing.xxs, background: colors.warnDim, border: `1px solid ${colors.warnBorder}`, borderRadius: radius.full, padding: `${spacing.xxs}px ${spacing.xs}px` }}><span style={{ fontSize: typography.caption }}>🔥</span><span style={{ fontSize: typography.caption, fontWeight: typography.bold, color: colors.warn }}>{streak} day streak</span></div>}
             <button onClick={onSignOut} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: "transparent", color: colors.textMuted }}>Sign out</button>
           </div>
@@ -970,8 +969,8 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Add row */}
       <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
-        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.statusNowBg, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.accent, minHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
-        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.textDisabled, minHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
+        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.statusNowBg, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.accent, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
+        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.textDisabled, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
       </div>
 
       {/* Main slot list — injectable category excluded */}
