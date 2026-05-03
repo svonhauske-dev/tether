@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  colors, spacing, radius, typography, touch,
+  cardStyle, inputStyle, labelStyle, primaryButtonStyle, ghostButtonStyle, badgeStyle,
+} from "./design-system";
 
 const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
@@ -68,16 +72,16 @@ const dbUpsertLog  = (log, t) => supa("POST",   "/rest/v1/daily_logs?on_conflict
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const SLOTS = [
-  { id: "rx",            label: "Start my day",            sublabel: "Rx only · empty stomach",       icon: "★", color: "#2930FF" },
-  { id: "fasted",        label: "Empty stomach",           sublabel: "30 min post-Rx · before eating", icon: "○", color: "#2930FF" },
-  { id: "pre_breakfast", label: "30 min before breakfast", sublabel: "Weight Loss Pack · enzymes",     icon: "◎", color: "#67e8f9" },
-  { id: "breakfast",     label: "With breakfast",          sublabel: "Fat-soluble · need food",        icon: "●", color: "#67e8f9" },
-  { id: "pre_lunch",     label: "30 min before lunch",     sublabel: "T3 2nd dose · empty stomach",   icon: "◎", color: "#c084fc" },
-  { id: "lunch",         label: "With lunch",              sublabel: "Thyroid complex 2nd dose",       icon: "●", color: "#c084fc" },
-  { id: "pre_dinner",    label: "Before dinner",           sublabel: "Enzymes only",                   icon: "◎", color: "#fb923c" },
-  { id: "dinner",        label: "With dinner",             sublabel: "2nd doses · fat-soluble",        icon: "●", color: "#fb923c" },
-  { id: "after_dinner",  label: "After dinner",            sublabel: "Wind-down · before bed",         icon: "◑", color: "#818cf8" },
-  { id: "injectable",    label: "Injectables",             sublabel: "Protocol · subcutaneous",        icon: "⊕", color: "#94a3b8" },
+  { id: "rx",            label: "Start my day",            sublabel: "Rx only · empty stomach",       icon: "★", color: colors.slotRx },
+  { id: "fasted",        label: "Empty stomach",           sublabel: "30 min post-Rx · before eating", icon: "○", color: colors.slotFasted },
+  { id: "pre_breakfast", label: "30 min before breakfast", sublabel: "Weight Loss Pack · enzymes",     icon: "◎", color: colors.slotPreBreakfast },
+  { id: "breakfast",     label: "With breakfast",          sublabel: "Fat-soluble · need food",        icon: "●", color: colors.slotBreakfast },
+  { id: "pre_lunch",     label: "30 min before lunch",     sublabel: "T3 2nd dose · empty stomach",   icon: "◎", color: colors.slotPreLunch },
+  { id: "lunch",         label: "With lunch",              sublabel: "Thyroid complex 2nd dose",       icon: "●", color: colors.slotLunch },
+  { id: "pre_dinner",    label: "Before dinner",           sublabel: "Enzymes only",                   icon: "◎", color: colors.slotPreDinner },
+  { id: "dinner",        label: "With dinner",             sublabel: "2nd doses · fat-soluble",        icon: "●", color: colors.slotDinner },
+  { id: "after_dinner",  label: "After dinner",            sublabel: "Wind-down · before bed",         icon: "◑", color: colors.slotAfterDinner },
+  { id: "injectable",    label: "Injectables",             sublabel: "Protocol · subcutaneous",        icon: "⊕", color: colors.slotInjectable },
 ];
 
 const SLOT_OFFSETS = {
@@ -100,7 +104,6 @@ const getMonthYear = () => new Date().toLocaleDateString("en-US", { month: "long
 const notifOK      = () => "Notification" in window;
 
 const TODAY = startOfDay(new Date());
-const P     = "16px";
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 
@@ -119,19 +122,6 @@ function scheduleNotifications(pt, supps, vd, dk) {
     }, diff));
   });
 }
-
-// ── Shared styles ─────────────────────────────────────────────────────────────
-
-const inputStyle = {
-  width: "100%", padding: "12px 16px", borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.1)", fontSize: 15,
-  boxSizing: "border-box", background: "#0d0f1a", color: "#fff",
-  display: "block", WebkitAppearance: "none", outline: "none",
-};
-const labelStyle = {
-  fontSize: 11, color: "#8b90a0", marginBottom: 8, display: "block",
-  fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase",
-};
 
 // ── SignIn ────────────────────────────────────────────────────────────────────
 
@@ -153,23 +143,23 @@ function SignIn({ onSignIn }) {
     else setMsg(mode === "signin" ? "Invalid email or password." : "Could not create account — try again.");
   };
 
-  const si = { ...inputStyle, textAlign: "center", fontSize: 17 };
+  const si = { ...inputStyle, textAlign: "center", fontSize: typography.title };
 
   return (
-    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", background: "linear-gradient(160deg,#080b14 0%,#0a0f1e 50%,#060a12 100%)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: P }}>
+    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", background: `linear-gradient(160deg,${colors.bgBase} 0%,#0a0f1e 50%,#060a12 100%)`, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
       <div style={{ width: "100%", maxWidth: 360, textAlign: "center" }}>
-        <div style={{ fontSize: 40, marginBottom: 16 }}>💊</div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", marginBottom: 8 }}>Protocol Tracker</div>
-        <div style={{ fontSize: 13, color: "#4a5568", marginBottom: 32, lineHeight: 1.7 }}>Your supplement schedule,<br />anchored to your morning Rx.</div>
+        <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
+        <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Protocol Tracker</div>
+        <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />anchored to your morning Rx.</div>
         <input value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" type="email" style={si} />
-        <input value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" type="password" style={{ ...si, marginTop: 8 }} />
-        <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", marginTop: 16, padding: "12px 16px", minHeight: 44, background: "#2930FF", color: "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer" }}>
+        <input value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" type="password" style={{ ...si, marginTop: spacing.xs }} />
+        <button onClick={handleSubmit} disabled={loading} style={{ ...primaryButtonStyle, marginTop: spacing.md, cursor: loading ? "default" : "pointer" }}>
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
-        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: 16, background: "none", border: "none", color: "#4a5568", fontSize: 13, cursor: "pointer" }}>
+        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer" }}>
           {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
         </button>
-        {msg && <div style={{ marginTop: 16, fontSize: 13, color: "#f87171" }}>{msg}</div>}
+        {msg && <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: colors.danger }}>{msg}</div>}
       </div>
     </div>
   );
@@ -179,8 +169,8 @@ function SignIn({ onSignIn }) {
 
 function Loader({ text }) {
   return (
-    <div style={{ background: "linear-gradient(160deg,#080b14 0%,#0a0f1e 50%,#060a12 100%)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ fontSize: 13, color: "#4a5568" }}>{text}</div>
+    <div style={{ background: `linear-gradient(160deg,${colors.bgBase} 0%,#0a0f1e 50%,#060a12 100%)`, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ fontSize: typography.caption, color: colors.textMuted }}>{text}</div>
     </div>
   );
 }
@@ -190,8 +180,8 @@ function Loader({ text }) {
 function Modal({ open, onClose, children }) {
   if (!open) return null;
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.78)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: P }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, background: "#13151f", borderRadius: 24, padding: 24, maxHeight: "86vh", overflowY: "auto", boxSizing: "border-box", border: "1px solid rgba(255,255,255,0.08)" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.78)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, background: colors.bgModal, borderRadius: radius.xl, padding: spacing.lg, maxHeight: "86vh", overflowY: "auto", boxSizing: "border-box", border: `1px solid ${colors.borderBase}` }}>
         {children}
       </div>
     </div>
@@ -205,34 +195,34 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
   const toggleDay  = (i)   => setForm(f => ({ ...f, days:  f.days.includes(i)   ? f.days.filter(x => x !== i)   : [...f.days, i]   }));
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <span style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>{editingId ? "Edit supplement" : "New supplement"}</span>
-        <button onClick={onCancel} style={{ width: 32, height: 32, borderRadius: 9999, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", color: "#8b90a0" }}>✕</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
+        <span style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary }}>{editingId ? "Edit supplement" : "New supplement"}</span>
+        <button onClick={onCancel} style={{ width: 32, height: 32, borderRadius: radius.full, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, cursor: "pointer", fontSize: typography.caption, display: "flex", alignItems: "center", justifyContent: "center", color: colors.textSecondary }}>✕</button>
       </div>
       {[["Name", "name", "e.g. Magnesium Glycinate"], ["Dose", "dose", "e.g. 2 caps (300 mg)"], ["Notes", "notes", "e.g. Thorne · with food"]].map(([lbl, key, ph]) => (
-        <div key={key} style={{ marginBottom: 16 }}>
+        <div key={key} style={{ marginBottom: spacing.md }}>
           <label style={labelStyle}>{lbl}</label>
           <input style={inputStyle} value={form[key]} placeholder={ph} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
         </div>
       ))}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: spacing.lg }}>
         <label style={labelStyle}>When to take it</label>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
           {SLOTS.map(slot => { const on = form.slots.includes(slot.id); return (
-            <button key={slot.id} onClick={() => toggleSlot(slot.id)} style={{ fontSize: 13, padding: "8px 16px", borderRadius: 9999, cursor: "pointer", background: on ? slot.color + "22" : "transparent", color: on ? slot.color : "#8b90a0", border: `1px solid ${on ? slot.color : "rgba(255,255,255,0.1)"}`, fontWeight: on ? 600 : 400 }}>{slot.label}</button>
+            <button key={slot.id} onClick={() => toggleSlot(slot.id)} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: on ? slot.color + "22" : "transparent", color: on ? slot.color : colors.textSecondary, border: `1px solid ${on ? slot.color : colors.borderStrong}`, fontWeight: on ? typography.semibold : typography.regular }}>{slot.label}</button>
           ); })}
         </div>
       </div>
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: spacing.lg }}>
         <label style={labelStyle}>Which days</label>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: spacing.xs }}>
           {DAYS.map((d, i) => { const on = form.days.includes(i); return (
-            <button key={i} onClick={() => toggleDay(i)} style={{ width: 44, height: 44, borderRadius: 9999, fontSize: 13, cursor: "pointer", fontWeight: 600, background: on ? "#2930FF" : "transparent", color: on ? "#fff" : "#8b90a0", border: `1px solid ${on ? "#2930FF" : "rgba(255,255,255,0.1)"}`, padding: 0, flexShrink: 0 }}>{d[0]}</button>
+            <button key={i} onClick={() => toggleDay(i)} style={{ width: touch.min, height: touch.min, borderRadius: radius.full, fontSize: typography.caption, cursor: "pointer", fontWeight: typography.semibold, background: on ? colors.accent : "transparent", color: on ? colors.textPrimary : colors.textSecondary, border: `1px solid ${on ? colors.accent : colors.borderStrong}`, padding: 0, flexShrink: 0 }}>{d[0]}</button>
           ); })}
         </div>
       </div>
-      {editingId && <button onClick={onDelete} style={{ width: "100%", padding: "12px 16px", minHeight: 44, borderRadius: 16, cursor: "pointer", background: "transparent", color: "#f87171", border: "1px solid rgba(248,113,113,0.25)", fontSize: 15, fontWeight: 500, marginBottom: 8 }}>Delete supplement</button>}
-      <button onClick={onSubmit} style={{ width: "100%", padding: "12px 16px", minHeight: 44, borderRadius: 16, cursor: "pointer", background: "#2930FF", color: "#fff", border: "none", fontSize: 15, fontWeight: 700 }}>{editingId ? "Save changes" : "Add supplement"}</button>
+      {editingId && <button onClick={onDelete} style={{ width: "100%", padding: `${spacing.sm}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.lg, cursor: "pointer", background: "transparent", color: colors.danger, border: `1px solid rgba(248,113,113,0.25)`, fontSize: typography.body, fontWeight: typography.medium, marginBottom: spacing.xs }}>Delete supplement</button>}
+      <button onClick={onSubmit} style={primaryButtonStyle}>{editingId ? "Save changes" : "Add supplement"}</button>
     </div>
   );
 }
@@ -245,49 +235,49 @@ function SlotCard({ slot, slotSupps, status, timeLabel, pillTime, isFuture, isCh
   useEffect(() => { setExpanded(!allDone); }, [allDone]);
 
   const SC = {
-    done:   { border: "rgba(255,255,255,0.05)",  bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
-    missed: { border: "rgba(249,115,22,0.35)",   bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)",  badge: { label: "missed", bg: "rgba(124,45,18,0.5)",    color: "#fed7aa" } },
-    now:    { border: "rgba(41,48,255,0.45)",   bg: "rgba(41,48,255,0.04)", hbg: "rgba(41,48,255,0.07)",  badge: { label: "now",    bg: "rgba(41,48,255,0.18)",   color: "#2930FF" } },
-    future: { border: "rgba(255,255,255,0.05)",  bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
+    done:   { border: colors.borderSubtle, bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
+    missed: { border: "rgba(249,115,22,0.35)", bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)", badge: { label: "missed", bg: "rgba(124,45,18,0.5)", color: "#fed7aa" } },
+    now:    { border: "rgba(41,48,255,0.45)",  bg: "rgba(41,48,255,0.04)", hbg: "rgba(41,48,255,0.07)", badge: { label: "now",    bg: "rgba(41,48,255,0.18)", color: colors.accent } },
+    future: { border: colors.borderSubtle, bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
   };
   const sc = SC[status];
 
   return (
-    <div style={{ marginBottom: 8, borderRadius: 12, border: `1px solid ${sc.border}`, background: sc.bg, overflow: "hidden", opacity: status === "future" && !pillTime ? 0.38 : 1 }}>
-      <div onClick={() => setExpanded(e => !e)} style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: sc.hbg, cursor: "pointer", userSelect: "none" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+    <div style={{ marginBottom: spacing.xs, borderRadius: radius.md, border: `1px solid ${sc.border}`, background: sc.bg, overflow: "hidden", opacity: status === "future" && !pillTime ? 0.38 : 1 }}>
+      <div onClick={() => setExpanded(e => !e)} style={{ padding: `${spacing.sm}px ${spacing.md}px`, display: "flex", justifyContent: "space-between", alignItems: "center", background: sc.hbg, cursor: "pointer", userSelect: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flex: 1, minWidth: 0 }}>
           {allDone
-            ? <div style={{ width: 20, height: 20, borderRadius: 4, background: "#2930FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span></div>
-            : <span style={{ color: slot.color, fontSize: 13, flexShrink: 0, width: 20, textAlign: "center" }}>{slot.icon}</span>
+            ? <div style={{ width: 20, height: 20, borderRadius: radius.xs, background: colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: colors.textPrimary, fontSize: typography.label, fontWeight: typography.bold }}>✓</span></div>
+            : <span style={{ color: slot.color, fontSize: typography.caption, flexShrink: 0, width: 20, textAlign: "center" }}>{slot.icon}</span>
           }
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: allDone ? "#4a5568" : "#fff", display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: allDone ? colors.textMuted : colors.textPrimary, display: "flex", alignItems: "center", gap: spacing.xs }}>
               {slot.label}
-              {sc.badge && <span style={{ fontSize: 11, background: sc.badge.bg, color: sc.badge.color, borderRadius: 4, padding: "2px 8px", fontWeight: 600 }}>{sc.badge.label}</span>}
+              {sc.badge && <span style={badgeStyle(sc.badge.bg, sc.badge.color)}>{sc.badge.label}</span>}
             </div>
-            <div style={{ fontSize: 11, color: "#4a5568", marginTop: 2 }}>{allDone && !expanded ? `${slotSupps.length} supplement${slotSupps.length !== 1 ? "s" : ""} done` : slot.sublabel}</div>
+            <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2 }}>{allDone && !expanded ? `${slotSupps.length} supplement${slotSupps.length !== 1 ? "s" : ""} done` : slot.sublabel}</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <span style={{ fontSize: 13, color: pillTime && SLOT_OFFSETS[slot.id] !== null ? slot.color : "#4a5568", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{timeLabel}</span>
-          <span style={{ fontSize: 13, color: "#4a5568", display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>⌃</span>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
+          <span style={{ fontSize: typography.caption, color: pillTime && SLOT_OFFSETS[slot.id] !== null ? slot.color : colors.textMuted, fontVariantNumeric: "tabular-nums", fontWeight: typography.semibold }}>{timeLabel}</span>
+          <span style={{ fontSize: typography.caption, color: colors.textMuted, display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>⌃</span>
         </div>
       </div>
       {expanded && (
-        <div style={{ padding: "0 16px", borderTop: `1px solid ${sc.border}` }}>
+        <div style={{ padding: `0 ${spacing.md}px`, borderTop: `1px solid ${sc.border}` }}>
           {slotSupps.map((supp, i) => {
             const done = isChecked(slot.id, supp.id);
             return (
-              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 0", borderBottom: i < slotSupps.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                <div onClick={() => { if (!isFuture) toggleCheck(slot.id, supp.id); }} style={{ width: 24, height: 24, borderRadius: 8, flexShrink: 0, border: `1.5px solid ${done ? "#2930FF" : "rgba(255,255,255,0.15)"}`, background: done ? "#2930FF" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: isFuture ? "default" : "pointer" }}>
-                  {done && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
+              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+                <div onClick={() => { if (!isFuture) toggleCheck(slot.id, supp.id); }} style={{ width: 24, height: 24, borderRadius: radius.sm, flexShrink: 0, border: `1.5px solid ${done ? colors.accent : colors.borderStrong}`, background: done ? colors.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: isFuture ? "default" : "pointer" }}>
+                  {done && <span style={{ color: colors.textPrimary, fontSize: typography.label, fontWeight: typography.bold }}>✓</span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, color: done ? "#4a5568" : "#f1f5f9", textDecoration: done ? "line-through" : "none", fontWeight: done ? 400 : 500 }}>{supp.name}</div>
-                  <div style={{ fontSize: 11, color: "#4a5568", marginTop: 2 }}>{supp.dose}</div>
-                  {supp.notes && <div style={{ fontSize: 11, color: "#2d3748", marginTop: 4 }}>{supp.notes}</div>}
+                  <div style={{ fontSize: typography.body, color: done ? colors.textDone : colors.textPrimary, textDecoration: done ? "line-through" : "none", fontWeight: done ? typography.regular : typography.medium }}>{supp.name}</div>
+                  <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2 }}>{supp.dose}</div>
+                  {supp.notes && <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxs }}>{supp.notes}</div>}
                 </div>
-                <button onClick={e => { e.stopPropagation(); openEdit(supp); }} style={{ fontSize: 11, padding: "8px 12px", borderRadius: 8, cursor: "pointer", border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", color: "#6b7280", flexShrink: 0, minHeight: 44, display: "flex", alignItems: "center" }}>Edit</button>
+                <button onClick={e => { e.stopPropagation(); openEdit(supp); }} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, color: colors.textSecondary, flexShrink: 0, minHeight: touch.min, display: "flex", alignItems: "center" }}>Edit</button>
               </div>
             );
           })}
@@ -439,88 +429,90 @@ function ProtocolApp({ user, token, onSignOut }) {
 
   const r = 30, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
   const dayLabel = isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-  const card = { borderRadius: 24, border: "1px solid rgba(255,255,255,0.07)", background: flashGreen ? "rgba(41,48,255,0.06)" : "rgba(255,255,255,0.03)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", padding: P, marginBottom: P, transition: "background 0.4s ease" };
+  const heroCard = { ...cardStyle, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" };
+
+  const navArrow = { width: touch.min, height: touch.min, display: "flex", alignItems: "center", justifyContent: "center", fontSize: typography.title, background: colors.bgCardHover, border: `1px solid ${colors.borderBase}`, cursor: "pointer", color: colors.textSecondary, borderRadius: radius.md, flexShrink: 0 };
 
   if (loading) return <Loader text="Loading your protocol…" />;
 
   return (
-    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", color: "#fff", maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${P} max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: "linear-gradient(160deg,#080b14 0%,#0a0f1e 50%,#060a12 100%)", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", color: colors.textPrimary, maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: `linear-gradient(160deg,${colors.bgBase} 0%,#0a0f1e 50%,#060a12 100%)`, minHeight: "100vh" }}>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: P }}>
-        <button onClick={() => goDay(-1)} style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: "#8b90a0", borderRadius: 12, flexShrink: 0 }}>‹</button>
-        <div style={{ flex: 1, textAlign: "center", padding: "0 8px" }}>
-          <div style={{ fontSize: 11, color: "#4a5568", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>PROTOCOL · {getMonthYear().toUpperCase()}</div>
-          <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? "#fff" : "#2930FF", padding: 0, display: "block", width: "100%", textAlign: "center" }}>{dayLabel}</button>
-          {!isToday && <div style={{ fontSize: 11, color: "#4a5568", marginTop: 4 }}>tap to return to today</div>}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
+        <button onClick={() => goDay(-1)} style={navArrow}>‹</button>
+        <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
+          <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>PROTOCOL · {getMonthYear().toUpperCase()}</div>
+          <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center" }}>{dayLabel}</button>
+          {!isToday && <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxs }}>tap to return to today</div>}
         </div>
-        <button onClick={() => goDay(1)} style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: "#8b90a0", borderRadius: 12, flexShrink: 0 }}>›</button>
+        <button onClick={() => goDay(1)} style={navArrow}>›</button>
       </div>
 
       {/* Hero card */}
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: pillTime ? 16 : 0 }}>
+      <div style={heroCard}>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.md, marginBottom: pillTime ? spacing.md : 0 }}>
           <div style={{ flex: 1 }}>
             {!pillTime ? (
               <div>
-                <button onClick={startDay} style={{ width: "100%", padding: "0 16px", minHeight: 48, background: isFuture ? "rgba(255,255,255,0.05)" : "#2930FF", color: isFuture ? "#4a5568" : "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 700, cursor: isFuture ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={startDay} style={{ ...primaryButtonStyle, minHeight: spacing.xxl, background: isFuture ? colors.bgCardHover : colors.accent, color: isFuture ? colors.textMuted : colors.textPrimary, cursor: isFuture ? "default" : "pointer" }}>
                   {isFuture ? "Future day" : "Start my day"}
                 </button>
-                {!isFuture && <div style={{ fontSize: 13, color: "#4a5568", marginTop: 8, textAlign: "center" }}>logs your Rx meds · sets full schedule</div>}
+                {!isFuture && <div style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: "center" }}>logs your Rx meds · sets full schedule</div>}
               </div>
             ) : (
               <div>
-                <div style={{ fontSize: 11, color: "#4a5568", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Protocol started</div>
+                <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacing, textTransform: "uppercase", marginBottom: spacing.xxs }}>Protocol started</div>
                 {editPillTime ? (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: 15, padding: "12px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "#fff" }} />
-                    <button onClick={() => { setPillForDay(tmpTime); setEditPillTime(false); }} style={{ fontSize: 13, padding: "0 16px", minHeight: 44, borderRadius: 8, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#fff" }}>Save</button>
+                  <div style={{ display: "flex", gap: spacing.xs, alignItems: "center" }}>
+                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: typography.body, padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.sm, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, color: colors.textPrimary }} />
+                    <button onClick={() => { setPillForDay(tmpTime); setEditPillTime(false); }} style={{ ...ghostButtonStyle, width: "auto", borderRadius: radius.sm }}>Save</button>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.04em", color: "#2930FF" }}>{pillTime}</span>
-                    <button onClick={() => { setTmpTime(pillTime); setEditPillTime(true); }} style={{ fontSize: 13, color: "#4a5568", background: "none", border: "none", cursor: "pointer", padding: 0 }}>edit</button>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: spacing.xs }}>
+                    <span style={{ fontSize: typography.hero, fontWeight: typography.bold, letterSpacing: "-0.04em", color: colors.accent }}>{pillTime}</span>
+                    <button onClick={() => { setTmpTime(pillTime); setEditPillTime(true); }} style={{ fontSize: typography.caption, color: colors.textMuted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>edit</button>
                   </div>
                 )}
-                {pct === 100 && <div style={{ fontSize: 13, color: "#2930FF", fontWeight: 600, marginTop: 8 }}>Protocol complete ✓</div>}
+                {pct === 100 && <div style={{ fontSize: typography.caption, color: colors.accent, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
               </div>
             )}
           </div>
           {/* Progress ring — 72×72, r=30 */}
           <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0 }}>
-            <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
-            <circle cx="36" cy="36" r={r} fill="none" stroke="#2930FF" strokeWidth="5" strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
-            <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="13" fontWeight="700">{pct}%</text>
+            <circle cx="36" cy="36" r={r} fill="none" stroke={colors.borderBase} strokeWidth="5" />
+            <circle cx="36" cy="36" r={r} fill="none" stroke={colors.accent} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+            <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={colors.textPrimary} fontSize={typography.caption} fontWeight={typography.bold}>{pct}%</text>
           </svg>
         </div>
         {/* Footer row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing.xs }}>
           <div>
-            {notifStatus === "default"     && <button onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }} style={{ fontSize: 13, padding: "8px 16px", minHeight: 44, borderRadius: 9999, cursor: "pointer", border: "1px solid rgba(41,48,255,0.3)", background: "rgba(41,48,255,0.06)", color: "#2930FF", fontWeight: 600 }}>Enable reminders</button>}
-            {notifStatus === "granted"     && <span style={{ fontSize: 13, color: "#2930FF", fontWeight: 500 }}>Reminders on</span>}
-            {notifStatus === "denied"      && <span style={{ fontSize: 13, color: "#f87171" }}>Reminders blocked</span>}
-            {notifStatus === "unsupported" && <span style={{ fontSize: 13, color: "#4a5568" }}>Add to home screen for reminders</span>}
+            {notifStatus === "default"     && <button onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.full, cursor: "pointer", border: `1px solid ${colors.accentBorder}`, background: colors.accentDim, color: colors.accent, fontWeight: typography.semibold }}>Enable reminders</button>}
+            {notifStatus === "granted"     && <span style={{ fontSize: typography.caption, color: colors.accent, fontWeight: typography.medium }}>Reminders on</span>}
+            {notifStatus === "denied"      && <span style={{ fontSize: typography.caption, color: colors.danger }}>Reminders blocked</span>}
+            {notifStatus === "unsupported" && <span style={{ fontSize: typography.caption, color: colors.textMuted }}>Add to home screen for reminders</span>}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {streak > 0 && <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.18)", borderRadius: 9999, padding: "4px 8px" }}><span style={{ fontSize: 13 }}>🔥</span><span style={{ fontSize: 13, fontWeight: 700, color: "#fb923c" }}>{streak} day streak</span></div>}
-            <button onClick={onSignOut} style={{ fontSize: 11, padding: "8px 16px", minHeight: 44, borderRadius: 8, cursor: "pointer", border: "1px solid rgba(255,255,255,0.07)", background: "transparent", color: "#4a5568" }}>Sign out</button>
+          <div style={{ display: "flex", alignItems: "center", gap: spacing.xs }}>
+            {streak > 0 && <div style={{ display: "flex", alignItems: "center", gap: spacing.xxs, background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.18)", borderRadius: radius.full, padding: `${spacing.xxs}px ${spacing.xs}px` }}><span style={{ fontSize: typography.caption }}>🔥</span><span style={{ fontSize: typography.caption, fontWeight: typography.bold, color: "#fb923c" }}>{streak} day streak</span></div>}
+            <button onClick={onSignOut} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: "transparent", color: colors.textMuted }}>Sign out</button>
           </div>
         </div>
       </div>
 
       {/* Add row */}
-      <div style={{ marginBottom: P }}>
-        <button onClick={openAdd} style={{ width: "100%", padding: "0 16px", minHeight: 44, borderRadius: 16, cursor: "pointer", border: "1px dashed rgba(41,48,255,0.22)", background: "rgba(41,48,255,0.03)", fontSize: 15, fontWeight: 600, color: "#2930FF" }}>+ Add supplement</button>
+      <div style={{ marginBottom: spacing.md }}>
+        <button onClick={openAdd} style={{ width: "100%", padding: `0 ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.accentDim, fontSize: typography.body, fontWeight: typography.semibold, color: colors.accent }}>+ Add supplement</button>
       </div>
 
       {/* Slot list */}
-      <div style={{ borderRadius: 24, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", padding: P, marginBottom: P }}>
+      <div style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>
         {supps.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "32px 16px" }}>
-            <div style={{ fontSize: 28, marginBottom: 16 }}>💊</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#e2e8f0", marginBottom: 8 }}>Your protocol is empty</div>
-            <div style={{ fontSize: 13, color: "#4a5568", lineHeight: 1.7, marginBottom: 24 }}>Add your medications and supplements above.<br />The schedule anchors to when you take your first Rx each morning.</div>
-            <button onClick={openAdd} style={{ width: "100%", minHeight: 44, borderRadius: 16, cursor: "pointer", background: "#2930FF", color: "#fff", border: "none", fontSize: 15, fontWeight: 700 }}>Add first supplement</button>
+          <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
+            <div style={{ fontSize: typography.hero, marginBottom: spacing.md }}>💊</div>
+            <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
+            <div style={{ fontSize: typography.caption, color: colors.textMuted, lineHeight: 1.7, marginBottom: spacing.lg }}>Add your medications and supplements above.<br />The schedule anchors to when you take your first Rx each morning.</div>
+            <button onClick={openAdd} style={{ ...primaryButtonStyle, minHeight: touch.min }}>Add first supplement</button>
           </div>
         ) : SLOTS.map(slot => {
           const slotSupps = getSuppsForSlot(slot.id); if (!slotSupps.length) return null;
