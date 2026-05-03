@@ -75,7 +75,6 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const SLOTS = [
   { id: "rx",            label: "Anchor Medication", sublabel: "Empty stomach · first thing", icon: "★", color: colors.slotRx },
-  { id: "fasted",        label: "Fasted",            sublabel: "Before eating",               icon: "○", color: colors.slotFasted },
   { id: "pre_breakfast", label: "Before Breakfast",  sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreBreakfast },
   { id: "breakfast",     label: "With Breakfast",    sublabel: "With food",                   icon: "●", color: colors.slotBreakfast },
   { id: "pre_lunch",     label: "Before Lunch",      sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreLunch },
@@ -87,10 +86,10 @@ const SLOTS = [
 ];
 
 const DEFAULT_CONFIG = {
-  pre_meal_window: 30, fasted: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660,
+  pre_meal_window: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660,
   window_start: 0, window_length: 480, meals_per_day: 2,
   fixed_times: {
-    fasted: "07:30", breakfast: "08:00", pre_lunch: "11:30", lunch: "12:00",
+    pre_breakfast: "07:30", breakfast: "08:00", pre_lunch: "11:30", lunch: "12:00",
     pre_dinner: "17:30", dinner: "18:00", after_dinner: "20:00", injectable: null,
   },
 };
@@ -104,7 +103,6 @@ function deriveOffsets(mode, cfg) {
     const interval = Math.floor(winLen / (meals + 1));
     const pmw      = cfg.pre_meal_window ?? 30;
     return {
-      fasted:        null,
       pre_breakfast: winStart + interval - pmw,
       breakfast:     winStart + interval,
       pre_lunch:     meals >= 2 ? winStart + (interval * 2) - pmw : null,
@@ -116,11 +114,9 @@ function deriveOffsets(mode, cfg) {
     };
   }
   const pmw       = cfg.pre_meal_window ?? 30;
-  const fastedVal = mode === "wakeup" ? null : (cfg.fasted ?? null);
   const pre_bfast = (cfg.breakfast ?? 60) - pmw;
   return {
-    fasted:        fastedVal,
-    pre_breakfast: (!fastedVal || pre_bfast > fastedVal) ? pre_bfast : null,
+    pre_breakfast: pre_bfast,
     breakfast:     cfg.breakfast ?? 60,
     pre_lunch:     (cfg.lunch ?? 300) - pmw,
     lunch:         cfg.lunch ?? 300,
@@ -146,8 +142,8 @@ const ANCHOR_NOTES = {
 };
 
 const FIXED_SLOTS = [
-  { key: "fasted",       label: "Fasted" },
-  { key: "breakfast",    label: "Breakfast" },
+  { key: "pre_breakfast", label: "Before Breakfast" },
+  { key: "breakfast",     label: "Breakfast" },
   { key: "pre_lunch",    label: "Before Lunch" },
   { key: "lunch",        label: "Lunch" },
   { key: "pre_dinner",   label: "Before Dinner" },
@@ -168,7 +164,7 @@ const START_SUBTITLES = {
   wakeup:     "sets your daily schedule",
 };
 
-const CORE_SLOTS = ["rx", "fasted", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
+const CORE_SLOTS = ["rx", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
 
 const CATEGORIES = ["Oral", "Rx", "Injectable", "Topical"];
 
@@ -393,7 +389,6 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
       ].sort((a, b) => a.offset - b.offset);
 
   const mealRows = [
-    { key: "fasted",       label: "Fasted window",    nullable: localMode === "wakeup" },
     { key: "breakfast",    label: "Breakfast" },
     { key: "lunch",        label: "Lunch" },
     { key: "dinner",       label: "Dinner" },
@@ -718,7 +713,12 @@ function ProtocolApp({ user, token, onSignOut }) {
         dbGetLog(dk, token),
         dbGetSchedule(token),
       ]);
-      setSupps(s || []);
+      const migrated = (s || []).map(supp =>
+        supp.slots?.includes("fasted")
+          ? { ...supp, slots: supp.slots.map(sl => sl === "fasted" ? "pre_breakfast" : sl) }
+          : supp
+      );
+      setSupps(migrated);
       if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log?.checked)   setChecked(log.checked);
       if (sched?.schedule_type) setScheduleMode(sched.schedule_type);
