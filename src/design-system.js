@@ -89,13 +89,15 @@ export const radius = {
 };
 
 export const typography = {
-  // Sizes
-  caption2: 10,  // smaller than label, for very compact sublabels
-  label:    11,
-  caption:  13,
-  body:     15,
-  title:    17,
-  hero:     28,
+  // Sizes — all multiples of 2
+  caption2: 10,   // very compact sublabels (unchanged)
+  label:    12,   // was 11
+  caption:  14,   // was 13
+  body:     16,   // was 15
+  title:    18,   // was 17
+  heading:  22,   // new — section/modal headings
+  display:  32,   // new — large display numbers (anchor time)
+  hero:     28,   // preserved — app title, empty-state emoji
 
   // Weights
   regular:  400,
@@ -104,9 +106,13 @@ export const typography = {
   bold:     700,
 
   // Letter spacing
-  labelSpacingTight: "0.04em", // compact labels
+  labelSpacingTight: "0.04em",
   labelSpacing:      "0.08em",
-  labelSpacingWide:  "0.1em",  // header eyebrows
+  labelSpacingWide:  "0.1em",
+
+  // Font families
+  fontBody:    "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+  fontHeading: "'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
 };
 
 export const touch = {
@@ -136,7 +142,7 @@ export const inputStyle = {
   padding: `${spacing.sm}px ${spacing.md}px`,
   borderRadius: radius.sm,
   border: `1px solid ${colors.borderStrong}`,
-  fontSize: 16,
+  fontSize: typography.body,
   boxSizing: "border-box",
   background: colors.bgInput,
   color: colors.textPrimary,

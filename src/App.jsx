@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import {
   colors, spacing, radius, typography, touch, layout,
-  cardStyle, inputStyle, labelStyle, primaryButtonStyle, ghostButtonStyle, badgeStyle,
+  cardStyle, inputStyle, labelStyle, ghostButtonStyle, badgeStyle,
 } from "./design-system";
+import Button from "./components/Button";
 
 const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
@@ -70,6 +71,8 @@ const dbGetSchedule  = (t)       => supa("GET",    "/rest/v1/user_schedule?selec
 const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedule?on_conflict=user_id", data, t);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+
+const BG_GRADIENT = `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -224,19 +227,19 @@ function SignIn({ onSignIn }) {
     else setMsg(mode === "signin" ? "Invalid email or password." : "Could not create account — try again.");
   };
 
-  const si = { ...inputStyle, textAlign: "center", fontSize: 16 };
+  const si = { ...inputStyle, textAlign: "center", fontSize: typography.body };
 
   return (
-    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", background: `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
+    <div style={{ fontFamily: typography.fontBody, background: BG_GRADIENT, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
       <div style={{ width: "100%", maxWidth: 360, textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
         <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Protocol Tracker</div>
         <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />built around your life.</div>
         <input value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" type="email" style={si} />
         <input value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" type="password" style={{ ...si, marginTop: spacing.xs }} />
-        <button onClick={handleSubmit} disabled={loading} style={{ ...primaryButtonStyle, marginTop: spacing.md, cursor: loading ? "default" : "pointer" }}>
+        <Button variant="primary" fullWidth onClick={handleSubmit} disabled={loading} style={{ marginTop: spacing.md }}>
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
-        </button>
+        </Button>
         <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
           {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
         </button>
@@ -250,7 +253,7 @@ function SignIn({ onSignIn }) {
 
 function Loader({ text }) {
   return (
-    <div style={{ background: `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ background: BG_GRADIENT, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ fontSize: typography.caption, color: colors.textMuted }}>{text}</div>
     </div>
   );
@@ -294,8 +297,8 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
-        <span style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary }}>{editingId ? "Edit supplement" : "New supplement"}</span>
-        <button onClick={onCancel} style={{ width: layout.closeButton, height: layout.closeButton, borderRadius: radius.full, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, cursor: "pointer", fontSize: typography.caption, display: "flex", alignItems: "center", justifyContent: "center", color: colors.textSecondary }}>✕</button>
+        <span style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary, fontFamily: typography.fontHeading }}>{editingId ? "Edit supplement" : "New supplement"}</span>
+        <Button variant="icon" aria-label="Close" onClick={onCancel}>✕</Button>
       </div>
       {[["Name", "name", "e.g. Magnesium Glycinate"], ["Dose", "dose", "e.g. 2 caps (300 mg)"], ["Notes", "notes", "e.g. Thorne · with food"]].map(([lbl, key, ph]) => (
         <div key={key} style={{ marginBottom: spacing.md }}>
@@ -309,7 +312,7 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
           {CATEGORIES.map(cat => {
             const on = form.category === cat;
             return (
-              <button key={cat} onClick={() => {
+              <Button key={cat} variant="pill" active={on} solidActive style={{ flex: 1 }} onClick={() => {
                 if (cat === "Injectable") {
                   setForm(f => ({ ...f, category: cat, slots: ["injectable"], timePreference: f.timePreference || "Anytime" }));
                 } else if (cat === "Topical") {
@@ -317,15 +320,9 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
                 } else {
                   setForm(f => ({ ...f, category: cat, slots: [], timePreference: "Anytime" }));
                 }
-              }}
-                style={{ flex: 1, padding: `${spacing.xs}px`, borderRadius: radius.md, cursor: "pointer",
-                  fontSize: typography.caption, background: on ? colors.accent : "transparent",
-                  color: on ? colors.textPrimary : colors.textSecondary,
-                  border: `1px solid ${on ? colors.accent : colors.borderStrong}`,
-                  fontWeight: on ? typography.semibold : typography.regular, minHeight: touch.min,
-                  WebkitTapHighlightColor: "transparent" }}>
+              }}>
                 {cat}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -337,16 +334,9 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
             {["Morning", "Midday", "Evening", "Before Bed", "Anytime"].map(pref => {
               const on = form.timePreference === pref;
               return (
-                <button key={pref} onClick={() => setForm(f => ({ ...f, timePreference: pref }))}
-                  style={{ padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.full,
-                    cursor: "pointer", fontSize: typography.caption,
-                    background: on ? colors.accentDim : "transparent",
-                    color: on ? colors.accent : colors.textSecondary,
-                    border: `1px solid ${on ? colors.accent : colors.borderStrong}`,
-                    fontWeight: on ? typography.semibold : typography.regular,
-                    minHeight: touch.min, WebkitTapHighlightColor: "transparent" }}>
+                <Button key={pref} variant="pill" active={on} onClick={() => setForm(f => ({ ...f, timePreference: pref }))}>
                   {pref}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -358,16 +348,9 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
             {SLOTS.filter(s => s.id !== "injectable" && s.id !== "topical").map(slot => {
               const on = form.slots.includes(slot.id);
               return (
-                <button key={slot.id} onClick={() => toggleSlot(slot.id)}
-                  style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.sm}px`,
-                    borderRadius: radius.full, cursor: "pointer",
-                    background: on ? colors.accentDim : "transparent",
-                    color: on ? colors.accent : colors.textSecondary,
-                    border: `1px solid ${on ? colors.accent : colors.borderStrong}`,
-                    fontWeight: on ? typography.semibold : typography.regular,
-                    minHeight: touch.min, WebkitTapHighlightColor: "transparent" }}>
+                <Button key={slot.id} variant="pill" active={on} onClick={() => toggleSlot(slot.id)}>
                   {slot.label}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -381,8 +364,8 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
           ); })}
         </div>
       </div>
-      {editingId && <button onClick={onDelete} style={{ width: "100%", padding: `${spacing.sm}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.lg, cursor: "pointer", background: "transparent", color: colors.danger, border: `1px solid ${colors.dangerBorder}`, fontSize: typography.body, fontWeight: typography.medium, marginBottom: spacing.xs }}>Delete supplement</button>}
-      <button onClick={onSubmit} style={primaryButtonStyle}>{editingId ? "Save changes" : "Add supplement"}</button>
+      {editingId && <Button variant="destructive" fullWidth onClick={onDelete} style={{ marginBottom: spacing.xs }}>Delete supplement</Button>}
+      <Button variant="primary" fullWidth onClick={onSubmit}>{editingId ? "Save changes" : "Add supplement"}</Button>
     </div>
   );
 }
@@ -395,7 +378,26 @@ function toHrMin(totalMins) {
 }
 function fromHrMin(h, m) { return (parseInt(h) || 0) * 60 + (parseInt(m) || 0); }
 
-const numInputStyle = { ...inputStyle, width: 52, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: 16 };
+const numInputStyle = { ...inputStyle, width: 52, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.body };
+
+const scheduleRowStyle = {
+  display: "flex", alignItems: "center", gap: spacing.xs,
+  padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md,
+  background: colors.bgCard, border: `1px solid ${colors.borderSubtle}`,
+};
+
+const segBtnStyle = (on) => ({
+  flex: 1,
+  padding: `${spacing.sm}px`,
+  borderRadius: radius.md,
+  cursor: "pointer",
+  fontSize: typography.caption,
+  background: on ? colors.accentDim : "transparent",
+  color: on ? colors.accent : colors.textSecondary,
+  border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`,
+  fontWeight: on ? typography.semibold : typography.regular,
+  minHeight: layout.segHeight,
+});
 
 // ── ScheduleModal ─────────────────────────────────────────────────────────────
 
@@ -445,20 +447,12 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
 
   const isOffsetMode = localMode === "medication" || localMode === "wakeup";
 
-  const segBtn = (on) => ({
-    flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.md, cursor: "pointer",
-    fontSize: typography.caption, background: on ? colors.accentDim : "transparent",
-    color: on ? colors.accent : colors.textSecondary,
-    border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`,
-    fontWeight: on ? typography.semibold : typography.regular, minHeight: layout.segHeight,
-  });
-
   return (
     <div>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
-        <span style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary }}>Daily Schedule</span>
-        <button onClick={onClose} style={{ width: layout.closeButton, height: layout.closeButton, borderRadius: radius.full, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, cursor: "pointer", fontSize: typography.caption, display: "flex", alignItems: "center", justifyContent: "center", color: colors.textSecondary }}>✕</button>
+        <span style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary, fontFamily: typography.fontHeading }}>Daily Schedule</span>
+        <Button variant="icon" aria-label="Close" onClick={onClose}>✕</Button>
       </div>
 
       {/* 2×2 mode grid */}
@@ -492,7 +486,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
             {[["flexible", "Flexible"], ["consistent", "Consistent"]].map(([val, label]) => {
               const on = localBehavior === val;
               return (
-                <button key={val} onClick={() => setLocalBehavior(val)} style={segBtn(on)}>{label}</button>
+                <button key={val} onClick={() => setLocalBehavior(val)} style={segBtnStyle(on)}>{label}</button>
               );
             })}
           </div>
@@ -505,7 +499,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
             <div style={{ marginTop: spacing.sm }}>
               <label style={labelStyle}>Start time</label>
               <input type="time" value={localTime} onChange={e => setLocalTime(e.target.value)}
-                style={{ fontSize: 16, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md,
+                style={{ fontSize: typography.body, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md,
                   border: `1px solid ${colors.borderStrong}`, background: colors.bgInput,
                   color: colors.textPrimary, width: "100%", boxSizing: "border-box", outline: "none" }} />
             </div>
@@ -524,7 +518,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
                 const isEmpty = total === null || total === undefined;
                 const { h, m } = toHrMin(isEmpty ? 0 : total);
                 return (
-                  <div key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+                  <div key={key} style={scheduleRowStyle}>
                     <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
                     <input
                       type="number" min="0" max="23"
@@ -549,7 +543,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
           </div>
           <div style={{ marginBottom: spacing.lg }}>
             <label style={labelStyle}>Pre-meal window</label>
-            <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+            <div style={scheduleRowStyle}>
               <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Take pre-meal supplements</span>
               <input
                 type="number" min="0" max="120"
@@ -572,7 +566,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
             <div style={{ display: "flex", gap: spacing.xs }}>
               {[[240, "4 hr"], [360, "6 hr"], [480, "8 hr"]].map(([val, lbl]) => {
                 const on = (localConfig.window_length ?? 480) === val;
-                return <button key={val} onClick={() => updateConfig("window_length", val)} style={segBtn(on)}>{lbl}</button>;
+                return <button key={val} onClick={() => updateConfig("window_length", val)} style={segBtnStyle(on)}>{lbl}</button>;
               })}
             </div>
           </div>
@@ -581,11 +575,11 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
             <div style={{ display: "flex", gap: spacing.xs }}>
               {[[2, "2 meals"], [3, "3 meals"]].map(([val, lbl]) => {
                 const on = (localConfig.meals_per_day ?? 2) === val;
-                return <button key={val} onClick={() => updateConfig("meals_per_day", val)} style={segBtn(on)}>{lbl}</button>;
+                return <button key={val} onClick={() => updateConfig("meals_per_day", val)} style={segBtnStyle(on)}>{lbl}</button>;
               })}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+          <div style={scheduleRowStyle}>
             <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal supplements</span>
             <input type="number" min="0" max="120" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)} style={numInputStyle} />
             <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: 60 }}>min before</span>
@@ -600,13 +594,13 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
           <label style={labelStyle}>Fixed times</label>
           <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
             {FIXED_SLOTS.map(({ key, label }) => (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+              <div key={key} style={scheduleRowStyle}>
                 <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
                 <input
                   type="time"
                   value={localConfig.fixed_times?.[key] || ""}
                   onChange={e => updateFixed(key, e.target.value)}
-                  style={{ background: colors.bgInput, color: colors.textPrimary, border: `1px solid ${colors.borderStrong}`, borderRadius: radius.sm, fontSize: 16, padding: `${spacing.xs}px ${spacing.sm}px`, outline: "none" }}
+                  style={{ background: colors.bgInput, color: colors.textPrimary, border: `1px solid ${colors.borderStrong}`, borderRadius: radius.sm, fontSize: typography.body, padding: `${spacing.xs}px ${spacing.sm}px`, outline: "none" }}
                 />
               </div>
             ))}
@@ -633,7 +627,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
         </div>
       </div>
 
-      <button onClick={handleSave} style={primaryButtonStyle}>Save schedule</button>
+      <Button variant="primary" fullWidth onClick={handleSave}>Save schedule</Button>
     </div>
   );
 }
@@ -931,7 +925,6 @@ function ProtocolApp({ user, token, onSignOut }) {
   const dayLabel   = isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const shortDate  = viewDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const heroCard   = { ...cardStyle, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" };
-  const navArrow   = { width: touch.min, height: touch.min, display: "flex", alignItems: "center", justifyContent: "center", fontSize: typography.title, background: colors.bgCardHover, border: `1px solid ${colors.borderBase}`, cursor: "pointer", color: colors.textSecondary, borderRadius: radius.md, flexShrink: 0 };
 
   // Hero state helpers
   const isConsistent   = anchorBehavior === "consistent";
@@ -941,23 +934,23 @@ function ProtocolApp({ user, token, onSignOut }) {
   if (loading) return <Loader text="Loading your protocol…" />;
 
   return (
-    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", color: colors.textPrimary, maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`, minHeight: "100vh" }}>
+    <div style={{ fontFamily: typography.fontBody, color: colors.textPrimary, maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
-        <button onClick={() => goDay(-1)} style={navArrow}>‹</button>
+        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)} style={{ width: touch.min, height: touch.min, fontSize: typography.title, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}>‹</Button>
         <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
-          <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs }}>MY PROTOCOL</div>
-          <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center" }}>{dayLabel}</button>
+          <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
+          <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
           <div style={{ fontSize: typography.caption2, color: colors.textFaint, marginTop: 2, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
         </div>
-        <button onClick={() => goDay(1)} style={navArrow}>›</button>
+        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)} style={{ width: touch.min, height: touch.min, fontSize: typography.title, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}>›</Button>
       </div>
 
       {/* Add row */}
       <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
-        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.accentDim, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.accent, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
-        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.textDisabled, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
+        <Button variant="secondary" secondaryStyle="dashed" onClick={openAdd} style={{ flex: 1 }}>+ Add Supplement</Button>
+        <Button variant="tertiary" onClick={() => setShowSchedule(true)} style={{ flex: 1 }}>Edit Schedule</Button>
       </div>
 
       {/* Hero card */}
@@ -978,12 +971,12 @@ function ProtocolApp({ user, token, onSignOut }) {
                 </div>
                 {editPillTime && pillTime ? (
                   <div style={{ display: "flex", gap: spacing.xs, alignItems: "center" }}>
-                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: 16, padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.sm, border: `1px solid ${colors.borderStrong}`, background: colors.bgInput, color: colors.textPrimary }} />
+                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: typography.body, padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.sm, border: `1px solid ${colors.borderStrong}`, background: colors.bgInput, color: colors.textPrimary }} />
                     <button onClick={() => { setPillForDay(tmpTime); setEditPillTime(false); }} style={{ ...ghostButtonStyle, width: "auto", borderRadius: radius.sm }}>Save</button>
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "baseline", gap: spacing.xs }}>
-                    <span style={{ fontSize: typography.hero, fontWeight: typography.bold, letterSpacing: "-0.04em", color: colors.accent }}>{heroDisplayTime}</span>
+                    <span style={{ fontSize: typography.display, fontWeight: typography.bold, letterSpacing: "-0.04em", color: colors.accent, fontFamily: typography.fontHeading }}>{heroDisplayTime}</span>
                     {pillTime && <button onClick={() => { setTmpTime(pillTime); setEditPillTime(true); }} style={{ fontSize: typography.caption, color: colors.textMuted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>edit</button>}
                   </div>
                 )}
@@ -991,9 +984,9 @@ function ProtocolApp({ user, token, onSignOut }) {
               </div>
             ) : (
               <div>
-                <button onClick={startDay} style={{ ...primaryButtonStyle, minHeight: spacing.xxl, background: isFuture ? colors.bgCardHover : colors.accent, color: isFuture ? colors.textMuted : colors.textPrimary, cursor: isFuture ? "default" : "pointer" }}>
+                <Button variant="primary" fullWidth onClick={startDay} style={{ minHeight: spacing.xxl, background: isFuture ? colors.bgCardHover : colors.accent, color: isFuture ? colors.textMuted : colors.textPrimary, cursor: isFuture ? "default" : "pointer" }}>
                   {isFuture ? "Future day" : (START_LABELS[scheduleMode] || "Start my day")}
-                </button>
+                </Button>
                 {!isFuture && <div style={{ fontSize: typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: "center" }}>{START_SUBTITLES[scheduleMode] || "sets your daily schedule"}</div>}
               </div>
             )}
@@ -1001,19 +994,19 @@ function ProtocolApp({ user, token, onSignOut }) {
           <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0, width: 72, height: 72, display: "block" }}>
             <circle cx="36" cy="36" r={r} fill="none" stroke={colors.borderBase} strokeWidth="5" />
             <circle cx="36" cy="36" r={r} fill="none" stroke={colors.accent} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
-            <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={colors.textPrimary} fontSize={typography.caption} fontWeight={typography.bold}>{pct}%</text>
+            <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={colors.textPrimary} fontSize={typography.caption} fontWeight={typography.bold} fontFamily={typography.fontHeading}>{pct}%</text>
           </svg>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing.sm, marginTop: spacing.sm, minHeight: 36 }}>
           <div style={{ flex: 1 }}>
-            {notifStatus === "default"     && <button onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.full, cursor: "pointer", border: `1px solid ${colors.accentBorder}`, background: colors.accentDim, color: colors.accent, fontWeight: typography.semibold }}>Enable reminders</button>}
+            {notifStatus === "default"     && <Button variant="secondary" secondaryStyle="solid" onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }}>Enable reminders</Button>}
             {notifStatus === "granted"     && <span style={{ fontSize: typography.caption, color: colors.accent, fontWeight: typography.medium }}>Reminders on</span>}
             {notifStatus === "denied"      && <span style={{ fontSize: typography.caption, color: colors.danger }}>Reminders blocked</span>}
             {notifStatus === "unsupported" && <span style={{ fontSize: typography.caption, color: colors.textMuted }}>Add to home screen for reminders</span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, minWidth: 100, justifyContent: "flex-end" }}>
             {streak > 0 && <div style={{ display: "flex", alignItems: "center", gap: spacing.xxs, background: colors.warnDim, border: `1px solid ${colors.warnBorder}`, borderRadius: radius.full, padding: `${spacing.xxs}px ${spacing.xs}px` }}><span style={{ fontSize: typography.caption }}>🔥</span><span style={{ fontSize: typography.caption, fontWeight: typography.bold, color: colors.warn }}>{streak} day streak</span></div>}
-            <button onClick={onSignOut} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: "transparent", color: colors.textMuted }}>Sign out</button>
+            <button onClick={onSignOut} style={{ fontSize: typography.caption, color: colors.textMuted, background: "none", border: "none", cursor: "pointer", padding: `0 ${spacing.xs}px`, minHeight: touch.min, WebkitTapHighlightColor: "transparent" }}>Sign out</button>
           </div>
         </div>
       </div>
@@ -1025,7 +1018,7 @@ function ProtocolApp({ user, token, onSignOut }) {
             <div style={{ fontSize: typography.hero, marginBottom: spacing.md }}>💊</div>
             <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
             <div style={{ fontSize: typography.caption, color: colors.textMuted, lineHeight: 1.7, marginBottom: spacing.lg }}>Add your medications and supplements. Your schedule builds from when you take your first med each morning.</div>
-            <button onClick={openAdd} style={{ ...primaryButtonStyle, minHeight: touch.min }}>Add first supplement</button>
+            <Button variant="primary" fullWidth onClick={openAdd}>Add first supplement</Button>
           </div>
         ) : SLOTS.map(slot => {
           const slotSupps = slot.id === "injectable"
