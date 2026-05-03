@@ -233,7 +233,7 @@ function SignIn({ onSignIn }) {
         <button onClick={handleSubmit} disabled={loading} style={{ ...primaryButtonStyle, marginTop: spacing.md, cursor: loading ? "default" : "pointer" }}>
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
-        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer" }}>
+        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
           {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
         </button>
         {msg && <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: colors.danger }}>{msg}</div>}
@@ -310,7 +310,8 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
                   fontSize: typography.caption, background: on ? colors.accent : "transparent",
                   color: on ? colors.textPrimary : colors.textSecondary,
                   border: `1px solid ${on ? colors.accent : colors.borderStrong}`,
-                  fontWeight: on ? typography.semibold : typography.regular, minHeight: 36 }}>
+                  fontWeight: on ? typography.semibold : typography.regular, minHeight: touch.min,
+                  WebkitTapHighlightColor: "transparent" }}>
                 {cat}
               </button>
             );
@@ -321,7 +322,7 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
         <label style={labelStyle}>When to take it</label>
         <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
           {SLOTS.map(slot => { const on = form.slots.includes(slot.id); return (
-            <button key={slot.id} onClick={() => toggleSlot(slot.id)} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: on ? slot.color + "22" : "transparent", color: on ? slot.color : colors.textSecondary, border: `1px solid ${on ? slot.color : colors.borderStrong}`, fontWeight: on ? typography.semibold : typography.regular }}>{slot.label}</button>
+            <button key={slot.id} onClick={() => toggleSlot(slot.id)} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: on ? slot.color + "22" : "transparent", color: on ? slot.color : colors.textSecondary, border: `1px solid ${on ? slot.color : colors.borderStrong}`, fontWeight: on ? typography.semibold : typography.regular, minHeight: touch.min, WebkitTapHighlightColor: "transparent" }}>{slot.label}</button>
           ); })}
         </div>
       </div>
@@ -471,7 +472,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
           <div style={{ marginBottom: spacing.md }}>
             <label style={labelStyle}>Meal schedule</label>
             <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
-              {mealRows.map(({ key, label, nullable }) => {
+              {mealRows.map(({ key, label }) => {
                 const total   = localConfig[key];
                 const isEmpty = total === null || total === undefined;
                 const { h, m } = toHrMin(isEmpty ? 0 : total);
@@ -481,7 +482,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
                     <input
                       type="number" min="0" max="23"
                       value={isEmpty ? "" : h}
-                      onChange={e => updateConfig(key, e.target.value === "" ? (nullable ? null : 0) : fromHrMin(e.target.value, isEmpty ? 0 : m))}
+                      onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(e.target.value, isEmpty ? 0 : m))}
                       placeholder="0"
                       style={numInputStyle}
                     />
@@ -489,7 +490,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
                     <input
                       type="number" min="0" max="59"
                       value={isEmpty ? "" : m}
-                      onChange={e => updateConfig(key, e.target.value === "" ? (nullable ? null : 0) : fromHrMin(isEmpty ? 0 : h, e.target.value))}
+                      onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(isEmpty ? 0 : h, e.target.value))}
                       placeholder="0"
                       style={numInputStyle}
                     />
@@ -598,10 +599,10 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
   useEffect(() => { setExpanded(!allDone); }, [allDone]);
 
   const SC = {
-    done:   { border: colors.borderSubtle,     bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
-    missed: { border: "rgba(249,115,22,0.35)", bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)", badge: { label: "missed", bg: "rgba(124,45,18,0.5)",   color: "#fed7aa" } },
-    now:    { border: "rgba(61,154,143,0.45)", bg: "rgba(61,154,143,0.04)", hbg: "rgba(61,154,143,0.07)",  badge: { label: "now",    bg: "rgba(61,154,143,0.18)", color: colors.accent } },
-    future: { border: colors.borderSubtle,     bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
+    done:   { border: colors.borderSubtle,          bg: colors.cardSubtle,        hbg: "transparent",                badge: null },
+    missed: { border: colors.statusMissedBorder,    bg: colors.statusMissedBg,    hbg: colors.statusMissedHover,     badge: { label: "missed", bg: colors.statusMissedBadgeBg,  color: colors.statusMissedBadgeColor } },
+    now:    { border: colors.statusNowBorder,       bg: colors.statusNowBg,       hbg: colors.statusNowHover,        badge: { label: "now",    bg: colors.statusNowBadgeBg,     color: colors.accent } },
+    future: { border: colors.borderSubtle,          bg: colors.cardSubtle,        hbg: "transparent",                badge: null },
   };
   const sc = SC[status];
 
@@ -631,7 +632,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
           {slotSupps.map((supp, i) => {
             const done = isChecked(slot.id, supp.id);
             return (
-              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
+              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid ${colors.divider}` : "none" }}>
                 <div onClick={() => { if (!isFuture) toggleCheck(slot.id, supp.id); }} style={{ width: 24, height: 24, borderRadius: radius.sm, flexShrink: 0, border: `1.5px solid ${done ? colors.accent : colors.borderStrong}`, background: done ? colors.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: isFuture ? "default" : "pointer" }}>
                   {done && <span style={{ color: colors.textPrimary, fontSize: typography.label, fontWeight: typography.bold }}>✓</span>}
                 </div>
@@ -639,7 +640,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
                   <div style={{ fontSize: typography.body, color: done ? colors.textDone : colors.textPrimary, textDecoration: done ? "line-through" : "none", fontWeight: done ? typography.regular : typography.medium, display: "flex", alignItems: "center", gap: spacing.xxs }}>
                     {supp.name}
                     {supp.category === "Rx" && (
-                      <span style={{ fontSize: typography.label, background: "rgba(61,154,143,0.12)", color: colors.accent, borderRadius: radius.xs, padding: "1px 5px", fontWeight: typography.semibold, letterSpacing: "0.04em", flexShrink: 0 }}>Rx</span>
+                      <span style={{ fontSize: typography.label, background: colors.accentDim, color: colors.accent, borderRadius: radius.xs, padding: "1px 5px", fontWeight: typography.semibold, letterSpacing: "0.04em", flexShrink: 0 }}>Rx</span>
                     )}
                   </div>
                   <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2 }}>{supp.dose}</div>
@@ -961,7 +962,7 @@ function ProtocolApp({ user, token, onSignOut }) {
             {notifStatus === "unsupported" && <span style={{ fontSize: typography.caption, color: colors.textMuted }}>Add to home screen for reminders</span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: spacing.xs }}>
-            {streak > 0 && <div style={{ display: "flex", alignItems: "center", gap: spacing.xxs, background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.18)", borderRadius: radius.full, padding: `${spacing.xxs}px ${spacing.xs}px` }}><span style={{ fontSize: typography.caption }}>🔥</span><span style={{ fontSize: typography.caption, fontWeight: typography.bold, color: "#fb923c" }}>{streak} day streak</span></div>}
+            {streak > 0 && <div style={{ display: "flex", alignItems: "center", gap: spacing.xxs, background: colors.warnDim, border: `1px solid ${colors.warnBorder}`, borderRadius: radius.full, padding: `${spacing.xxs}px ${spacing.xs}px` }}><span style={{ fontSize: typography.caption }}>🔥</span><span style={{ fontSize: typography.caption, fontWeight: typography.bold, color: colors.warn }}>{streak} day streak</span></div>}
             <button onClick={onSignOut} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: "transparent", color: colors.textMuted }}>Sign out</button>
           </div>
         </div>
@@ -969,8 +970,8 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Add row */}
       <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
-        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: "1px dashed rgba(61,154,143,0.3)", background: "rgba(61,154,143,0.04)", fontSize: typography.caption, fontWeight: typography.semibold, color: "#3D9A8F", minHeight: 44, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
-        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", fontSize: typography.caption, fontWeight: typography.semibold, color: "rgba(255,255,255,0.45)", minHeight: 44, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
+        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.statusNowBg, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.accent, minHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
+        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.textDisabled, minHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
       </div>
 
       {/* Main slot list — injectable category excluded */}
@@ -1010,21 +1011,23 @@ function ProtocolApp({ user, token, onSignOut }) {
                     border: `1.5px solid ${done ? colors.accent : colors.borderStrong}`,
                     background: done ? colors.accent : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  {done && <span style={{ color: colors.textPrimary, fontSize: 12, fontWeight: 700 }}>✓</span>}
+                  {done && <span style={{ color: colors.textPrimary, fontSize: typography.label, fontWeight: typography.bold }}>✓</span>}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: typography.body, color: done ? colors.textMuted : colors.textPrimary, textDecoration: done ? "line-through" : "none", fontWeight: typography.medium, display: "flex", alignItems: "center", gap: spacing.xxs }}>
                     {supp.name}
-                    <span style={{ fontSize: typography.label, color: colors.textMuted, background: "rgba(255,255,255,0.05)", borderRadius: radius.xs, padding: "1px 5px", letterSpacing: "0.04em", flexShrink: 0 }}>{supp.category}</span>
+                    <span style={{ fontSize: typography.label, color: colors.textMuted, background: colors.bgCardHover, borderRadius: radius.xs, padding: "1px 5px", letterSpacing: "0.04em", flexShrink: 0 }}>{supp.category}</span>
                   </div>
                   <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2 }}>
                     {supp.dose}{supp.notes ? " · " + supp.notes : ""}
                   </div>
                 </div>
                 <button onClick={() => openEdit(supp)}
-                  style={{ fontSize: typography.label, padding: `4px ${spacing.xs}px`, borderRadius: radius.sm,
+                  style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm,
                     cursor: "pointer", border: `1px solid ${colors.borderStrong}`,
-                    background: "transparent", color: colors.textMuted }}>
+                    background: "transparent", color: colors.textMuted,
+                    minHeight: touch.min, display: "flex", alignItems: "center",
+                    WebkitTapHighlightColor: "transparent" }}>
                   Edit
                 </button>
               </div>

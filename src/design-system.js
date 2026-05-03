@@ -32,10 +32,30 @@ export const colors = {
   dangerDim:  "rgba(248,113,113,0.08)",
   info:       "#60a5fa",
   infoDim:    "rgba(96,165,250,0.08)",
+  warn:       "#fb923c",
+  warnDim:    "rgba(251,146,60,0.08)",
+  warnBorder: "rgba(251,146,60,0.18)",
+
+  // Text
+  textDisabled: "rgba(255,255,255,0.45)",
+
+  // Surfaces
+  cardSubtle: "rgba(255,255,255,0.02)",
+  divider:    "rgba(255,255,255,0.04)",
+
+  // Slot status
+  statusMissedBorder:     "rgba(249,115,22,0.35)",
+  statusMissedBg:         "rgba(249,115,22,0.05)",
+  statusMissedHover:      "rgba(249,115,22,0.07)",
+  statusMissedBadgeBg:    "rgba(124,45,18,0.5)",
+  statusMissedBadgeColor: "#fed7aa",
+  statusNowBorder:        "rgba(61,154,143,0.45)",
+  statusNowBg:            "rgba(61,154,143,0.04)",
+  statusNowHover:         "rgba(61,154,143,0.07)",
+  statusNowBadgeBg:       "rgba(61,154,143,0.18)",
 
   // Slot colors
   slotRx:          "#3D9A8F",
-  slotFasted:      "#3D9A8F",
   slotPreBreakfast:"#67e8f9",
   slotBreakfast:   "#67e8f9",
   slotPreLunch:    "#c084fc",
