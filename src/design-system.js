@@ -64,6 +64,7 @@ export const colors = {
   slotDinner:      "#fb923c",
   slotAfterDinner: "#818cf8",
   slotInjectable:  "#94a3b8",
+  slotTopical:     "#f9a8d4",
 };
 
 export const spacing = {

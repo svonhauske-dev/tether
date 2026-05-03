@@ -83,6 +83,7 @@ const SLOTS = [
   { id: "dinner",        label: "With Dinner",       sublabel: "With food",                   icon: "●", color: colors.slotDinner },
   { id: "after_dinner",  label: "After Dinner",      sublabel: "Before bed",                  icon: "◑", color: colors.slotAfterDinner },
   { id: "injectable",    label: "Injectables",       sublabel: "Subcutaneous",                icon: "⊕", color: colors.slotInjectable },
+  { id: "topical",       label: "Topicals",          sublabel: "Skin & external",             icon: "◐", color: colors.slotTopical },
 ];
 
 const DEFAULT_CONFIG = {
@@ -90,7 +91,7 @@ const DEFAULT_CONFIG = {
   window_start: 0, window_length: 480, meals_per_day: 2,
   fixed_times: {
     pre_breakfast: "07:30", breakfast: "08:00", pre_lunch: "11:30", lunch: "12:00",
-    pre_dinner: "17:30", dinner: "18:00", after_dinner: "20:00", injectable: null,
+    pre_dinner: "17:30", dinner: "18:00", after_dinner: "20:00", injectable: null, topical: null,
   },
 };
 
@@ -111,6 +112,7 @@ function deriveOffsets(mode, cfg) {
       dinner:        meals >= 3 ? winStart + (interval * 3) : null,
       after_dinner:  winStart + winLen + 30,
       injectable:    null,
+      topical:       null,
     };
   }
   const pmw       = cfg.pre_meal_window ?? 30;
@@ -124,6 +126,7 @@ function deriveOffsets(mode, cfg) {
     dinner:        cfg.dinner ?? 540,
     after_dinner:  cfg.after_dinner ?? 660,
     injectable:    null,
+    topical:       null,
   };
 }
 
@@ -150,6 +153,7 @@ const FIXED_SLOTS = [
   { key: "dinner",       label: "Dinner" },
   { key: "after_dinner", label: "Evening" },
   { key: "injectable",   label: "Injectables" },
+  { key: "topical",      label: "Topicals" },
 ];
 
 const START_LABELS = {
@@ -308,6 +312,8 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
               <button key={cat} onClick={() => {
                 if (cat === "Injectable") {
                   setForm(f => ({ ...f, category: cat, slots: ["injectable"], timePreference: f.timePreference || "Anytime" }));
+                } else if (cat === "Topical") {
+                  setForm(f => ({ ...f, category: cat, slots: ["topical"], timePreference: f.timePreference || "Anytime" }));
                 } else {
                   setForm(f => ({ ...f, category: cat, slots: [], timePreference: "Anytime" }));
                 }
@@ -324,7 +330,7 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
           })}
         </div>
       </div>
-      {form.category === "Injectable" ? (
+      {(form.category === "Injectable" || form.category === "Topical") ? (
         <div style={{ marginBottom: spacing.md }}>
           <label style={labelStyle}>When to take it</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
@@ -349,7 +355,7 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
         <div style={{ marginBottom: spacing.md }}>
           <label style={labelStyle}>When to take it</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
-            {SLOTS.filter(s => s.id !== "injectable").map(slot => {
+            {SLOTS.filter(s => s.id !== "injectable" && s.id !== "topical").map(slot => {
               const on = form.slots.includes(slot.id);
               return (
                 <button key={slot.id} onClick={() => toggleSlot(slot.id)}
@@ -842,7 +848,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   const setPillForDay = (t) => setPillTimes(pt => ({ ...pt, [dk]: t }));
 
   const getSlotTime = (sid) => {
-    if (sid === "injectable") return null;
+    if (sid === "injectable" || sid === "topical") return null;
     if (scheduleMode === "fixed") {
       const ft = scheduleConfig.fixed_times?.[sid];
       return ft ? parseHHMM(ft) : null;
@@ -883,7 +889,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
   let coreTotal = 0, coreDone = 0;
   CORE_SLOTS.forEach(sid => {
-    const sl = getSuppsForSlot(sid).filter(s => (s.category || "Oral") !== "Injectable");
+    const sl = getSuppsForSlot(sid).filter(s => (s.category || "Oral") !== "Injectable" && (s.category || "Oral") !== "Topical");
     coreTotal += sl.length;
     sl.forEach(s => { if (isChecked(sid, s.id)) coreDone++; });
   });
@@ -1024,14 +1030,17 @@ function ProtocolApp({ user, token, onSignOut }) {
         ) : SLOTS.map(slot => {
           const slotSupps = slot.id === "injectable"
             ? getSuppsForSlot(slot.id).filter(s => s.category === "Injectable")
-            : getSuppsForSlot(slot.id).filter(s => (s.category || "Oral") !== "Injectable");
+            : slot.id === "topical"
+              ? getSuppsForSlot(slot.id).filter(s => s.category === "Topical")
+              : getSuppsForSlot(slot.id).filter(s => s.category !== "Injectable" && s.category !== "Topical");
           if (!slotSupps.length) return null;
+          const isVarSlot = slot.id === "injectable" || slot.id === "topical";
           const hasOffset = scheduleMode === "fixed"
-            ? slot.id !== "injectable" && !!scheduleConfig.fixed_times?.[slot.id]
+            ? !isVarSlot && !!scheduleConfig.fixed_times?.[slot.id]
             : slot.id === "rx"
               ? !!pillTime
-              : slot.id !== "injectable" && slotOffsets?.[slot.id] !== null && slotOffsets?.[slot.id] !== undefined;
-          const timeLabel = slot.id === "injectable" ? "variable" : (hasOffset ? slotTimeStr(slot.id) : "variable");
+              : !isVarSlot && slotOffsets?.[slot.id] !== null && slotOffsets?.[slot.id] !== undefined;
+          const timeLabel = isVarSlot ? "variable" : (hasOffset ? slotTimeStr(slot.id) : "variable");
           return <SlotCard key={slot.id} slot={slot} slotSupps={slotSupps} status={slotStatus(slot.id)} timeLabel={timeLabel} hasOffset={hasOffset} pillTime={effectivePillTime} isFuture={isFuture} isChecked={isChecked} toggleCheck={toggleCheck} openEdit={openEdit} />;
         })}
       </div>
