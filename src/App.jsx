@@ -251,6 +251,23 @@ function Loader({ text }) {
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 function Modal({ open, onClose, children }) {
+  useEffect(function() {
+    if (open) {
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+    } else {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    }
+    return function() {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.78)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }} onClick={onClose}>
