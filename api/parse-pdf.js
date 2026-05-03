@@ -1,3 +1,4 @@
+// Anthropic proxy v2
 export const config = {
   api: {
     bodyParser: {
