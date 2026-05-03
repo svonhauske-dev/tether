@@ -10,8 +10,12 @@ async function supa(method, path, body, token) {
 }
 
 async function getSession() {
+  const token = localStorage.getItem("sb_token");
+  if (!token) return null;
   try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/user`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${localStorage.getItem("sb_token") || ""}` } });
+    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${token}` }
+    });
     if (res.ok) { const d = await res.json(); return d.id ? d : null; }
   } catch(e) {}
   return null;
