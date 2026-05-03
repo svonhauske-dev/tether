@@ -156,6 +156,7 @@ async function pdfToBase64(file) {
 }
 
 async function callAnthropic(system, b64) {
+  console.log("API key:", import.meta.env.VITE_ANTHROPIC_KEY ? "found" : "missing");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: ANTHROPIC_HEADERS,
