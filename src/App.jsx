@@ -885,6 +885,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
   const r = 30, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
   const dayLabel   = isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const shortDate  = viewDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const heroCard   = { ...cardStyle, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" };
   const navArrow   = { width: touch.min, height: touch.min, display: "flex", alignItems: "center", justifyContent: "center", fontSize: typography.title, background: colors.bgCardHover, border: `1px solid ${colors.borderBase}`, cursor: "pointer", color: colors.textSecondary, borderRadius: radius.md, flexShrink: 0 };
 
@@ -904,7 +905,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
           <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>MY PROTOCOL</div>
           <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center" }}>{dayLabel}</button>
-          {!isToday && <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxs }}>tap to return to today</div>}
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 2, minHeight: 14, letterSpacing: "0.04em" }}>{isToday ? shortDate : "tap to return to today"}</div>
         </div>
         <button onClick={() => goDay(1)} style={navArrow}>›</button>
       </div>
