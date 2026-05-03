@@ -60,59 +60,63 @@ function signOut() { localStorage.removeItem("sb_token"); }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
 
-const dbGetSupps   = (t)      => supa("GET",    "/rest/v1/supplements?select=*&order=created_at.asc", null, t);
-const dbAddSupp    = (s, t)   => supa("POST",   "/rest/v1/supplements", s, t);
-const dbUpdateSupp = (s, t)   => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, updated_at: new Date().toISOString() }, t);
-const dbDeleteSupp = (id, t)  => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
-const dbGetLog     = (date, t)=> supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
-const dbUpsertLog  = (log, t) => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
+const dbGetSupps     = (t)       => supa("GET",    "/rest/v1/supplements?select=*&order=created_at.asc", null, t);
+const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
+const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, updated_at: new Date().toISOString() }, t);
+const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
+const dbGetLog       = (date, t) => supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
+const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
+const dbGetSchedule  = (t)       => supa("GET",    "/rest/v1/user_schedule?select=*", null, t).then(r => r?.[0] || null);
+const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedule?on_conflict=user_id", data, t);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const SLOTS = [
-  { id: "rx",            label: "Anchor Medication",  sublabel: "Empty stomach · first thing",  icon: "★", color: colors.slotRx },
-  { id: "fasted",        label: "Fasted",             sublabel: "Before eating",                icon: "○", color: colors.slotFasted },
-  { id: "pre_breakfast", label: "Before Breakfast",   sublabel: "30 min before eating",         icon: "◎", color: colors.slotPreBreakfast },
-  { id: "breakfast",     label: "With Breakfast",     sublabel: "With food",                    icon: "●", color: colors.slotBreakfast },
-  { id: "pre_lunch",     label: "Before Lunch",       sublabel: "30 min before eating",         icon: "◎", color: colors.slotPreLunch },
-  { id: "lunch",         label: "With Lunch",         sublabel: "With food",                    icon: "●", color: colors.slotLunch },
-  { id: "pre_dinner",    label: "Before Dinner",      sublabel: "30 min before eating",         icon: "◎", color: colors.slotPreDinner },
-  { id: "dinner",        label: "With Dinner",        sublabel: "With food",                    icon: "●", color: colors.slotDinner },
-  { id: "after_dinner",  label: "After Dinner",       sublabel: "Before bed",                   icon: "◑", color: colors.slotAfterDinner },
-  { id: "injectable",    label: "Injectables",        sublabel: "Subcutaneous",                 icon: "⊕", color: colors.slotInjectable },
+  { id: "rx",            label: "Anchor Medication", sublabel: "Empty stomach · first thing", icon: "★", color: colors.slotRx },
+  { id: "fasted",        label: "Fasted",            sublabel: "Before eating",               icon: "○", color: colors.slotFasted },
+  { id: "pre_breakfast", label: "Before Breakfast",  sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreBreakfast },
+  { id: "breakfast",     label: "With Breakfast",    sublabel: "With food",                   icon: "●", color: colors.slotBreakfast },
+  { id: "pre_lunch",     label: "Before Lunch",      sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreLunch },
+  { id: "lunch",         label: "With Lunch",        sublabel: "With food",                   icon: "●", color: colors.slotLunch },
+  { id: "pre_dinner",    label: "Before Dinner",     sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreDinner },
+  { id: "dinner",        label: "With Dinner",       sublabel: "With food",                   icon: "●", color: colors.slotDinner },
+  { id: "after_dinner",  label: "After Dinner",      sublabel: "Before bed",                  icon: "◑", color: colors.slotAfterDinner },
+  { id: "injectable",    label: "Injectables",       sublabel: "Subcutaneous",                icon: "⊕", color: colors.slotInjectable },
 ];
 
-const SLOT_OFFSETS = {
-  rx: 0, fasted: 30, pre_breakfast: 45, breakfast: 60,
-  pre_lunch: 330, lunch: 360, pre_dinner: 750, dinner: 780,
-  after_dinner: 900, injectable: null,
+const DEFAULT_OFFSETS = {
+  fasted: 30, pre_breakfast: 45, breakfast: 60,
+  pre_lunch: 330, lunch: 360, pre_dinner: 510,
+  dinner: 540, after_dinner: 660,
 };
 
 const CORE_SLOTS = ["rx", "fasted", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-const pad          = (n) => String(n).padStart(2, "0");
-const fmtTime      = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const addMins      = (d, m) => new Date(d.getTime() + m * 60000);
-const parseHHMM    = (s) => { const [h, m] = s.split(":"); const d = new Date(); d.setHours(+h, +m, 0, 0); return d; };
-const dateKey      = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const startOfDay   = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
-const notifOK      = () => "Notification" in window;
+const pad       = (n) => String(n).padStart(2, "0");
+const fmtTime   = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const addMins   = (d, m) => new Date(d.getTime() + m * 60000);
+const parseHHMM = (s) => { const [h, m] = s.split(":"); const d = new Date(); d.setHours(+h, +m, 0, 0); return d; };
+const dateKey   = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const startOfDay = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
+const notifOK   = () => "Notification" in window;
 
 const TODAY = startOfDay(new Date());
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 
-function scheduleNotifications(pt, supps, vd, dk) {
+function scheduleNotifications(pt, supps, vd, dk, offsets) {
   if (window._nto) window._nto.forEach(clearTimeout);
   window._nto = [];
   if (!pt || Notification.permission !== "granted") return;
   const base = parseHHMM(pt), now = new Date();
   SLOTS.forEach(slot => {
-    const offset = SLOT_OFFSETS[slot.id]; if (offset === null) return;
+    if (slot.id === "injectable") return;
+    const offset = slot.id === "rx" ? 0 : (offsets[slot.id] ?? null);
+    if (offset === null) return;
     const t = addMins(base, offset), diff = t - now; if (diff < 0) return;
     const sl = supps.filter(s => s.slots.includes(slot.id) && s.days.includes(vd));
     if (!sl.length) return;
@@ -226,18 +230,149 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
   );
 }
 
+// ── ScheduleModal ─────────────────────────────────────────────────────────────
+
+const SCHEDULE_TYPES = [
+  { id: "medication_anchored", label: "Medication Anchored", subtitle: "Everything cascades from when you take your first med" },
+  { id: "meal_anchored",       label: "Meal Times",          subtitle: "Set your typical meal times" },
+  { id: "fixed",               label: "Fixed Times",         subtitle: "Set exact times for each slot" },
+];
+
+const TEMPLATES = [
+  { label: "Thyroid Protocol", offsets: { fasted: 30, pre_breakfast: null, breakfast: 60, pre_lunch: 330, lunch: 360, pre_dinner: 510, dinner: 540, after_dinner: 660 } },
+  { label: "16:8 Fasting",     offsets: { fasted: null, pre_breakfast: null, breakfast: 240, pre_lunch: null, lunch: 480, pre_dinner: null, dinner: 720, after_dinner: 840 } },
+  { label: "18:6 Fasting",     offsets: { fasted: null, pre_breakfast: null, breakfast: 300, pre_lunch: null, lunch: 540, pre_dinner: null, dinner: 780, after_dinner: 900 } },
+  { label: "3 Meals",          offsets: { fasted: null, pre_breakfast: 30, breakfast: 60, pre_lunch: 270, lunch: 300, pre_dinner: 510, dinner: 540, after_dinner: 660 } },
+];
+
+const OFFSET_SLOTS = [
+  { id: "fasted",        label: "Fasted" },
+  { id: "pre_breakfast", label: "Before Breakfast" },
+  { id: "breakfast",     label: "With Breakfast" },
+  { id: "pre_lunch",     label: "Before Lunch" },
+  { id: "lunch",         label: "With Lunch" },
+  { id: "pre_dinner",    label: "Before Dinner" },
+  { id: "dinner",        label: "With Dinner" },
+  { id: "after_dinner",  label: "After Dinner" },
+];
+
+function ScheduleModal({ scheduleType, setScheduleType, slotOffsets, setSlotOffsets, onSave, onClose }) {
+  const [localType, setLocalType]       = useState(scheduleType);
+  const [localOffsets, setLocalOffsets] = useState({ ...slotOffsets });
+  const [showCustom, setShowCustom]     = useState(false);
+
+  const applyTemplate = (tmpl) => { setLocalOffsets({ ...tmpl.offsets }); setShowCustom(false); };
+
+  const handleSave = () => {
+    setScheduleType(localType);
+    setSlotOffsets(localOffsets);
+    onSave(localType, localOffsets);
+  };
+
+  const previewBase = parseHHMM("07:00");
+  const previewRows = [
+    { label: "Anchor Medication", offset: 0 },
+    ...OFFSET_SLOTS.map(s => ({ label: s.label, offset: localOffsets[s.id] })),
+  ].filter(r => r.offset !== null && r.offset !== undefined)
+   .sort((a, b) => a.offset - b.offset);
+
+  const showEditor = showCustom || localType === "medication_anchored";
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
+        <span style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary }}>Daily Schedule</span>
+        <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: radius.full, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, cursor: "pointer", fontSize: typography.caption, display: "flex", alignItems: "center", justifyContent: "center", color: colors.textSecondary }}>✕</button>
+      </div>
+
+      {/* Schedule type */}
+      <div style={{ marginBottom: spacing.lg }}>
+        <label style={labelStyle}>Schedule type</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+          {SCHEDULE_TYPES.map(t => {
+            const on = localType === t.id;
+            return (
+              <button key={t.id} onClick={() => setLocalType(t.id)} style={{ textAlign: "left", padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.md, cursor: "pointer", background: on ? colors.accentDim : "transparent", border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, display: "flex", flexDirection: "column", gap: 2 }}>
+                <span style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: on ? colors.accent : colors.textPrimary }}>{t.label}</span>
+                <span style={{ fontSize: typography.label, color: colors.textMuted }}>{t.subtitle}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Templates */}
+      <div style={{ marginBottom: spacing.lg }}>
+        <label style={labelStyle}>Templates</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
+          {TEMPLATES.map(tmpl => (
+            <button key={tmpl.label} onClick={() => applyTemplate(tmpl)} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: "transparent", color: colors.textSecondary, border: `1px solid ${colors.borderStrong}`, fontWeight: typography.medium }}>
+              {tmpl.label}
+            </button>
+          ))}
+          <button onClick={() => setShowCustom(s => !s)} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: showCustom ? colors.accentDim : "transparent", color: showCustom ? colors.accent : colors.textSecondary, border: `1px solid ${showCustom ? colors.accentBorder : colors.borderStrong}`, fontWeight: typography.medium }}>
+            Custom
+          </button>
+        </div>
+      </div>
+
+      {/* Offset editor */}
+      {showEditor && (
+        <div style={{ marginBottom: spacing.lg }}>
+          <label style={labelStyle}>Minutes after anchor medication</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+            {OFFSET_SLOTS.map(s => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: spacing.sm, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+                <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{s.label}</span>
+                <span style={{ fontSize: typography.label, color: colors.textMuted }}>min</span>
+                <input
+                  type="number"
+                  value={localOffsets[s.id] === null || localOffsets[s.id] === undefined ? "" : localOffsets[s.id]}
+                  onChange={e => {
+                    const v = e.target.value === "" ? null : Number(e.target.value);
+                    setLocalOffsets(o => ({ ...o, [s.id]: v }));
+                  }}
+                  placeholder="skip"
+                  style={{ ...inputStyle, width: 72, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.caption }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Live preview */}
+      <div style={{ marginBottom: spacing.lg }}>
+        <label style={labelStyle}>Preview (based on 7:00am anchor)</label>
+        <div style={{ borderRadius: radius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.bgCard, padding: spacing.md, display: "flex", flexDirection: "column", gap: spacing.xs }}>
+          {previewRows.map((row, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
+              <span style={{ fontSize: typography.caption, fontVariantNumeric: "tabular-nums", color: colors.accent, fontWeight: typography.semibold, minWidth: 42 }}>{fmtTime(addMins(previewBase, row.offset))}</span>
+              <span style={{ fontSize: typography.caption, color: colors.textMuted }}>—</span>
+              <span style={{ fontSize: typography.caption, color: colors.textSecondary }}>{row.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={handleSave} style={primaryButtonStyle}>Save schedule</button>
+    </div>
+  );
+}
+
 // ── SlotCard ──────────────────────────────────────────────────────────────────
 
-function SlotCard({ slot, slotSupps, status, timeLabel, pillTime, isFuture, isChecked, toggleCheck, openEdit }) {
+function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isFuture, isChecked, toggleCheck, openEdit }) {
   const allDone = slotSupps.every(s => isChecked(slot.id, s.id));
   const [expanded, setExpanded] = useState(!allDone);
   useEffect(() => { setExpanded(!allDone); }, [allDone]);
 
   const SC = {
-    done:   { border: colors.borderSubtle, bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
-    missed: { border: "rgba(249,115,22,0.35)", bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)", badge: { label: "missed", bg: "rgba(124,45,18,0.5)", color: "#fed7aa" } },
-    now:    { border: "rgba(41,48,255,0.45)",  bg: "rgba(41,48,255,0.04)", hbg: "rgba(41,48,255,0.07)", badge: { label: "now",    bg: "rgba(41,48,255,0.18)", color: colors.accent } },
-    future: { border: colors.borderSubtle, bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
+    done:   { border: colors.borderSubtle,        bg: "rgba(255,255,255,0.02)", hbg: "transparent",            badge: null },
+    missed: { border: "rgba(249,115,22,0.35)",    bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)",  badge: { label: "missed", bg: "rgba(124,45,18,0.5)",   color: "#fed7aa" } },
+    now:    { border: "rgba(41,48,255,0.45)",     bg: "rgba(41,48,255,0.04)", hbg: "rgba(41,48,255,0.07)",   badge: { label: "now",    bg: "rgba(41,48,255,0.18)",  color: colors.accent } },
+    future: { border: colors.borderSubtle,        bg: "rgba(255,255,255,0.02)", hbg: "transparent",            badge: null },
   };
   const sc = SC[status];
 
@@ -258,7 +393,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, pillTime, isFuture, isCh
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
-          <span style={{ fontSize: typography.caption, color: pillTime && SLOT_OFFSETS[slot.id] !== null ? slot.color : colors.textMuted, fontVariantNumeric: "tabular-nums", fontWeight: typography.semibold }}>{timeLabel}</span>
+          <span style={{ fontSize: typography.caption, color: pillTime && hasOffset ? slot.color : colors.textMuted, fontVariantNumeric: "tabular-nums", fontWeight: typography.semibold }}>{timeLabel}</span>
           <span style={{ fontSize: typography.caption, color: colors.textMuted, display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>⌃</span>
         </div>
       </div>
@@ -316,6 +451,9 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [notifStatus, setNotifStatus]   = useState(notifOK() ? Notification.permission : "unsupported");
   const [streak, setStreak]             = useState(0);
   const [flashGreen, setFlashGreen]     = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleType, setScheduleType] = useState("medication_anchored");
+  const [slotOffsets, setSlotOffsets]   = useState({ ...DEFAULT_OFFSETS });
   const saveTimer = useRef(null);
 
   const dk       = dateKey(viewDate);
@@ -328,11 +466,16 @@ function ProtocolApp({ user, token, onSignOut }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const s = await dbGetSupps(token);
+      const [s, log, sched] = await Promise.all([
+        dbGetSupps(token),
+        dbGetLog(dk, token),
+        dbGetSchedule(token),
+      ]);
       setSupps(s || []);
-      const log = await dbGetLog(dk, token);
       if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log?.checked)   setChecked(log.checked);
+      if (sched?.offsets)       setSlotOffsets(sched.offsets);
+      if (sched?.schedule_type) setScheduleType(sched.schedule_type);
       setLoading(false);
     })();
   }, [token]);
@@ -370,9 +513,17 @@ function ProtocolApp({ user, token, onSignOut }) {
     setStreak(s);
   }, [checked, pillTimes, supps]);
 
-  const goDay           = (offset) => { const d = new Date(viewDate); d.setDate(d.getDate() + offset); setViewDate(startOfDay(d)); };
-  const setPillForDay   = (t) => setPillTimes(pt => ({ ...pt, [dk]: t }));
-  const getSlotTime     = (sid) => { if (!pillTime || SLOT_OFFSETS[sid] === null) return null; return addMins(parseHHMM(pillTime), SLOT_OFFSETS[sid]); };
+  const goDay         = (offset) => { const d = new Date(viewDate); d.setDate(d.getDate() + offset); setViewDate(startOfDay(d)); };
+  const setPillForDay = (t) => setPillTimes(pt => ({ ...pt, [dk]: t }));
+
+  const getSlotTime = (sid) => {
+    if (!pillTime || sid === "injectable") return null;
+    if (sid === "rx") return parseHHMM(pillTime);
+    const offset = slotOffsets[sid];
+    if (offset === null || offset === undefined) return null;
+    return addMins(parseHHMM(pillTime), offset);
+  };
+
   const slotTimeStr     = (sid) => { const t = getSlotTime(sid); return t ? fmtTime(t) : "--:--"; };
   const toggleCheck     = (sid, suppId) => { const k = `${dk}_${sid}_${suppId}`; setChecked(c => ({ ...c, [k]: !c[k] })); };
   const isChecked       = (sid, suppId) => !!checked[`${dk}_${sid}_${suppId}`];
@@ -384,7 +535,7 @@ function ProtocolApp({ user, token, onSignOut }) {
     setPillForDay(t);
     const rxSupps = supps.filter(s => s.slots.includes("rx") && s.days.includes(viewDay));
     setChecked(c => { const n = { ...c }; rxSupps.forEach(s => { n[`${dk}_rx_${s.id}`] = true; }); return n; });
-    scheduleNotifications(t, supps, viewDay, dk);
+    scheduleNotifications(t, supps, viewDay, dk, slotOffsets);
     setFlashGreen(true); setTimeout(() => setFlashGreen(false), 600);
   };
 
@@ -402,7 +553,6 @@ function ProtocolApp({ user, token, onSignOut }) {
   CORE_SLOTS.forEach(sid => { const sl = getSuppsForSlot(sid); coreTotal += sl.length; sl.forEach(s => { if (isChecked(sid, s.id)) coreDone++; }); });
   const pct = coreTotal > 0 ? Math.round((coreDone / coreTotal) * 100) : 0;
 
-  // Supplement CRUD
   const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6] }); setFormOpen(true); };
   const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days] }); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
@@ -426,10 +576,14 @@ function ProtocolApp({ user, token, onSignOut }) {
     closeForm();
   };
 
+  const saveSchedule = async (type, offsets) => {
+    await dbSaveSchedule({ user_id: user.id, schedule_type: type, offsets }, token);
+    setShowSchedule(false);
+  };
+
   const r = 30, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
   const dayLabel = isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const heroCard = { ...cardStyle, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" };
-
   const navArrow = { width: touch.min, height: touch.min, display: "flex", alignItems: "center", justifyContent: "center", fontSize: typography.title, background: colors.bgCardHover, border: `1px solid ${colors.borderBase}`, cursor: "pointer", color: colors.textSecondary, borderRadius: radius.md, flexShrink: 0 };
 
   if (loading) return <Loader text="Loading your protocol…" />;
@@ -445,7 +599,10 @@ function ProtocolApp({ user, token, onSignOut }) {
           <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center" }}>{dayLabel}</button>
           {!isToday && <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxs }}>tap to return to today</div>}
         </div>
-        <button onClick={() => goDay(1)} style={navArrow}>›</button>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs }}>
+          <button onClick={() => setShowSchedule(true)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid rgba(255,255,255,0.08)`, cursor: "pointer", color: "rgba(255,255,255,0.45)", borderRadius: 8, fontSize: 16 }}>⚙</button>
+          <button onClick={() => goDay(1)} style={navArrow}>›</button>
+        </div>
       </div>
 
       {/* Hero card */}
@@ -477,14 +634,12 @@ function ProtocolApp({ user, token, onSignOut }) {
               </div>
             )}
           </div>
-          {/* Progress ring — 72×72, r=30 */}
           <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0 }}>
             <circle cx="36" cy="36" r={r} fill="none" stroke={colors.borderBase} strokeWidth="5" />
             <circle cx="36" cy="36" r={r} fill="none" stroke={colors.accent} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
             <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={colors.textPrimary} fontSize={typography.caption} fontWeight={typography.bold}>{pct}%</text>
           </svg>
         </div>
-        {/* Footer row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing.xs }}>
           <div>
             {notifStatus === "default"     && <button onClick={async () => { const r = await Notification.requestPermission(); setNotifStatus(r); }} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.full, cursor: "pointer", border: `1px solid ${colors.accentBorder}`, background: colors.accentDim, color: colors.accent, fontWeight: typography.semibold }}>Enable reminders</button>}
@@ -515,13 +670,27 @@ function ProtocolApp({ user, token, onSignOut }) {
           </div>
         ) : SLOTS.map(slot => {
           const slotSupps = getSuppsForSlot(slot.id); if (!slotSupps.length) return null;
-          return <SlotCard key={slot.id} slot={slot} slotSupps={slotSupps} status={slotStatus(slot.id)} timeLabel={SLOT_OFFSETS[slot.id] === null ? "variable" : slotTimeStr(slot.id)} pillTime={pillTime} isFuture={isFuture} isChecked={isChecked} toggleCheck={toggleCheck} openEdit={openEdit} />;
+          const hasOffset = slot.id === "rx"
+            ? !!pillTime
+            : slot.id !== "injectable" && slotOffsets[slot.id] !== null && slotOffsets[slot.id] !== undefined;
+          const timeLabel = slot.id === "injectable" ? "variable" : (hasOffset ? slotTimeStr(slot.id) : "variable");
+          return <SlotCard key={slot.id} slot={slot} slotSupps={slotSupps} status={slotStatus(slot.id)} timeLabel={timeLabel} hasOffset={hasOffset} pillTime={pillTime} isFuture={isFuture} isChecked={isChecked} toggleCheck={toggleCheck} openEdit={openEdit} />;
         })}
       </div>
 
       {/* Modals */}
       <Modal open={formOpen} onClose={closeForm}>
         <EditForm form={form} setForm={setForm} editingId={editingId} onSubmit={submitForm} onCancel={closeForm} onDelete={deleteSupp} />
+      </Modal>
+      <Modal open={showSchedule} onClose={() => setShowSchedule(false)}>
+        <ScheduleModal
+          scheduleType={scheduleType}
+          setScheduleType={setScheduleType}
+          slotOffsets={slotOffsets}
+          setSlotOffsets={setSlotOffsets}
+          onSave={saveSchedule}
+          onClose={() => setShowSchedule(false)}
+        />
       </Modal>
     </div>
   );
