@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
+const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_KEY || "";
 
 async function supa(method, path, body, token) {
   const headers = { "Content-Type": "application/json", "apikey": SUPA_KEY, "Authorization": `Bearer ${token || SUPA_KEY}`, "Prefer": "return=representation" };
@@ -394,7 +395,10 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [notifStatus, setNotifStatus] = useState(notifSupported() ? Notification.permission : "unsupported");
   const [streak, setStreak]         = useState(0);
   const [flashGreen, setFlashGreen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
   const saveTimer = useRef(null);
+  const importPdfRef = useRef(null);
 
   const dk      = dateKey(viewDate);
   const isToday = dateKey(viewDate) === dateKey(TODAY);
@@ -501,6 +505,63 @@ function ProtocolApp({ user, token, onSignOut }) {
     closeForm();
   };
 
+  const handleImportPDF = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true); setImportMsg("");
+    try {
+      const ab = await file.arrayBuffer();
+      const bytes = new Uint8Array(ab); const chunks = [];
+      for (let i = 0; i < bytes.length; i += 8192) chunks.push(String.fromCharCode(...bytes.subarray(i, i+8192)));
+      const b64 = btoa(chunks.join(""));
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514", max_tokens: 2000,
+          system: `You are a supplement protocol parser. Extract all medications and supplements from this document. Return ONLY a raw JSON array, no markdown, no backticks. Each item should have these exact fields:
+- name: string (supplement/medication name including dose in name if specified)
+- dose: string (dosage amount and unit)
+- notes: string (brand, instructions, conditions - keep it short)
+- slots: array of slot IDs from this list only: ["rx", "fasted", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner", "injectable"]
+- days: array of day numbers (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat) - use [0,1,2,3,4,5,6] for daily
+
+Map timing instructions to the closest slot:
+- "empty stomach / fasted / before eating / ayunas" → "fasted"
+- "with breakfast / morning with food" → "breakfast"
+- "before breakfast / 30 min before breakfast" → "pre_breakfast"
+- "with lunch / midday with food" → "lunch"
+- "before lunch / 30 min before lunch" → "pre_lunch"
+- "with dinner / with food" → "dinner"
+- "before dinner" → "pre_dinner"
+- "after dinner / before bed / wind down" → "after_dinner"
+- "injection / injectable / subcutaneous" → "injectable"
+- "Rx / thyroid medication / first thing morning" → "rx"
+
+Example output: [{"name":"Magnesium Glycinate","dose":"300mg","notes":"Thorne · with food","slots":["dinner"],"days":[0,1,2,3,4,5,6]}]`,
+          messages: [{ role: "user", content: [
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } },
+            { type: "text", text: "Extract all supplements and medications. Raw JSON array only." }
+          ]}]
+        })
+      });
+      if (!res.ok) { setImportMsg(`API error ${res.status}`); setImporting(false); return; }
+      const data = await res.json();
+      const txt = data.content.filter(c=>c.type==="text").map(c=>c.text).join("").trim();
+      const parsed = JSON.parse(txt.replace(/^```[a-z]*\n?/,"").replace(/\n?```$/,"").trim());
+      if (!Array.isArray(parsed) || parsed.length === 0) { setImportMsg("No supplements found in PDF."); setImporting(false); return; }
+      const added = [];
+      for (const item of parsed) {
+        const rows = await dbAddSupp({ name:item.name||"", dose:item.dose||"", notes:item.notes||"", slots:Array.isArray(item.slots)?item.slots:[], days:Array.isArray(item.days)?item.days:[0,1,2,3,4,5,6] }, token);
+        if (rows?.[0]) added.push(rows[0]);
+      }
+      setSupps(s => [...s, ...added]);
+      setImportMsg(`✓ ${added.length} supplement${added.length!==1?"s":""} imported`);
+    } catch(err) { setImportMsg("Failed: " + err.message); }
+    setImporting(false);
+  };
+
   const saveLabEntry = async (entries, date) => {
     if (editingLabIdx!==null && labHistory[editingLabIdx]) {
       const existing = labHistory[editingLabIdx];
@@ -597,9 +658,16 @@ function ProtocolApp({ user, token, onSignOut }) {
             </div>
           </div>
 
-          <button onClick={openAdd} style={{width:"100%",padding:"13px",borderRadius:14,cursor:"pointer",border:"1px dashed rgba(74,222,128,0.22)",background:"rgba(74,222,128,0.03)",fontSize:14,fontWeight:600,color:"#4ade80",marginBottom:P}}>
-            + Add supplement or medication
-          </button>
+          <input ref={importPdfRef} type="file" accept="application/pdf" style={{display:"none"}} onChange={handleImportPDF}/>
+          <div style={{display:"flex",gap:8,marginBottom:P}}>
+            <button onClick={openAdd} style={{flex:1,padding:"13px",borderRadius:14,cursor:"pointer",border:"1px dashed rgba(74,222,128,0.22)",background:"rgba(74,222,128,0.03)",fontSize:14,fontWeight:600,color:"#4ade80"}}>
+              + Add supplement
+            </button>
+            <button onClick={()=>importPdfRef.current?.click()} disabled={importing} style={{padding:"13px 16px",borderRadius:14,cursor:importing?"default":"pointer",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",fontSize:14,fontWeight:600,color:importing?"#4a5568":"#8b90a0",whiteSpace:"nowrap"}}>
+              {importing ? "Importing…" : "Import PDF"}
+            </button>
+          </div>
+          {importMsg && <div style={{fontSize:13,color:importMsg.startsWith("✓")?"#4ade80":"#f87171",marginBottom:P,textAlign:"center"}}>{importMsg}</div>}
 
           <div style={{borderRadius:18,border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",padding:P,marginBottom:P}}>
             {supps.length===0 ? (
@@ -607,7 +675,10 @@ function ProtocolApp({ user, token, onSignOut }) {
                 <div style={{fontSize:28,marginBottom:12}}>💊</div>
                 <div style={{fontSize:15,fontWeight:600,color:"#e2e8f0",marginBottom:6}}>Your protocol is empty</div>
                 <div style={{fontSize:13,color:"#4a5568",lineHeight:1.7,marginBottom:20}}>Add your medications and supplements above.<br/>The schedule anchors to when you take your first Rx each morning.</div>
-                <button onClick={openAdd} style={{padding:"11px 24px",borderRadius:12,cursor:"pointer",background:"#4ade80",color:"#0a0a0f",border:"none",fontSize:14,fontWeight:700}}>Add first supplement</button>
+                <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+                  <button onClick={openAdd} style={{padding:"11px 24px",borderRadius:12,cursor:"pointer",background:"#4ade80",color:"#0a0a0f",border:"none",fontSize:14,fontWeight:700}}>Add first supplement</button>
+                  <button onClick={()=>importPdfRef.current?.click()} disabled={importing} style={{padding:"11px 24px",borderRadius:12,cursor:importing?"default":"pointer",background:"transparent",color:importing?"#4a5568":"#8b90a0",border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:600}}>{importing?"Importing…":"Import from PDF"}</button>
+                </div>
               </div>
             ) : SLOTS.map(slot => {
               const slotSupps = getSuppsForSlot(slot.id); if (!slotSupps.length) return null;
