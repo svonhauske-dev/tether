@@ -675,9 +675,9 @@ Example output: [{"name":"Magnesium Glycinate","dose":"300mg","notes":"Thorne ·
                 <div style={{fontSize:28,marginBottom:12}}>💊</div>
                 <div style={{fontSize:15,fontWeight:600,color:"#e2e8f0",marginBottom:6}}>Your protocol is empty</div>
                 <div style={{fontSize:13,color:"#4a5568",lineHeight:1.7,marginBottom:20}}>Add your medications and supplements above.<br/>The schedule anchors to when you take your first Rx each morning.</div>
-                <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-                  <button onClick={openAdd} style={{padding:"11px 24px",borderRadius:12,cursor:"pointer",background:"#4ade80",color:"#0a0a0f",border:"none",fontSize:14,fontWeight:700}}>Add first supplement</button>
-                  <button onClick={()=>importPdfRef.current?.click()} disabled={importing} style={{padding:"11px 24px",borderRadius:12,cursor:importing?"default":"pointer",background:"transparent",color:importing?"#4a5568":"#8b90a0",border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:600}}>{importing?"Importing…":"Import from PDF"}</button>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={openAdd} style={{flex:1,padding:"11px 0",borderRadius:12,cursor:"pointer",background:"#4ade80",color:"#0a0a0f",border:"none",fontSize:14,fontWeight:700}}>Add first supplement</button>
+                  <button onClick={()=>importPdfRef.current?.click()} disabled={importing} style={{flex:1,padding:"11px 0",borderRadius:12,cursor:importing?"default":"pointer",background:"transparent",color:importing?"#4a5568":"#8b90a0",border:"1px solid rgba(255,255,255,0.1)",fontSize:14,fontWeight:600}}>{importing?"Importing…":"Import from PDF"}</button>
                 </div>
               </div>
             ) : SLOTS.map(slot => {
