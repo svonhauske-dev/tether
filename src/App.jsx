@@ -198,7 +198,7 @@ function scheduleNotifications(pt, supps, vd, dk, offsets) {
   if (!pt || Notification.permission !== "granted") return;
   const base = parseHHMM(pt), now = new Date();
   SLOTS.forEach(slot => {
-    if (slot.id === "injectable") return;
+    if (slot.id === "injectable" || slot.id === "topical") return;
     const offset = slot.id === "rx" ? 0 : (offsets?.[slot.id] ?? null);
     if (offset === null) return;
     const t = addMins(base, offset), diff = t - now; if (diff < 0) return;
@@ -601,6 +601,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
   const allDone = slotSupps.every(s => isChecked(slot.id, s.id));
   const [expanded, setExpanded] = useState(!allDone);
   useEffect(() => { setExpanded(!allDone); }, [allDone]);
+  const isVariableSlot = slot.id === "injectable" || slot.id === "topical";
 
   const SC = {
     done:   { border: colors.borderSubtle,          bg: colors.cardSubtle,        hbg: "transparent",                badge: null },
@@ -611,7 +612,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
   const sc = SC[status];
 
   return (
-    <div style={{ marginBottom: spacing.xs, borderRadius: radius.md, border: `1px solid ${sc.border}`, background: sc.bg, overflow: "hidden", opacity: status === "future" && !pillTime ? 0.38 : 1 }}>
+    <div style={{ marginBottom: spacing.xs, borderRadius: radius.md, border: `1px solid ${sc.border}`, background: sc.bg, overflow: "hidden", opacity: status === "future" && !pillTime && !isVariableSlot ? 0.38 : 1 }}>
       <div onClick={() => setExpanded(e => !e)} style={{ padding: `${spacing.sm}px ${spacing.md}px`, display: "flex", justifyContent: "space-between", alignItems: "center", background: sc.hbg, cursor: "pointer", userSelect: "none" }}>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flex: 1, minWidth: 0 }}>
           {allDone
@@ -685,7 +686,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [tmpTime, setTmpTime]               = useState("");
   const [formOpen, setFormOpen]             = useState(false);
   const [editingId, setEditingId]           = useState(null);
-  const [form, setForm]                     = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: "Oral" });
+  const [form, setForm]                     = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: "Oral", timePreference: "Anytime" });
   const [notifStatus, setNotifStatus]       = useState(notifOK() ? Notification.permission : "unsupported");
   const [streak, setStreak]                 = useState(0);
   const [flashGreen, setFlashGreen]         = useState(false);
@@ -724,16 +725,23 @@ function ProtocolApp({ user, token, onSignOut }) {
         dbGetLog(dk, token),
         dbGetSchedule(token),
       ]);
-      const migrated = (s || []).map(supp => {
-        let out = supp.slots?.includes("fasted")
-          ? { ...supp, slots: supp.slots.map(sl => sl === "fasted" ? "pre_breakfast" : sl) }
-          : supp;
+      const migrated = [];
+      const toWrite  = [];
+      for (const supp of (s || [])) {
+        let out = supp;
+        if (out.slots?.includes("fasted")) {
+          out = { ...out, slots: out.slots.map(sl => sl === "fasted" ? "pre_breakfast" : sl) };
+        }
         if ((out.category === "Injectable" || out.category === "Topical") && !out.timePreference) {
           out = { ...out, timePreference: "Anytime" };
         }
-        return out;
-      });
+        migrated.push(out);
+        if (out !== supp) toWrite.push(out);
+      }
       setSupps(migrated);
+      for (const supp of toWrite) {
+        try { await dbUpdateSupp(supp, token); } catch (e) { console.warn("Migration write failed for", supp.id, e); }
+      }
       if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log?.checked)   setChecked(log.checked);
       if (sched?.schedule_type) setScheduleMode(sched.schedule_type);
