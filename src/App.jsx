@@ -909,9 +909,15 @@ function ProtocolApp({ user, token, onSignOut }) {
         <button onClick={() => goDay(1)} style={navArrow}>›</button>
       </div>
 
+      {/* Add row */}
+      <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
+        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.statusNowBg, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.accent, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
+        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.textDisabled, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
+      </div>
+
       {/* Hero card */}
       <div style={heroCard}>
-        <div style={{ display: "flex", alignItems: "center", gap: spacing.md, marginBottom: spacing.md, minHeight: 120 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.md, marginBottom: spacing.md }}>
           <div style={{ flex: 1 }}>
             {scheduleMode === "fixed" ? (
               <div>
@@ -965,12 +971,6 @@ function ProtocolApp({ user, token, onSignOut }) {
             <button onClick={onSignOut} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.md}px`, minHeight: touch.min, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: "transparent", color: colors.textMuted }}>Sign out</button>
           </div>
         </div>
-      </div>
-
-      {/* Add row */}
-      <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
-        <button onClick={openAdd} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px dashed ${colors.accentBorder}`, background: colors.statusNowBg, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.accent, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>+ Add Supplement</button>
-        <button onClick={() => setShowSchedule(true)} style={{ flex: 1, padding: `${spacing.sm}px`, borderRadius: radius.lg, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, fontSize: typography.caption, fontWeight: typography.semibold, color: colors.textDisabled, height: touch.min, minHeight: touch.min, maxHeight: touch.min, letterSpacing: "-0.01em", WebkitTapHighlightColor: "transparent" }}>Edit Schedule</button>
       </div>
 
       {/* Main slot list — injectable category excluded */}
