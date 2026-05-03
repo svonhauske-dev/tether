@@ -106,7 +106,7 @@ export const inputStyle = {
   padding: `${spacing.sm}px ${spacing.md}px`,
   borderRadius: radius.sm,
   border: `1px solid ${colors.borderStrong}`,
-  fontSize: typography.body,
+  fontSize: 16,
   boxSizing: "border-box",
   background: colors.bgInput,
   color: colors.textPrimary,

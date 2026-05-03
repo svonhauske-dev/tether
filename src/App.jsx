@@ -86,23 +86,35 @@ const SLOTS = [
   { id: "injectable",    label: "Injectables",       sublabel: "Subcutaneous",                icon: "⊕", color: colors.slotInjectable },
 ];
 
-const DEFAULT_OFFSETS = {
-  fasted: 30, pre_breakfast: 45, breakfast: 60,
-  pre_lunch: 330, lunch: 360, pre_dinner: 510,
-  dinner: 540, after_dinner: 660,
+const DEFAULT_CONFIG = {
+  fasted: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660, pre_meal_window: 30,
 };
+
+function deriveOffsets(cfg) {
+  return {
+    fasted:        cfg.fasted,
+    pre_breakfast: cfg.breakfast != null ? cfg.breakfast - cfg.pre_meal_window : null,
+    breakfast:     cfg.breakfast,
+    pre_lunch:     cfg.lunch != null    ? cfg.lunch    - cfg.pre_meal_window : null,
+    lunch:         cfg.lunch,
+    pre_dinner:    cfg.dinner != null   ? cfg.dinner   - cfg.pre_meal_window : null,
+    dinner:        cfg.dinner,
+    after_dinner:  cfg.after_dinner,
+    injectable:    null,
+  };
+}
 
 const CORE_SLOTS = ["rx", "fasted", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-const pad       = (n) => String(n).padStart(2, "0");
-const fmtTime   = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const addMins   = (d, m) => new Date(d.getTime() + m * 60000);
-const parseHHMM = (s) => { const [h, m] = s.split(":"); const d = new Date(); d.setHours(+h, +m, 0, 0); return d; };
-const dateKey   = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const pad        = (n) => String(n).padStart(2, "0");
+const fmtTime    = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const addMins    = (d, m) => new Date(d.getTime() + m * 60000);
+const parseHHMM  = (s) => { const [h, m] = s.split(":"); const d = new Date(); d.setHours(+h, +m, 0, 0); return d; };
+const dateKey    = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const startOfDay = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
-const notifOK   = () => "Notification" in window;
+const notifOK    = () => "Notification" in window;
 
 const TODAY = startOfDay(new Date());
 
@@ -146,7 +158,8 @@ function SignIn({ onSignIn }) {
     else setMsg(mode === "signin" ? "Invalid email or password." : "Could not create account — try again.");
   };
 
-  const si = { ...inputStyle, textAlign: "center", fontSize: typography.title };
+  // fontSize: 16 enforced — prevents iOS zoom on focus
+  const si = { ...inputStyle, textAlign: "center", fontSize: 16 };
 
   return (
     <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", background: `linear-gradient(160deg,${colors.bgBase} 0%,#0a0f1e 50%,#060a12 100%)`, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
@@ -239,21 +252,18 @@ const SCHEDULE_TYPES = [
 ];
 
 const TEMPLATES = [
-  { label: "Thyroid Protocol", offsets: { fasted: 30, pre_breakfast: null, breakfast: 60, pre_lunch: 330, lunch: 360, pre_dinner: 510, dinner: 540, after_dinner: 660 } },
-  { label: "16:8 Fasting",     offsets: { fasted: null, pre_breakfast: null, breakfast: 240, pre_lunch: null, lunch: 480, pre_dinner: null, dinner: 720, after_dinner: 840 } },
-  { label: "18:6 Fasting",     offsets: { fasted: null, pre_breakfast: null, breakfast: 300, pre_lunch: null, lunch: 540, pre_dinner: null, dinner: 780, after_dinner: 900 } },
-  { label: "3 Meals",          offsets: { fasted: null, pre_breakfast: 30, breakfast: 60, pre_lunch: 270, lunch: 300, pre_dinner: 510, dinner: 540, after_dinner: 660 } },
+  { label: "Thyroid Protocol", config: { fasted: 30,   breakfast: 60,  lunch: 300, dinner: 540, after_dinner: 660, pre_meal_window: 30 } },
+  { label: "16:8 Fasting",     config: { fasted: null, breakfast: 240, lunch: 480, dinner: 720, after_dinner: 840, pre_meal_window: 30 } },
+  { label: "18:6 Fasting",     config: { fasted: null, breakfast: 300, lunch: 540, dinner: 780, after_dinner: 900, pre_meal_window: 30 } },
+  { label: "3 Meals",          config: { fasted: null, breakfast: 60,  lunch: 300, dinner: 540, after_dinner: 660, pre_meal_window: 30 } },
 ];
 
-const OFFSET_SLOTS = [
-  { id: "fasted",        label: "Fasted" },
-  { id: "pre_breakfast", label: "Before Breakfast" },
-  { id: "breakfast",     label: "With Breakfast" },
-  { id: "pre_lunch",     label: "Before Lunch" },
-  { id: "lunch",         label: "With Lunch" },
-  { id: "pre_dinner",    label: "Before Dinner" },
-  { id: "dinner",        label: "With Dinner" },
-  { id: "after_dinner",  label: "After Dinner" },
+const MEAL_ROWS = [
+  { key: "fasted",       label: "Fasted window", nullable: true },
+  { key: "breakfast",    label: "Breakfast" },
+  { key: "lunch",        label: "Lunch" },
+  { key: "dinner",       label: "Dinner" },
+  { key: "after_dinner", label: "Evening" },
 ];
 
 function toHrMin(totalMins) {
@@ -262,39 +272,37 @@ function toHrMin(totalMins) {
 }
 function fromHrMin(h, m) { return (parseInt(h) || 0) * 60 + (parseInt(m) || 0); }
 
-function ScheduleModal({ scheduleType, setScheduleType, slotOffsets, setSlotOffsets, onSave, onClose }) {
-  const [localType, setLocalType]             = useState(scheduleType);
-  const [localOffsets, setLocalOffsets]       = useState({ ...slotOffsets });
+// Shared style for small number inputs — fontSize 16 prevents iOS zoom
+const numInputStyle = { ...inputStyle, width: 52, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: 16 };
+
+function ScheduleModal({ scheduleType, setScheduleType, scheduleConfig, setScheduleConfig, onSave, onClose }) {
+  const [localType, setLocalType]               = useState(scheduleType);
+  const [localConfig, setLocalConfig]           = useState({ ...scheduleConfig });
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [showCustom, setShowCustom]           = useState(false);
 
-  const applyTemplate = (tmpl) => {
-    setLocalOffsets({ ...tmpl.offsets });
-    setSelectedTemplate(tmpl.label);
-    setShowCustom(false);
-  };
+  const applyTemplate = (tmpl) => { setLocalConfig({ ...tmpl.config }); setSelectedTemplate(tmpl.label); };
 
-  const updateOffset = (sid, totalMins) => {
-    setLocalOffsets(o => ({ ...o, [sid]: totalMins }));
+  const updateConfig = (key, value) => {
+    setLocalConfig(c => ({ ...c, [key]: value }));
     setSelectedTemplate("custom");
   };
 
   const handleSave = () => {
     setScheduleType(localType);
-    setSlotOffsets(localOffsets);
-    onSave(localType, localOffsets);
+    setScheduleConfig(localConfig);
+    onSave(localType, localConfig);
   };
 
+  const derived = deriveOffsets(localConfig);
   const previewBase = parseHHMM("07:00");
   const previewRows = [
     { label: "Anchor Medication", offset: 0 },
-    ...OFFSET_SLOTS.map(s => ({ label: s.label, offset: localOffsets[s.id] })),
-  ].filter(r => r.offset !== null && r.offset !== undefined)
-   .sort((a, b) => a.offset - b.offset);
+    ...Object.entries(derived)
+      .filter(([, v]) => v !== null && v !== undefined)
+      .map(([sid, offset]) => ({ label: SLOTS.find(s => s.id === sid)?.label ?? sid, offset })),
+  ].sort((a, b) => a.offset - b.offset);
 
-  const showEditor = showCustom || selectedTemplate === "custom" || localType === "medication_anchored";
-
-  const chipActive = (name) => selectedTemplate === name;
+  const chipOn = (name) => selectedTemplate === name;
 
   return (
     <div>
@@ -325,57 +333,69 @@ function ScheduleModal({ scheduleType, setScheduleType, slotOffsets, setSlotOffs
         <label style={labelStyle}>Templates</label>
         <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
           {TEMPLATES.map(tmpl => {
-            const on = chipActive(tmpl.label);
+            const on = chipOn(tmpl.label);
             return (
               <button key={tmpl.label} onClick={() => applyTemplate(tmpl)} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: on ? colors.accentDim : "transparent", color: on ? colors.accent : colors.textSecondary, border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, fontWeight: on ? typography.semibold : typography.medium }}>
                 {tmpl.label}
               </button>
             );
           })}
-          {(() => { const on = chipActive("custom") || showCustom; return (
-            <button onClick={() => { setShowCustom(s => !s); if (!showCustom) setSelectedTemplate("custom"); }} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: on ? colors.accentDim : "transparent", color: on ? colors.accent : colors.textSecondary, border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, fontWeight: on ? typography.semibold : typography.medium }}>
+          {(() => { const on = chipOn("custom"); return (
+            <button onClick={() => { if (!on) { setSelectedTemplate("custom"); } else { setSelectedTemplate(null); } }} style={{ fontSize: typography.caption, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.full, cursor: "pointer", background: on ? colors.accentDim : "transparent", color: on ? colors.accent : colors.textSecondary, border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, fontWeight: on ? typography.semibold : typography.medium }}>
               Custom
             </button>
           ); })()}
         </div>
       </div>
 
-      {/* Offset editor */}
-      {showEditor && (
-        <div style={{ marginBottom: spacing.lg }}>
-          <label style={labelStyle}>Time after anchor medication</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
-            {OFFSET_SLOTS.map(s => {
-              const total = localOffsets[s.id];
-              const { h, m } = toHrMin(total === null || total === undefined ? null : total);
-              const isEmpty = total === null || total === undefined;
-              return (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: spacing.sm, padding: `${spacing.xs}px ${spacing.md}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
-                  <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{s.label}</span>
-                  <input
-                    type="number"
-                    min="0" max="23"
-                    value={isEmpty ? "" : h}
-                    onChange={e => updateOffset(s.id, e.target.value === "" ? null : fromHrMin(e.target.value, isEmpty ? 0 : m))}
-                    placeholder="0"
-                    style={{ ...inputStyle, width: 52, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.caption }}
-                  />
-                  <span style={{ fontSize: typography.label, color: colors.textMuted }}>hr</span>
-                  <input
-                    type="number"
-                    min="0" max="59"
-                    value={isEmpty ? "" : m}
-                    onChange={e => updateOffset(s.id, e.target.value === "" ? null : fromHrMin(isEmpty ? 0 : h, e.target.value))}
-                    placeholder="0"
-                    style={{ ...inputStyle, width: 52, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.caption }}
-                  />
-                  <span style={{ fontSize: typography.label, color: colors.textMuted }}>min</span>
-                </div>
-              );
-            })}
-          </div>
+      {/* Meal schedule editor */}
+      <div style={{ marginBottom: spacing.md }}>
+        <label style={labelStyle}>Meal schedule</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+          {MEAL_ROWS.map(({ key, label, nullable }) => {
+            const total = localConfig[key];
+            const isEmpty = total === null || total === undefined;
+            const { h, m } = toHrMin(isEmpty ? 0 : total);
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+                <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
+                <input
+                  type="number" min="0" max="23"
+                  value={isEmpty ? "" : h}
+                  onChange={e => updateConfig(key, e.target.value === "" ? (nullable ? null : 0) : fromHrMin(e.target.value, isEmpty ? 0 : m))}
+                  placeholder="0"
+                  style={numInputStyle}
+                />
+                <span style={{ fontSize: typography.label, color: colors.textMuted }}>hr</span>
+                <input
+                  type="number" min="0" max="59"
+                  value={isEmpty ? "" : m}
+                  onChange={e => updateConfig(key, e.target.value === "" ? (nullable ? null : 0) : fromHrMin(isEmpty ? 0 : h, e.target.value))}
+                  placeholder="0"
+                  style={numInputStyle}
+                />
+                <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: 60 }}>after anchor</span>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {/* Pre-meal window */}
+      <div style={{ marginBottom: spacing.lg }}>
+        <label style={labelStyle}>Pre-meal window</label>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md, background: colors.bgCard, border: `1px solid ${colors.borderSubtle}` }}>
+          <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Take pre-meal supplements</span>
+          <input
+            type="number" min="0" max="120"
+            value={localConfig.pre_meal_window ?? 30}
+            onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
+            style={numInputStyle}
+          />
+          <span style={{ fontSize: typography.label, color: colors.textMuted }}>min before eating</span>
+        </div>
+        <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>applies to all meals</div>
+      </div>
 
       {/* Live preview */}
       <div style={{ marginBottom: spacing.lg }}>
@@ -404,10 +424,10 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
   useEffect(() => { setExpanded(!allDone); }, [allDone]);
 
   const SC = {
-    done:   { border: colors.borderSubtle,        bg: "rgba(255,255,255,0.02)", hbg: "transparent",            badge: null },
-    missed: { border: "rgba(249,115,22,0.35)",    bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)",  badge: { label: "missed", bg: "rgba(124,45,18,0.5)",   color: "#fed7aa" } },
-    now:    { border: "rgba(41,48,255,0.45)",     bg: "rgba(41,48,255,0.04)", hbg: "rgba(41,48,255,0.07)",   badge: { label: "now",    bg: "rgba(41,48,255,0.18)",  color: colors.accent } },
-    future: { border: colors.borderSubtle,        bg: "rgba(255,255,255,0.02)", hbg: "transparent",            badge: null },
+    done:   { border: colors.borderSubtle,     bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
+    missed: { border: "rgba(249,115,22,0.35)", bg: "rgba(249,115,22,0.05)", hbg: "rgba(249,115,22,0.07)", badge: { label: "missed", bg: "rgba(124,45,18,0.5)",  color: "#fed7aa" } },
+    now:    { border: "rgba(41,48,255,0.45)",  bg: "rgba(41,48,255,0.04)", hbg: "rgba(41,48,255,0.07)",  badge: { label: "now",    bg: "rgba(41,48,255,0.18)", color: colors.accent } },
+    future: { border: colors.borderSubtle,     bg: "rgba(255,255,255,0.02)", hbg: "transparent",           badge: null },
   };
   const sc = SC[status];
 
@@ -473,23 +493,25 @@ export default function App() {
 // ── ProtocolApp ───────────────────────────────────────────────────────────────
 
 function ProtocolApp({ user, token, onSignOut }) {
-  const [supps, setSupps]               = useState([]);
-  const [pillTimes, setPillTimes]       = useState({});
-  const [checked, setChecked]           = useState({});
-  const [loading, setLoading]           = useState(true);
-  const [viewDate, setViewDate]         = useState(TODAY);
-  const [editPillTime, setEditPillTime] = useState(false);
-  const [tmpTime, setTmpTime]           = useState("");
-  const [formOpen, setFormOpen]         = useState(false);
-  const [editingId, setEditingId]       = useState(null);
-  const [form, setForm]                 = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6] });
-  const [notifStatus, setNotifStatus]   = useState(notifOK() ? Notification.permission : "unsupported");
-  const [streak, setStreak]             = useState(0);
-  const [flashGreen, setFlashGreen]     = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [scheduleType, setScheduleType] = useState("medication_anchored");
-  const [slotOffsets, setSlotOffsets]   = useState({ ...DEFAULT_OFFSETS });
+  const [supps, setSupps]                 = useState([]);
+  const [pillTimes, setPillTimes]         = useState({});
+  const [checked, setChecked]             = useState({});
+  const [loading, setLoading]             = useState(true);
+  const [viewDate, setViewDate]           = useState(TODAY);
+  const [editPillTime, setEditPillTime]   = useState(false);
+  const [tmpTime, setTmpTime]             = useState("");
+  const [formOpen, setFormOpen]           = useState(false);
+  const [editingId, setEditingId]         = useState(null);
+  const [form, setForm]                   = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6] });
+  const [notifStatus, setNotifStatus]     = useState(notifOK() ? Notification.permission : "unsupported");
+  const [streak, setStreak]               = useState(0);
+  const [flashGreen, setFlashGreen]       = useState(false);
+  const [showSchedule, setShowSchedule]   = useState(false);
+  const [scheduleType, setScheduleType]   = useState("medication_anchored");
+  const [scheduleConfig, setScheduleConfig] = useState({ ...DEFAULT_CONFIG });
   const saveTimer = useRef(null);
+
+  const slotOffsets = deriveOffsets(scheduleConfig);
 
   const dk       = dateKey(viewDate);
   const isToday  = dateKey(viewDate) === dateKey(TODAY);
@@ -509,7 +531,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       setSupps(s || []);
       if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log?.checked)   setChecked(log.checked);
-      if (sched?.offsets)       setSlotOffsets(sched.offsets);
+      if (sched?.offsets)       setScheduleConfig(sched.offsets);
       if (sched?.schedule_type) setScheduleType(sched.schedule_type);
       setLoading(false);
     })();
@@ -611,8 +633,8 @@ function ProtocolApp({ user, token, onSignOut }) {
     closeForm();
   };
 
-  const saveSchedule = async (type, offsets) => {
-    await dbSaveSchedule({ user_id: user.id, schedule_type: type, offsets }, token);
+  const saveSchedule = async (type, config) => {
+    await dbSaveSchedule({ user_id: user.id, schedule_type: type, offsets: config }, token);
     setShowSchedule(false);
   };
 
@@ -656,7 +678,7 @@ function ProtocolApp({ user, token, onSignOut }) {
                 <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacing, textTransform: "uppercase", marginBottom: spacing.xxs }}>Started at</div>
                 {editPillTime ? (
                   <div style={{ display: "flex", gap: spacing.xs, alignItems: "center" }}>
-                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: typography.body, padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.sm, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, color: colors.textPrimary }} />
+                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: 16, padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.sm, border: `1px solid ${colors.borderStrong}`, background: colors.bgCardHover, color: colors.textPrimary }} />
                     <button onClick={() => { setPillForDay(tmpTime); setEditPillTime(false); }} style={{ ...ghostButtonStyle, width: "auto", borderRadius: radius.sm }}>Save</button>
                   </div>
                 ) : (
@@ -721,8 +743,8 @@ function ProtocolApp({ user, token, onSignOut }) {
         <ScheduleModal
           scheduleType={scheduleType}
           setScheduleType={setScheduleType}
-          slotOffsets={slotOffsets}
-          setSlotOffsets={setSlotOffsets}
+          scheduleConfig={scheduleConfig}
+          setScheduleConfig={setScheduleConfig}
           onSave={saveSchedule}
           onClose={() => setShowSchedule(false)}
         />
