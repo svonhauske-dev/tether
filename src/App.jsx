@@ -442,7 +442,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   if (loading) return <Loader text="Loading your protocol…" />;
 
   return (
-    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", color: "#fff", maxWidth: 480, margin: "0 auto", padding: `20px ${P} 80px`, WebkitFontSmoothing: "antialiased", background: "linear-gradient(160deg,#080b14 0%,#0a0f1e 50%,#060a12 100%)", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", color: "#fff", maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${P} max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: "linear-gradient(160deg,#080b14 0%,#0a0f1e 50%,#060a12 100%)", minHeight: "100vh" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: P }}>
