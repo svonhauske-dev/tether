@@ -173,6 +173,7 @@ async function callAnthropic(system, b64) {
       }],
     }),
   });
+  console.log("Anthropic response status:", res.status, await res.clone().text());
   if (!res.ok) throw new Error(`Anthropic error ${res.status}`);
   const data = await res.json();
   const txt = data.content.filter(c => c.type === "text").map(c => c.text).join("").trim();
