@@ -1,11 +1,12 @@
-import { colors, spacing, typography } from "../design-system";
+import { colors, spacing } from "../design-system";
 import Button from "./Button";
+import Label from "./Label";
 import BottomSheet from "./BottomSheet";
 
 export default function SettingsModal({ open, onClose, notifStatus, onEnableNotifications, onSignOut }) {
   return (
     <BottomSheet open={open} onClose={onClose} title="Settings">
-      <div style={{ fontSize: typography.label, color: colors.textSecondary, fontWeight: typography.semibold, letterSpacing: typography.labelSpacing, textTransform: "uppercase", marginBottom: spacing.sm }}>Notifications</div>
+      <Label style={{ marginBottom: spacing.sm }}>Notifications</Label>
       {notifStatus === "default" && (
         <Button variant="secondary" secondaryStyle="solid" fullWidth onClick={onEnableNotifications}>Enable reminders</Button>
       )}

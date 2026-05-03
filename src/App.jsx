@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import {
   colors, spacing, radius, typography, touch, layout,
-  cardStyle, inputStyle, labelStyle, ghostButtonStyle, badgeStyle,
+  ghostButtonStyle,
 } from "./design-system";
 import { Settings } from "lucide-react";
 import Button from "./components/Button";
+import Input from "./components/Input";
+import Card from "./components/Card";
+import Badge from "./components/Badge";
+import Label from "./components/Label";
 import BottomSheet from "./components/BottomSheet";
 import SettingsModal from "./components/SettingsModal";
 
@@ -230,16 +234,14 @@ function SignIn({ onSignIn }) {
     else setMsg(mode === "signin" ? "Invalid email or password." : "Could not create account — try again.");
   };
 
-  const si = { ...inputStyle, textAlign: "center", fontSize: typography.body };
-
   return (
     <div style={{ fontFamily: typography.fontBody, background: BG_GRADIENT, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
       <div style={{ width: "100%", maxWidth: 360, textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
         <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Protocol Tracker</div>
         <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />built around your life.</div>
-        <input value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" type="email" style={si} />
-        <input value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" type="password" style={{ ...si, marginTop: spacing.xs }} />
+        <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" style={{ textAlign: "center" }} />
+        <Input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" style={{ textAlign: "center", marginTop: spacing.xs }} />
         <Button variant="primary" fullWidth onClick={handleSubmit} disabled={loading} style={{ marginTop: spacing.md }}>
           {loading ? "…" : mode === "signin" ? "Sign in" : "Create account"}
         </Button>
@@ -271,12 +273,12 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
     <div>
       {[["Name", "name", "e.g. Magnesium Glycinate"], ["Dose", "dose", "e.g. 2 caps (300 mg)"], ["Notes", "notes", "e.g. Thorne · with food"]].map(([lbl, key, ph]) => (
         <div key={key} style={{ marginBottom: spacing.md }}>
-          <label style={labelStyle}>{lbl}</label>
-          <input style={inputStyle} value={form[key]} placeholder={ph} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+          <Label>{lbl}</Label>
+          <Input value={form[key]} placeholder={ph} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
         </div>
       ))}
       <div style={{ marginBottom: spacing.md }}>
-        <label style={labelStyle}>Category</label>
+        <Label>Category</Label>
         <div style={{ display: "flex", gap: spacing.xs }}>
           {CATEGORIES.map(cat => {
             const on = form.category === cat;
@@ -298,7 +300,7 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
       </div>
       {(form.category === "Injectable" || form.category === "Topical") ? (
         <div style={{ marginBottom: spacing.md }}>
-          <label style={labelStyle}>When to take it</label>
+          <Label>When to take it</Label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
             {["Morning", "Midday", "Evening", "Before Bed", "Anytime"].map(pref => {
               const on = form.timePreference === pref;
@@ -312,7 +314,7 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
         </div>
       ) : (
         <div style={{ marginBottom: spacing.md }}>
-          <label style={labelStyle}>When to take it</label>
+          <Label>When to take it</Label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
             {SLOTS.filter(s => s.id !== "injectable" && s.id !== "topical").map(slot => {
               const on = form.slots.includes(slot.id);
@@ -326,11 +328,11 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
         </div>
       )}
       <div style={{ marginBottom: spacing.lg }}>
-        <label style={labelStyle}>Which days</label>
+        <Label>Which days</Label>
         <div style={{ display: "flex", gap: spacing.xs }}>
-          {DAYS.map((d, i) => { const on = form.days.includes(i); return (
-            <button key={i} onClick={() => toggleDay(i)} style={{ width: 36, height: 36, borderRadius: radius.full, fontSize: typography.label, cursor: "pointer", fontWeight: typography.semibold, background: on ? colors.accent : "transparent", color: on ? colors.textPrimary : colors.textSecondary, border: `1px solid ${on ? colors.accent : colors.borderStrong}`, padding: 0, flexShrink: 0 }}>{d[0]}</button>
-          ); })}
+          {DAYS.map((d, i) => (
+            <Button key={i} variant="circle" active={form.days.includes(i)} onClick={() => toggleDay(i)}>{d[0]}</Button>
+          ))}
         </div>
       </div>
       {editingId && <Button variant="destructive" fullWidth onClick={onDelete} style={{ marginBottom: spacing.xs }}>Delete supplement</Button>}
@@ -346,14 +348,6 @@ function toHrMin(totalMins) {
   return { h: Math.floor(totalMins / 60), m: totalMins % 60 };
 }
 function fromHrMin(h, m) { return (parseInt(h) || 0) * 60 + (parseInt(m) || 0); }
-
-const numInputStyle = { ...inputStyle, width: 52, textAlign: "right", padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.body };
-
-const scheduleRowStyle = {
-  display: "flex", alignItems: "center", gap: spacing.xs,
-  padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md,
-  background: colors.bgCard, border: `1px solid ${colors.borderSubtle}`,
-};
 
 const segBtnStyle = (on) => ({
   flex: 1,
@@ -420,15 +414,15 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
     <div>
       {/* 2×2 mode grid */}
       <div style={{ marginBottom: spacing.lg }}>
-        <label style={labelStyle}>Schedule type</label>
+        <Label>Schedule type</Label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.xs }}>
           {MODES.map(m => {
             const on = localMode === m.id;
             return (
-              <button key={m.id} onClick={() => setLocalMode(m.id)} style={{ textAlign: "left", padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.md, cursor: "pointer", background: on ? colors.accentDim : "transparent", border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, display: "flex", flexDirection: "column", gap: spacing.xxs, minHeight: layout.modeButtonHeight }}>
+              <Card key={m.id} onClick={() => setLocalMode(m.id)} style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: spacing.xxs, minHeight: layout.modeButtonHeight, background: on ? colors.accentDim : "transparent", border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, marginBottom: 0 }}>
                 <span style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: on ? colors.accent : colors.textPrimary }}>{m.title}</span>
                 <span style={{ fontSize: typography.label, color: colors.textMuted, lineHeight: 1.4 }}>{m.desc}</span>
-              </button>
+              </Card>
             );
           })}
         </div>
@@ -436,15 +430,15 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
 
       {/* Anchor note */}
       {localMode !== "fixed" && (
-        <div style={{ marginBottom: spacing.md, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm, background: colors.accentDim, border: `1px solid ${colors.accentBorder}`, fontSize: typography.label, color: colors.accent }}>
+        <Card variant="accent" style={{ padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm, fontSize: typography.label, color: colors.accent, marginBottom: spacing.md }}>
           {ANCHOR_NOTES[localMode]}
-        </div>
+        </Card>
       )}
 
       {/* Flexible / Consistent toggle (non-fixed modes) */}
       {localMode !== "fixed" && (
         <div style={{ marginBottom: spacing.md }}>
-          <label style={labelStyle}>Daily timing</label>
+          <Label>Daily timing</Label>
           <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.xs }}>
             {[["flexible", "Flexible"], ["consistent", "Consistent"]].map(([val, label]) => {
               const on = localBehavior === val;
@@ -460,11 +454,8 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
           </div>
           {localBehavior === "consistent" && (
             <div style={{ marginTop: spacing.sm }}>
-              <label style={labelStyle}>Start time</label>
-              <input type="time" value={localTime} onChange={e => setLocalTime(e.target.value)}
-                style={{ fontSize: typography.body, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.md,
-                  border: `1px solid ${colors.borderStrong}`, background: colors.bgInput,
-                  color: colors.textPrimary, width: "100%", boxSizing: "border-box", outline: "none" }} />
+              <Label>Start time</Label>
+              <Input variant="time" value={localTime} onChange={e => setLocalTime(e.target.value)} />
             </div>
           )}
         </div>
@@ -474,48 +465,45 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
       {isOffsetMode && (
         <>
           <div style={{ marginBottom: spacing.md }}>
-            <label style={labelStyle}>Meal schedule</label>
+            <Label>Meal schedule</Label>
             <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
               {mealRows.map(({ key, label }) => {
                 const total   = localConfig[key];
                 const isEmpty = total === null || total === undefined;
                 const { h, m } = toHrMin(isEmpty ? 0 : total);
                 return (
-                  <div key={key} style={scheduleRowStyle}>
+                  <Card key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
                     <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
-                    <input
-                      type="number" min="0" max="23"
+                    <Input
+                      variant="number" width={52} min="0" max="23"
                       value={isEmpty ? "" : h}
                       onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(e.target.value, isEmpty ? 0 : m))}
                       placeholder="0"
-                      style={numInputStyle}
                     />
                     <span style={{ fontSize: typography.label, color: colors.textMuted }}>hr</span>
-                    <input
-                      type="number" min="0" max="59"
+                    <Input
+                      variant="number" width={52} min="0" max="59"
                       value={isEmpty ? "" : m}
                       onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(isEmpty ? 0 : h, e.target.value))}
                       placeholder="0"
-                      style={numInputStyle}
                     />
                     <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: 60 }}>after anchor</span>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
           </div>
           <div style={{ marginBottom: spacing.lg }}>
-            <label style={labelStyle}>Pre-meal window</label>
-            <div style={scheduleRowStyle}>
+            <Label>Pre-meal window</Label>
+            <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Take pre-meal supplements</span>
-              <input
-                type="number" min="0" max="120"
+              <Input
+                variant="number" width={52} min="0" max="120"
                 value={localConfig.pre_meal_window ?? 30}
                 onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
-                style={numInputStyle}
               />
               <span style={{ fontSize: typography.label, color: colors.textMuted }}>min before eating</span>
-            </div>
+            </Card>
             <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>applies to all meals</div>
           </div>
         </>
@@ -525,7 +513,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
       {localMode === "fasting" && (
         <div style={{ marginBottom: spacing.lg }}>
           <div style={{ marginBottom: spacing.md }}>
-            <label style={labelStyle}>Window length</label>
+            <Label>Window length</Label>
             <div style={{ display: "flex", gap: spacing.xs }}>
               {[[240, "4 hr"], [360, "6 hr"], [480, "8 hr"]].map(([val, lbl]) => {
                 const on = (localConfig.window_length ?? 480) === val;
@@ -534,7 +522,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
             </div>
           </div>
           <div style={{ marginBottom: spacing.md }}>
-            <label style={labelStyle}>Meals per day</label>
+            <Label>Meals per day</Label>
             <div style={{ display: "flex", gap: spacing.xs }}>
               {[[2, "2 meals"], [3, "3 meals"]].map(([val, lbl]) => {
                 const on = (localConfig.meals_per_day ?? 2) === val;
@@ -542,11 +530,11 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
               })}
             </div>
           </div>
-          <div style={scheduleRowStyle}>
+          <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
             <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal supplements</span>
-            <input type="number" min="0" max="120" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)} style={numInputStyle} />
+            <Input variant="number" width={52} min="0" max="120" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)} />
             <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: 60 }}>min before</span>
-          </div>
+          </Card>
           <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>How many minutes before each meal to take pre-meal supplements</div>
         </div>
       )}
@@ -554,18 +542,18 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
       {/* Fixed: time pickers */}
       {localMode === "fixed" && (
         <div style={{ marginBottom: spacing.lg }}>
-          <label style={labelStyle}>Fixed times</label>
+          <Label>Fixed times</Label>
           <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
             {FIXED_SLOTS.map(({ key, label }) => (
-              <div key={key} style={scheduleRowStyle}>
+              <Card key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
                 <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
-                <input
-                  type="time"
+                <Input
+                  variant="time"
                   value={localConfig.fixed_times?.[key] || ""}
                   onChange={e => updateFixed(key, e.target.value)}
-                  style={{ background: colors.bgInput, color: colors.textPrimary, border: `1px solid ${colors.borderStrong}`, borderRadius: radius.sm, fontSize: typography.body, padding: `${spacing.xs}px ${spacing.sm}px`, outline: "none" }}
+                  style={{ width: "auto" }}
                 />
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -573,7 +561,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
 
       {/* Live preview */}
       <div style={{ marginBottom: spacing.lg }}>
-        <label style={labelStyle}>{localMode === "fixed" ? "Schedule preview" : "Preview (7:00 am anchor)"}</label>
+        <Label>{localMode === "fixed" ? "Schedule preview" : "Preview (7:00 am anchor)"}</Label>
         <div style={{ borderRadius: radius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.bgCard, padding: spacing.md, display: "flex", flexDirection: "column", gap: spacing.xs }}>
           {previewRows.length === 0
             ? <span style={{ fontSize: typography.caption, color: colors.textMuted }}>No times configured yet</span>
@@ -622,7 +610,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: allDone ? colors.textMuted : colors.textPrimary, display: "flex", alignItems: "center", gap: spacing.xs }}>
               {slot.label}
-              {sc.badge && <span style={badgeStyle(sc.badge.bg, sc.badge.color)}>{sc.badge.label}</span>}
+              {sc.badge && <Badge variant={sc.badge.label === "now" ? "now" : "missed"}>{sc.badge.label}</Badge>}
             </div>
             <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2, minHeight: 16 }}>{allDone && !expanded ? `${slotSupps.length} supplement${slotSupps.length !== 1 ? "s" : ""} done` : slot.sublabel}</div>
           </div>
@@ -644,9 +632,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: typography.body, color: done ? colors.textDone : colors.textPrimary, textDecoration: done ? "line-through" : "none", fontWeight: done ? typography.regular : typography.medium, display: "flex", alignItems: "center", gap: spacing.xxs }}>
                     {supp.name}
-                    {supp.category === "Rx" && (
-                      <span style={{ fontSize: typography.label, background: colors.accentDim, color: colors.accent, borderRadius: radius.xs, padding: "1px 5px", fontWeight: typography.semibold, letterSpacing: "0.04em", flexShrink: 0 }}>Rx</span>
-                    )}
+                    {supp.category === "Rx" && <Badge variant="category">Rx</Badge>}
                   </div>
                   <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: 2, minHeight: 14 }}>{supp.dose}{supp.notes ? " · " + supp.notes : ""}</div>
                 </div>
@@ -896,8 +882,6 @@ function ProtocolApp({ user, token, onSignOut }) {
   const r = 30, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
   const dayLabel   = isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const shortDate  = viewDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const heroCard   = { ...cardStyle, padding: `${spacing.sm}px ${spacing.md}px`, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" };
-
   // Hero state helpers
   const isConsistent   = anchorBehavior === "consistent";
   const heroHasTime    = pillTime != null || isConsistent;
@@ -934,24 +918,24 @@ function ProtocolApp({ user, token, onSignOut }) {
       </div>
 
       {/* Hero card */}
-      <div style={heroCard}>
+      <Card style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
           <div style={{ flex: 1 }}>
             {scheduleMode === "fixed" ? (
               <div>
-                <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacing, textTransform: "uppercase", marginBottom: spacing.xxs }}>Fixed schedule</div>
+                <Label style={{ color: colors.textMuted, marginBottom: spacing.xxs }}>Fixed schedule</Label>
                 <div style={{ fontSize: typography.title, fontWeight: typography.bold, color: colors.textPrimary }}>{DAYS[viewDay]}</div>
                 {pct === 100 && <div style={{ fontSize: typography.caption, color: colors.accent, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
                 {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: colors.textSecondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
               </div>
             ) : heroHasTime ? (
               <div>
-                <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacing, textTransform: "uppercase", marginBottom: spacing.xxs }}>
+                <Label style={{ color: colors.textMuted, marginBottom: spacing.xxs }}>
                   {pillTime ? "Started at" : "Scheduled"}
-                </div>
+                </Label>
                 {editPillTime && pillTime ? (
                   <div style={{ display: "flex", gap: spacing.xs, alignItems: "center" }}>
-                    <input type="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ fontSize: typography.body, padding: `${spacing.sm}px ${spacing.md}px`, borderRadius: radius.sm, border: `1px solid ${colors.borderStrong}`, background: colors.bgInput, color: colors.textPrimary }} />
+                    <Input variant="time" value={tmpTime} onChange={e => setTmpTime(e.target.value)} style={{ flex: 1 }} />
                     <button onClick={() => { setPillForDay(tmpTime); setEditPillTime(false); }} style={{ ...ghostButtonStyle, width: "auto", borderRadius: radius.sm }}>Save</button>
                   </div>
                 ) : (
@@ -977,7 +961,7 @@ function ProtocolApp({ user, token, onSignOut }) {
             <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={colors.textPrimary} fontSize={typography.caption} fontWeight={typography.bold} fontFamily={typography.fontHeading}>{pct}%</text>
           </svg>
         </div>
-      </div>
+      </Card>
 
       {/* Main slot list */}
       <div style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>

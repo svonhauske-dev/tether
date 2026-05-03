@@ -99,6 +99,19 @@ export default function Button({
       flexShrink: 0,
       padding: 0,
     };
+  } else if (variant === "circle") {
+    v = {
+      width: 36,
+      height: 36,
+      borderRadius: "50%",
+      fontSize: typography.label,
+      fontWeight: typography.semibold,
+      flexShrink: 0,
+      padding: 0,
+      ...(active
+        ? { background: colors.accent, color: colors.textPrimary, border: "none" }
+        : { background: "transparent", color: colors.textSecondary, border: `1px solid ${colors.borderStrong}` }),
+    };
   } else {
     v = {};
   }
