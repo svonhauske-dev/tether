@@ -250,7 +250,7 @@ function SignIn({ onSignIn }) {
     <div style={{ fontFamily: typography.fontBody, background: BG_GRADIENT, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
       <div style={{ width: "100%", maxWidth: 360, textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
-        <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Protocol Tracker</div>
+        <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Tether</div>
         <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />built around your life.</div>
         <div style={{ marginBottom: spacing.md, textAlign: "left" }}>
           <Label>Email</Label>
@@ -994,7 +994,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Greeting */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm }}>
-        <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading }}>Hello</span>
+        <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading }}>Tether</span>
         <Button variant="icon" aria-label="Settings" onClick={() => setShowSettings(true)} style={{ width: touch.min, height: touch.min }}>
           <Settings size={18} />
         </Button>
