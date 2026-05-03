@@ -61,10 +61,6 @@ const dbUpdateSupp = (s, t)   => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.
 const dbDeleteSupp = (id, t)  => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
 const dbGetLog     = (date, t)=> supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 const dbUpsertLog  = (log, t) => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
-const dbGetLabs    = (t)      => supa("GET",    "/rest/v1/lab_results?select=*&order=drawn_at.desc", null, t);
-const dbAddLab     = (l, t)   => supa("POST",   "/rest/v1/lab_results", l, t);
-const dbUpdateLab  = (id, l, t) => supa("PATCH",`/rest/v1/lab_results?id=eq.${id}`, { values: l.values, drawn_at: l.drawn_at }, t);
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -90,28 +86,6 @@ const SLOT_OFFSETS = {
 
 const CORE_SLOTS = ["rx", "fasted", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
 
-const LAB_MARKERS = [
-  { id: "tsh",          name: "TSH",                 unit: "mIU/L",  optimalLow: 0.5,  optimalHigh: 2.0,  note: "Functional optimal for T3/T4 therapy" },
-  { id: "ft3",          name: "Free T3",             unit: "pg/mL",  optimalLow: 3.2,  optimalHigh: 4.2,  note: "Upper third of range" },
-  { id: "ft4",          name: "Free T4",             unit: "ng/dL",  optimalLow: 1.1,  optimalHigh: 1.7,  note: "Mid to upper range" },
-  { id: "dhea",         name: "DHEA-S",              unit: "μg/dL",  optimalLow: 150,  optimalHigh: 300,  note: "Youthful range for women" },
-  { id: "testosterone", name: "Testosterone (free)", unit: "pg/mL",  optimalLow: 1.5,  optimalHigh: 4.2,  note: "Functional optimal for women" },
-  { id: "glucose",      name: "Fasting Glucose",     unit: "mg/dL",  optimalLow: 72,   optimalHigh: 86,   note: "Metabolic optimal" },
-  { id: "insulin",      name: "Fasting Insulin",     unit: "μIU/mL", optimalLow: 2,    optimalHigh: 5,    note: "Optimal insulin sensitivity" },
-  { id: "vitd",         name: "Vitamin D (25-OH)",   unit: "ng/mL",  optimalLow: 60,   optimalHigh: 80,   note: "Therapeutic range" },
-  { id: "crp",          name: "hsCRP",               unit: "mg/L",   optimalLow: 0,    optimalHigh: 0.5,  note: "Near-zero inflammation" },
-  { id: "ferritin",     name: "Ferritin",            unit: "ng/mL",  optimalLow: 50,   optimalHigh: 100,  note: "Optimal for thyroid function" },
-];
-
-const LAB_INSIGHTS = {
-  tsh:     { optimal: "TSH is in functional range — T4/T3 protocol appears well-calibrated.", low: "TSH is suppressed — may indicate over-replacement. Worth reviewing T3 dose timing.", high: "TSH is elevated — T4 conversion or absorption may be suboptimal. Check fasting window before Rx." },
-  ft3:     { optimal: "Free T3 is in the upper functional range — active thyroid hormone is well-supported.", low: "Free T3 is below optimal — T3 conversion may be limited. Selenium and zinc support conversion.", high: "Free T3 is elevated — monitor for palpitations or sleep disruption." },
-  ft4:     { optimal: "Free T4 is in optimal range — Levothyroxine dose and absorption look appropriate.", low: "Free T4 is low — absorption may be affected. Ensure 60-min fasting window after Rx.", high: "Free T4 is high — may indicate over-replacement or conversion issue." },
-  vitd:    { optimal: "Vitamin D is in therapeutic range — your D3+K2 protocol is working.", low: "Vitamin D is below therapeutic target — consider increasing D3 dose or checking fat absorption.", high: "Vitamin D is above target — consider reducing dose temporarily." },
-  glucose: { optimal: "Fasting glucose is in the metabolic optimal range — good insulin sensitivity.", low: "Fasting glucose is low — check meal timing and carbohydrate intake.", high: "Fasting glucose is elevated — your metabolic protocol is targeting this." },
-  insulin: { optimal: "Fasting insulin is optimal — strong insulin sensitivity.", low: "Fasting insulin is very low — consistent with good metabolic health.", high: "Fasting insulin is elevated — this is what the Weight Loss Support Pack and metabolic protocol are targeting." },
-};
-
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
 const pad          = (n) => String(n).padStart(2, "0");
@@ -123,16 +97,6 @@ const startOfDay   = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); ret
 const getMonthYear = () => new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
 const notifOK      = () => "Notification" in window;
 
-const getLabStatus = (m, val) => {
-  const n = parseFloat(val); if (isNaN(n)) return null;
-  if (m.id === "crp") return n <= m.optimalHigh ? "optimal" : "high";
-  if (n < m.optimalLow) return "low";
-  if (n > m.optimalHigh) return "high";
-  return "optimal";
-};
-
-const STATUS_COLOR = { optimal: "#4ade80", low: "#60a5fa", high: "#f87171" };
-const STATUS_BG    = { optimal: "rgba(74,222,128,0.08)", low: "rgba(96,165,250,0.08)", high: "rgba(248,113,113,0.08)" };
 const TODAY        = startOfDay(new Date());
 const P            = "16px";
 
@@ -271,50 +235,6 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
   );
 }
 
-// ── LabModal ──────────────────────────────────────────────────────────────────
-
-function LabModal({ open, onClose, onSave, labs, labDate }) {
-  const [entries, setEntries]   = useState(labs || {});
-  const [date, setDate]         = useState(labDate || new Date().toISOString().split("T")[0]);
-
-  useEffect(() => { setEntries(labs || {}); setDate(labDate || new Date().toISOString().split("T")[0]); }, [labs, labDate]);
-
-  if (!open) return null;
-  return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.78)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: P }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, background: "#13151f", borderRadius: 24, padding: P, maxHeight: "86vh", overflowY: "auto", boxSizing: "border-box", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>Lab Results</span>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", color: "#8b90a0" }}>✕</button>
-        </div>
-        <div style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 10, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: "#34d399", lineHeight: 1.5 }}>
-          Ranges shown are functional optimal targets, not standard lab reference ranges.
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Date drawn</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
-        </div>
-        {LAB_MARKERS.map(m => {
-          const v = entries[m.id] || "", status = v ? getLabStatus(m, v) : null, sc = status ? STATUS_COLOR[status] : "#8b90a0";
-          return (
-            <div key={m.id} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                <div><span style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 500 }}>{m.name}</span><span style={{ fontSize: 11, color: "#4a5568", marginLeft: 6 }}>{m.note}</span></div>
-                <span style={{ fontSize: 11, color: "#4a5568" }}>{m.unit} · {m.optimalLow}–{m.optimalHigh}</span>
-              </div>
-              <div style={{ position: "relative" }}>
-                <input type="number" value={v} placeholder="—" onChange={e => setEntries(prev => ({ ...prev, [m.id]: e.target.value }))} style={{ ...inputStyle, paddingRight: 76, border: `1px solid ${status ? sc + "55" : "rgba(255,255,255,0.1)"}`, background: status ? STATUS_BG[status] : "#0d0f1a" }} />
-                {status && <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, fontWeight: 700, color: sc, textTransform: "capitalize" }}>{status}</span>}
-              </div>
-            </div>
-          );
-        })}
-        <button onClick={() => onSave(entries, date)} style={{ width: "100%", padding: "15px", borderRadius: 12, cursor: "pointer", background: "#4ade80", color: "#0a0a0f", border: "none", fontSize: 16, fontWeight: 700, marginTop: 8 }}>Save results</button>
-      </div>
-    </div>
-  );
-}
-
 // ── SlotCard ──────────────────────────────────────────────────────────────────
 
 function SlotCard({ slot, slotSupps, status, timeLabel, pillTime, isFuture, isChecked, toggleCheck, openEdit }) {
@@ -395,15 +315,11 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [supps, setSupps]               = useState([]);
   const [pillTimes, setPillTimes]       = useState({});
   const [checked, setChecked]           = useState({});
-  const [labHistory, setLabHistory]     = useState([]);
   const [loading, setLoading]           = useState(true);
   const [viewDate, setViewDate]         = useState(TODAY);
-  const [activeTab, setActiveTab]       = useState("today");
   const [editPillTime, setEditPillTime] = useState(false);
   const [tmpTime, setTmpTime]           = useState("");
   const [formOpen, setFormOpen]         = useState(false);
-  const [labOpen, setLabOpen]           = useState(false);
-  const [editingLabIdx, setEditingLabIdx] = useState(null);
   const [editingId, setEditingId]       = useState(null);
   const [form, setForm]                 = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6] });
   const [notifStatus, setNotifStatus]   = useState(notifOK() ? Notification.permission : "unsupported");
@@ -421,8 +337,8 @@ function ProtocolApp({ user, token, onSignOut }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [s, labs] = await Promise.all([dbGetSupps(token), dbGetLabs(token)]);
-      setSupps(s || []); setLabHistory(labs || []);
+      const s = await dbGetSupps(token);
+      setSupps(s || []);
       const log = await dbGetLog(dk, token);
       if (log?.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log?.checked)   setChecked(log.checked);
@@ -494,7 +410,6 @@ function ProtocolApp({ user, token, onSignOut }) {
   let coreTotal = 0, coreDone = 0;
   CORE_SLOTS.forEach(sid => { const sl = getSuppsForSlot(sid); coreTotal += sl.length; sl.forEach(s => { if (isChecked(sid, s.id)) coreDone++; }); });
   const pct = coreTotal > 0 ? Math.round((coreDone / coreTotal) * 100) : 0;
-  const latestLab = labHistory?.[0] || null;
 
   // Supplement CRUD
   const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6] }); setFormOpen(true); };
@@ -520,33 +435,6 @@ function ProtocolApp({ user, token, onSignOut }) {
     closeForm();
   };
 
-  // Lab CRUD
-  const saveLabEntry = async (entries, date) => {
-    if (editingLabIdx !== null && labHistory[editingLabIdx]) {
-      const existing = labHistory[editingLabIdx];
-      await dbUpdateLab(existing.id, { values: entries, drawn_at: date }, token);
-      setLabHistory(h => { const n = [...h]; n[editingLabIdx] = { ...n[editingLabIdx], values: entries, drawn_at: date }; return n; });
-    } else {
-      const rows = await dbAddLab({ values: entries, drawn_at: date }, token);
-      if (rows?.[0]) setLabHistory(h => [rows[0], ...h]);
-    }
-    setEditingLabIdx(null); setLabOpen(false);
-  };
-
-  // Lab insights
-  const buildLabInsight = (lab) => {
-    if (!lab) return null;
-    const insights = [];
-    LAB_MARKERS.forEach(m => {
-      const v = lab.values[m.id]; if (!v) return;
-      const status = getLabStatus(m, v);
-      const bank = LAB_INSIGHTS[m.id];
-      if (bank?.[status]) insights.push({ name: m.name, status, text: bank[status] });
-    });
-    return insights.sort((a, b) => a.status === "optimal" ? 1 : -1).slice(0, 3);
-  };
-  const labInsights = latestLab ? buildLabInsight(latestLab) : null;
-
   const r = 28, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
   const dayLabel = isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const card = { borderRadius: 18, border: "1px solid rgba(255,255,255,0.07)", background: flashGreen ? "rgba(74,222,128,0.06)" : "rgba(255,255,255,0.03)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", padding: P, marginBottom: P, transition: "background 0.4s ease" };
@@ -567,18 +455,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         <button onClick={() => goDay(1)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: "#8b90a0", borderRadius: 10, flexShrink: 0 }}>›</button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: P, background: "rgba(255,255,255,0.04)", borderRadius: 14, padding: 4, border: "1px solid rgba(255,255,255,0.06)" }}>
-        {[["today", "Protocol"], ["labs", "Lab Results"]].map(([id, label]) => {
-          const active = activeTab === id;
-          return <button key={id} onClick={() => setActiveTab(id)} style={{ flex: 1, padding: "9px", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", background: active ? "rgba(255,255,255,0.08)" : "transparent", color: active ? "#fff" : "#8b90a0", border: "none" }}>{label}</button>;
-        })}
-      </div>
-
-      {/* ── Protocol tab ── */}
-      {activeTab === "today" && (
-        <div>
-          {/* Hero card */}
+      {/* Hero card */}
           <div style={card}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: pillTime ? 12 : 0 }}>
               <div style={{ flex: 1 }}>
@@ -641,7 +518,7 @@ function ProtocolApp({ user, token, onSignOut }) {
                 <div style={{ fontSize: 28, marginBottom: 12 }}>💊</div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "#e2e8f0", marginBottom: 6 }}>Your protocol is empty</div>
                 <div style={{ fontSize: 13, color: "#4a5568", lineHeight: 1.7, marginBottom: 20 }}>Add your medications and supplements above.<br />The schedule anchors to when you take your first Rx each morning.</div>
-                <button onClick={openAdd} style={{ padding: "11px 24px", borderRadius: 12, cursor: "pointer", background: "#4ade80", color: "#0a0a0f", border: "none", fontSize: 14, fontWeight: 700 }}>Add first supplement</button>
+                <button onClick={openAdd} style={{ width: "100%", padding: "11px 0", borderRadius: 12, cursor: "pointer", background: "#4ade80", color: "#0a0a0f", border: "none", fontSize: 14, fontWeight: 700 }}>Add first supplement</button>
               </div>
             ) : SLOTS.map(slot => {
               const slotSupps = getSuppsForSlot(slot.id); if (!slotSupps.length) return null;
@@ -649,85 +526,10 @@ function ProtocolApp({ user, token, onSignOut }) {
             })}
           </div>
 
-          {/* Latest labs preview */}
-          {latestLab && (
-            <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", padding: P, marginBottom: P }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div><div style={{ fontSize: 11, color: "#4a5568", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 2 }}>Latest labs</div><div style={{ fontSize: 12, color: "#8b90a0" }}>{latestLab.drawn_at}</div></div>
-                <button onClick={() => setActiveTab("labs")} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, cursor: "pointer", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#8b90a0" }}>See all</button>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: labInsights ? 14 : 0 }}>
-                {LAB_MARKERS.filter(m => latestLab.values[m.id]).slice(0, 6).map(m => {
-                  const v = latestLab.values[m.id], status = getLabStatus(m, v), sc = status ? STATUS_COLOR[status] : "#8b90a0", sbg = status ? STATUS_BG[status] : "rgba(255,255,255,0.03)";
-                  return <div key={m.id} style={{ background: sbg, border: `1px solid ${status ? sc + "33" : "rgba(255,255,255,0.06)"}`, borderRadius: 10, padding: "8px 12px", minWidth: 88, flex: "1 1 88px" }}><div style={{ fontSize: 10, color: "#4a5568", marginBottom: 3, fontWeight: 500 }}>{m.name}</div><div style={{ display: "flex", alignItems: "baseline", gap: 3 }}><span style={{ fontSize: 16, fontWeight: 700, color: sc }}>{v}</span><span style={{ fontSize: 10, color: "#4a5568" }}>{m.unit}</span></div></div>;
-                })}
-              </div>
-              {labInsights?.map((insight, i) => {
-                const sc = STATUS_COLOR[insight.status];
-                return <div key={i} style={{ borderTop: i === 0 ? "1px solid rgba(255,255,255,0.05)" : "none", paddingTop: i === 0 ? 12 : 0, marginTop: i === 0 ? 0 : 8, display: "flex", gap: 10, alignItems: "flex-start" }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: sc, marginTop: 5, flexShrink: 0 }} /><div><span style={{ fontSize: 12, color: sc, fontWeight: 600 }}>{insight.name} · </span><span style={{ fontSize: 12, color: "#8b90a0", lineHeight: 1.5 }}>{insight.text}</span></div></div>;
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Lab Results tab ── */}
-      {activeTab === "labs" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: P }}>
-            <div style={{ fontSize: 13, color: "#8b90a0" }}>Functional optimal ranges</div>
-            <button onClick={() => { setEditingLabIdx(null); setLabOpen(true); }} style={{ fontSize: 13, padding: "8px 16px", borderRadius: 20, cursor: "pointer", border: "1px solid rgba(74,222,128,0.3)", background: "rgba(74,222,128,0.06)", color: "#4ade80", fontWeight: 600 }}>+ Log results</button>
-          </div>
-          {labHistory.length === 0 && (
-            <div style={{ borderRadius: 18, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", padding: P, textAlign: "center", paddingTop: "2.5rem", paddingBottom: "2.5rem" }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>🧬</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: "#e2e8f0", marginBottom: 6 }}>No lab results yet</div>
-              <div style={{ fontSize: 13, color: "#4a5568", marginBottom: 16 }}>Enter your lab values to track trends over time</div>
-              <button onClick={() => { setEditingLabIdx(null); setLabOpen(true); }} style={{ padding: "11px 24px", borderRadius: 12, cursor: "pointer", background: "#4ade80", color: "#0a0a0f", border: "none", fontSize: 14, fontWeight: 700 }}>Log first results</button>
-            </div>
-          )}
-          {labHistory.map((entry, i) => {
-            const isLatest = i === 0, entryInsights = isLatest ? buildLabInsight(entry) : null;
-            return (
-              <div key={entry.id || i} style={{ borderRadius: 18, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", padding: P, marginBottom: P }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isLatest ? 14 : 0 }}>
-                  <div>{isLatest && <div style={{ fontSize: 11, color: "#4a5568", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 2 }}>Latest results</div>}<div style={{ fontSize: 14, fontWeight: 600, color: "#e2e8f0" }}>{entry.drawn_at}</div></div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{!isLatest && <span style={{ fontSize: 12, color: "#4a5568" }}>{Object.keys(entry.values).length} markers</span>}<button onClick={() => { setEditingLabIdx(i); setLabOpen(true); }} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, cursor: "pointer", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#8b90a0" }}>{isLatest ? "Edit" : "View"}</button></div>
-                </div>
-                {isLatest && (
-                  <div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: entryInsights ? 14 : 0 }}>
-                      {LAB_MARKERS.map(m => {
-                        const v = entry.values[m.id]; if (!v) return null;
-                        const status = getLabStatus(m, v), sc = STATUS_COLOR[status] || "#8b90a0", sbg = STATUS_BG[status] || "rgba(255,255,255,0.03)";
-                        return <div key={m.id} style={{ background: sbg, border: `1px solid ${sc}33`, borderRadius: 10, padding: "10px 12px" }}><div style={{ fontSize: 11, color: "#4a5568", marginBottom: 4, fontWeight: 500 }}>{m.name}</div><div style={{ display: "flex", alignItems: "baseline", gap: 4 }}><span style={{ fontSize: 18, fontWeight: 700, color: sc }}>{v}</span><span style={{ fontSize: 11, color: "#4a5568" }}>{m.unit}</span></div><div style={{ fontSize: 10, fontWeight: 700, color: sc, marginTop: 3, textTransform: "capitalize" }}>{status} · {m.optimalLow}–{m.optimalHigh}</div></div>;
-                      })}
-                    </div>
-                    {entryInsights && (
-                      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 14 }}>
-                        <div style={{ fontSize: 11, color: "#4a5568", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>Protocol insights</div>
-                        {entryInsights.map((insight, j) => { const sc = STATUS_COLOR[insight.status]; return <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: j < entryInsights.length - 1 ? 10 : 0 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: sc, marginTop: 5, flexShrink: 0 }} /><div><span style={{ fontSize: 13, color: sc, fontWeight: 600 }}>{insight.name} · </span><span style={{ fontSize: 13, color: "#8b90a0", lineHeight: 1.6 }}>{insight.text}</span></div></div>; })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {/* Modals */}
       <Modal open={formOpen} onClose={closeForm}>
         <EditForm form={form} setForm={setForm} editingId={editingId} onSubmit={submitForm} onCancel={closeForm} onDelete={deleteSupp} />
       </Modal>
-      <LabModal
-        open={labOpen}
-        onClose={() => { setLabOpen(false); setEditingLabIdx(null); }}
-        onSave={saveLabEntry}
-        labs={editingLabIdx !== null && labHistory[editingLabIdx] ? labHistory[editingLabIdx].values : {}}
-        labDate={editingLabIdx !== null && labHistory[editingLabIdx] ? labHistory[editingLabIdx].drawn_at : ""}
-      />
     </div>
   );
 }
