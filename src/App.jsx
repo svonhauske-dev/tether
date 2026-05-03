@@ -9,7 +9,7 @@ async function supa(method, path, body, token) {
     "Content-Type": "application/json",
     "apikey": SUPA_KEY,
     "Authorization": `Bearer ${token || SUPA_KEY}`,
-    "Prefer": "return=representation",
+    "Prefer": "resolution=merge-duplicates,return=representation",
   };
   const res = await fetch(SUPA_URL + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
   return res.ok ? res.json() : null;
