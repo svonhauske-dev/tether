@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trash2, Pause, Play } from "lucide-react";
 import { colors, spacing, typography, touch } from "../design-system";
-import BottomSheet from "./BottomSheet";
+import Modal from "./Modal";
 import Badge from "./Badge";
 import Label from "./Label";
 import Button from "./Button";
@@ -33,18 +33,18 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
 
   if (supplements.length === 0) {
     return (
-      <BottomSheet open={open} onClose={onClose} title="Manage supplements">
+      <Modal open={open} onClose={onClose} title="Manage supplements">
         <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
           <div style={{ fontSize: typography.hero, marginBottom: spacing.md }}>💊</div>
           <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
           <div style={{ fontSize: typography.caption, color: colors.textMuted, lineHeight: 1.7 }}>Add your medications and supplements. Your schedule builds from when you take your first med each morning.</div>
         </div>
-      </BottomSheet>
+      </Modal>
     );
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Manage supplements">
+    <Modal open={open} onClose={onClose} title="Manage supplements">
       {grouped.map(({ cat, items }) => (
         <div key={cat} style={{ marginBottom: spacing.lg }}>
           <Label style={{ marginBottom: spacing.xs }}>{cat}</Label>
@@ -137,6 +137,6 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
           })}
         </div>
       ))}
-    </BottomSheet>
+    </Modal>
   );
 }
