@@ -3,7 +3,7 @@ import {
   colors, spacing, radius, typography, touch, layout,
   ghostButtonStyle,
 } from "./design-system";
-import { Settings, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Settings, Trash2, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import Button from "./components/Button";
 import Input from "./components/Input";
 import Card from "./components/Card";
@@ -134,7 +134,7 @@ function signOut() {
 
 const dbGetSupps     = (t)       => supa("GET",    "/rest/v1/supplements?select=*&order=created_at.asc", null, t);
 const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
-const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, updated_at: new Date().toISOString() }, t);
+const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, updated_at: new Date().toISOString() }, t);
 const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
 const dbGetLog       = (date, t) => supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
@@ -336,11 +336,16 @@ function Loader({ text }) {
 
 // ── EditForm ──────────────────────────────────────────────────────────────────
 
-function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
+function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete, onTogglePause }) {
   const toggleSlot = (sid) => setForm(f => ({ ...f, slots: f.slots.includes(sid) ? f.slots.filter(x => x !== sid) : [...f.slots, sid] }));
   const toggleDay  = (i)   => setForm(f => ({ ...f, days:  f.days.includes(i)   ? f.days.filter(x => x !== i)   : [...f.days, i]   }));
   return (
     <div>
+      {editingId && form.paused && (
+        <div style={{ marginBottom: spacing.md }}>
+          <Badge variant="neutral">Currently paused</Badge>
+        </div>
+      )}
       {[["Name", "name", "e.g. Magnesium Glycinate"], ["Dose", "dose", "e.g. 2 caps (300 mg)"], ["Notes", "notes", "e.g. Thorne · with food"]].map(([lbl, key, ph]) => (
         <div key={key} style={{ marginBottom: spacing.md }}>
           <Label>{lbl}</Label>
@@ -405,8 +410,19 @@ function EditForm({ form, setForm, editingId, onSubmit, onCancel, onDelete }) {
           ))}
         </div>
       </div>
-      {editingId && <Button variant="destructive" fullWidth onClick={onDelete} style={{ marginBottom: spacing.xs }}>Delete supplement</Button>}
-      <Button variant="primary" fullWidth onClick={onSubmit}>{editingId ? "Save changes" : "Add supplement"}</Button>
+      {editingId ? (
+        <>
+          <Button variant="primary" fullWidth onClick={onSubmit} style={{ marginBottom: spacing.xs }}>Save changes</Button>
+          <div style={{ display: "flex", gap: spacing.xs }}>
+            <Button variant="secondary" secondaryStyle="solid" style={{ flex: 1 }} onClick={onTogglePause}>
+              {form.paused ? "Resume" : "Pause"}
+            </Button>
+            <Button variant="destructive" style={{ flex: 1 }} onClick={onDelete}>Delete</Button>
+          </div>
+        </>
+      ) : (
+        <Button variant="primary" fullWidth onClick={onSubmit}>Add supplement</Button>
+      )}
     </div>
   );
 }
@@ -750,7 +766,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [tmpTime, setTmpTime]               = useState("");
   const [formOpen, setFormOpen]             = useState(false);
   const [editingId, setEditingId]           = useState(null);
-  const [form, setForm]                     = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: "Oral", timePreference: "Anytime" });
+  const [form, setForm]                     = useState({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: "Oral", timePreference: "Anytime", paused: false });
   const [notifStatus, setNotifStatus]       = useState(notifOK() ? Notification.permission : "unsupported");
   const [streak, setStreak]                 = useState(0);
   const [flashGreen, setFlashGreen]         = useState(false);
@@ -770,6 +786,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
   const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
+  const homeSupps     = visibleSupps.filter(s => !s.paused);
 
   const dk       = dateKey(viewDate);
   const isToday  = dateKey(viewDate) === dateKey(TODAY);
@@ -807,7 +824,7 @@ function ProtocolApp({ user, token, onSignOut }) {
           migrated.push(out);
           if (out !== supp) toWrite.push(out);
         }
-        setSupps(migrated);
+        setSupps(migrated.map(s => ({ ...s, paused: s.paused ?? false })));
         for (const supp of toWrite) {
           try { await dbUpdateSupp(supp, token); } catch (e) { console.warn("Migration write failed for", supp.id, e); }
         }
@@ -875,7 +892,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       const pt  = pillTimes[ddk];
       if (!pt && scheduleMode !== "fixed" && anchorBehavior !== "consistent") break;
       const day     = d.getDay();
-      const allDone = CORE_SLOTS.every(sid => supps.filter(x => x.slots.includes(sid) && x.days.includes(day)).every(x => !!checked[`${ddk}_${sid}_${x.id}`]));
+      const allDone = CORE_SLOTS.every(sid => supps.filter(x => !x.paused && x.slots.includes(sid) && x.days.includes(day)).every(x => !!checked[`${ddk}_${sid}_${x.id}`]));
       if (!allDone) break;
       s++; d.setDate(d.getDate() - 1);
     }
@@ -901,17 +918,17 @@ function ProtocolApp({ user, token, onSignOut }) {
   const slotTimeStr     = (sid) => { const t = getSlotTime(sid); return t ? fmtTime(t) : "--:--"; };
   const toggleCheck     = (sid, suppId) => { const k = `${dk}_${sid}_${suppId}`; setChecked(c => ({ ...c, [k]: !c[k] })); };
   const isChecked       = (sid, suppId) => !!checked[`${dk}_${sid}_${suppId}`];
-  const getSuppsForSlot = (sid) => visibleSupps.filter(s => s.slots.includes(sid) && s.days.includes(viewDay));
+  const getSuppsForSlot = (sid) => homeSupps.filter(s => s.slots.includes(sid) && s.days.includes(viewDay));
 
   const startDay = () => {
     if (isFuture) return;
     const t = fmtTime(new Date());
     setPillForDay(t);
     if (scheduleMode !== "wakeup") {
-      const rxSupps = supps.filter(s => s.slots.includes("rx") && s.days.includes(viewDay));
+      const rxSupps = homeSupps.filter(s => s.slots.includes("rx") && s.days.includes(viewDay));
       setChecked(c => { const n = { ...c }; rxSupps.forEach(s => { n[`${dk}_rx_${s.id}`] = true; }); return n; });
     }
-    scheduleNotifications(t, supps, viewDay, dk, slotOffsets);
+    scheduleNotifications(t, homeSupps, viewDay, dk, slotOffsets);
     setFlashGreen(true); setTimeout(() => setFlashGreen(false), 600);
   };
 
@@ -933,8 +950,8 @@ function ProtocolApp({ user, token, onSignOut }) {
   });
   const pct = coreTotal > 0 ? Math.round((coreDone / coreTotal) * 100) : 0;
 
-  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: "Oral", timePreference: "Anytime" }); setFormOpen(true); };
-  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime" }); setFormOpen(true); };
+  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: "Oral", timePreference: "Anytime", paused: false }); setFormOpen(true); };
+  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false }); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
 
   const submitForm = async () => {
@@ -952,7 +969,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       }
     } else {
       try {
-        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: form.days, category: cat, timePreference: form.timePreference || "Anytime", user_id: user.id }, token);
+        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: form.days, category: cat, timePreference: form.timePreference || "Anytime", paused: false, user_id: user.id }, token);
         if (rows?.[0]) setSupps(s => [...s, rows[0]]);
         showToast(`Added ${form.name}`);
       } catch (err) {
@@ -992,6 +1009,29 @@ function ProtocolApp({ user, token, onSignOut }) {
       return;
     }
     setShowSchedule(false);
+  };
+
+  const togglePause = async (supp) => {
+    const updated = { ...supp, paused: !supp.paused };
+    try {
+      await dbUpdateSupp(updated, token);
+      setSupps(s => s.map(x => x.id === supp.id ? updated : x));
+      showToast(updated.paused ? `Paused ${supp.name}` : `Resumed ${supp.name}`);
+      const updatedHome = supps.map(x => x.id === supp.id ? updated : x).filter(s => !pendingDeletes[s.id] && !s.paused);
+      scheduleNotifications(effectivePillTime, updatedHome, viewDay, dk, slotOffsets);
+      return true;
+    } catch (err) {
+      showToast("Couldn't update — try again");
+      console.error(err);
+      return false;
+    }
+  };
+
+  const handleEditFormTogglePause = async () => {
+    const supp = supps.find(s => s.id === editingId);
+    if (!supp) return;
+    const ok = await togglePause(supp);
+    if (ok) closeForm();
   };
 
   const undoDelete = (suppId) => {
@@ -1117,7 +1157,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Main slot list */}
       <div style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>
-        {visibleSupps.length === 0 ? (
+        {homeSupps.length === 0 ? (
           <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
             <div style={{ fontSize: typography.hero, marginBottom: spacing.md }}>💊</div>
             <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
@@ -1155,11 +1195,12 @@ function ProtocolApp({ user, token, onSignOut }) {
         open={showManage}
         onClose={() => setShowManage(false)}
         supplements={visibleSupps}
-        onEdit={(supp) => openEdit(supp)}
+        onEdit={(supp) => { setShowManage(false); openEdit(supp); }}
         onDelete={requestDelete}
+        onTogglePause={togglePause}
       />
       <BottomSheet open={formOpen} onClose={closeForm} title={editingId ? "Edit supplement" : "New supplement"}>
-        <EditForm form={form} setForm={setForm} editingId={editingId} onSubmit={submitForm} onCancel={closeForm} onDelete={deleteSupp} />
+        <EditForm form={form} setForm={setForm} editingId={editingId} onSubmit={submitForm} onCancel={closeForm} onDelete={deleteSupp} onTogglePause={handleEditFormTogglePause} />
       </BottomSheet>
       <BottomSheet open={showSchedule} onClose={() => setShowSchedule(false)} title="Daily Schedule">
         <ScheduleModal

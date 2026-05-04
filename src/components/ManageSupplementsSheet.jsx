@@ -1,21 +1,23 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pause, Play } from "lucide-react";
 import { colors, spacing, typography, touch } from "../design-system";
 import BottomSheet from "./BottomSheet";
+import Badge from "./Badge";
 import Label from "./Label";
 import Button from "./Button";
 
 const CATEGORY_ORDER = ["Oral", "Rx", "Injectable", "Topical"];
 
-export default function ManageSupplementsSheet({ open, onClose, supplements, onEdit, onDelete }) {
+export default function ManageSupplementsSheet({ open, onClose, supplements, onEdit, onDelete, onTogglePause }) {
   const [confirmId, setConfirmId] = useState(null);
 
   const grouped = CATEGORY_ORDER
     .map(cat => ({
       cat,
-      items: supplements
-        .filter(s => s.category === cat)
-        .sort((a, b) => a.name.localeCompare(b.name)),
+      items: [...supplements.filter(s => s.category === cat)].sort((a, b) => {
+        if (a.paused !== b.paused) return a.paused ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      }),
     }))
     .filter(g => g.items.length > 0);
 
@@ -58,6 +60,8 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
                   padding: `${spacing.sm}px 0`,
                   borderBottom: isLast ? "none" : `1px solid ${colors.divider}`,
                   minHeight: touch.min,
+                  opacity: supp.paused ? 0.5 : 1,
+                  transition: "opacity 0.2s",
                 }}
               >
                 {isConfirming ? (
@@ -86,11 +90,30 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
                   <>
                     <div
                       onClick={() => onEdit(supp)}
-                      style={{ flex: 1, cursor: "pointer", userSelect: "none", WebkitTapHighlightColor: "transparent", paddingRight: spacing.sm }}
+                      style={{ flex: 1, cursor: "pointer", userSelect: "none", WebkitTapHighlightColor: "transparent", paddingRight: spacing.sm, display: "flex", alignItems: "center", gap: spacing.xs, minWidth: 0 }}
                     >
                       <span style={{ fontSize: typography.body, color: colors.textPrimary, fontWeight: typography.medium }}>
                         {supp.name}
                       </span>
+                      {supp.paused && <Badge variant="neutral">Paused</Badge>}
+                    </div>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); onTogglePause(supp); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: touch.min,
+                        height: touch.min,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        WebkitTapHighlightColor: "transparent",
+                      }}
+                    >
+                      {supp.paused
+                        ? <Play size={16} color={colors.textSecondary} />
+                        : <Pause size={16} color={colors.textSecondary} />
+                      }
                     </div>
                     <div
                       onClick={(e) => handleTrash(e, supp)}
