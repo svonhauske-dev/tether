@@ -16,132 +16,16 @@ import { ToastProvider, useToast } from "./components/ToastContext";
 import Toast from "./components/Toast";
 import ManageSupplementsSheet from "./components/ManageSupplementsSheet";
 import Onboarding from "./components/Onboarding";
-
-const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
-const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
-
-// ── Supabase helpers ──────────────────────────────────────────────────────────
-
-async function refreshSession() {
-  const refreshToken = localStorage.getItem("sb_refresh_token");
-  if (!refreshToken) return null;
-  try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPA_KEY },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      if (d.access_token) {
-        localStorage.setItem("sb_token", d.access_token);
-        if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
-        return d.access_token;
-      }
-    }
-  } catch (e) {}
-  return null;
-}
-
-async function supa(method, path, body, token) {
-  const url = `${SUPA_URL}${path}`;
-  const headers = {
-    "Content-Type": "application/json",
-    "apikey": SUPA_KEY,
-    "Authorization": `Bearer ${token || SUPA_KEY}`,
-    "Prefer": "resolution=merge-duplicates,return=representation",
-  };
-
-  let res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-
-  if (res.status === 401 && token) {
-    const newToken = await refreshSession();
-    if (newToken) {
-      headers.Authorization = `Bearer ${newToken}`;
-      res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-    }
-  }
-
-  if (!res.ok) {
-    let detail = null;
-    try { detail = await res.json(); } catch {}
-    const err = new Error(`Request failed: ${res.status}`);
-    err.status = res.status;
-    err.detail = detail;
-    throw err;
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
-
-async function getSession() {
-  const token = localStorage.getItem("sb_token");
-  if (!token) return null;
-  try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
-      headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${token}` },
-    });
-    if (res.ok) { const d = await res.json(); return d.id ? d : null; }
-    if (res.status === 401) {
-      const newToken = await refreshSession();
-      if (newToken) {
-        const retry = await fetch(`${SUPA_URL}/auth/v1/user`, {
-          headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${newToken}` },
-        });
-        if (retry.ok) { const d = await retry.json(); return d.id ? d : null; }
-      }
-    }
-  } catch (e) {}
-  return null;
-}
-
-async function signUp(email, password) {
-  const res = await fetch(`${SUPA_URL}/auth/v1/signup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": SUPA_KEY },
-    body: JSON.stringify({ email, password }),
-  });
-  const d = await res.json();
-  if (res.ok && d.access_token) {
-    localStorage.setItem("sb_token", d.access_token);
-    if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
-    return d.user;
-  }
-  return null;
-}
-
-async function signInPassword(email, password) {
-  const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": SUPA_KEY },
-    body: JSON.stringify({ email, password }),
-  });
-  if (res.ok) {
-    const d = await res.json();
-    if (d.access_token) {
-      localStorage.setItem("sb_token", d.access_token);
-      if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
-      return d.user;
-    }
-  }
-  return null;
-}
-
-function signOut() {
-  localStorage.removeItem("sb_token");
-  localStorage.removeItem("sb_refresh_token");
-}
-
-// ── DB helpers ────────────────────────────────────────────────────────────────
-
-const dbGetSupps     = (t)       => supa("GET",    "/rest/v1/supplements?select=*&order=created_at.asc", null, t);
-const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
-const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, updated_at: new Date().toISOString() }, t);
-const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
-const dbGetLog       = (date, t) => supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
-const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
-const dbGetSchedule  = (t)       => supa("GET",    "/rest/v1/user_schedule?select=*", null, t).then(r => r?.[0] || null);
-const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedule?on_conflict=user_id", data, t);
+import Loader from "./components/Loader";
+import Auth from "./components/Auth";
+import {
+  supa, getSession, signInPassword, signUp, signOut, refreshSession,
+  dbGetSupps, dbAddSupp, dbUpdateSupp, dbDeleteSupp,
+  dbGetLog, dbUpsertLog,
+  dbGetSchedule, dbSaveSchedule,
+} from './lib/api';
+import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY } from './lib/time';
+import { SLOTS, scheduleNotifications, notifOK } from './lib/notifications';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -149,18 +33,6 @@ const BG_GRADIENT = gradients.bg;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const SLOTS = [
-  { id: "rx",            label: "Anchor Medication", sublabel: "Empty stomach · first thing", icon: "★", color: colors.slotAnchor },
-  { id: "pre_breakfast", label: "Before Breakfast",  sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreBreakfast },
-  { id: "breakfast",     label: "With Breakfast",    sublabel: "With food",                   icon: "●", color: colors.slotBreakfast },
-  { id: "pre_lunch",     label: "Before Lunch",      sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreLunch },
-  { id: "lunch",         label: "With Lunch",        sublabel: "With food",                   icon: "●", color: colors.slotLunch },
-  { id: "pre_dinner",    label: "Before Dinner",     sublabel: "30 min before eating",        icon: "◎", color: colors.slotPreDinner },
-  { id: "dinner",        label: "With Dinner",       sublabel: "With food",                   icon: "●", color: colors.slotDinner },
-  { id: "after_dinner",  label: "After Dinner",      sublabel: "Before bed",                  icon: "◑", color: colors.slotEvening },
-  { id: "injectable",    label: "Injectables",       sublabel: "Subcutaneous",                icon: "⊕", color: colors.slotInjectable },
-  { id: "topical",       label: "Topicals",          sublabel: "Skin & external",             icon: "◐", color: colors.slotTopical },
-];
 
 function deriveOffsets(mode, cfg) {
   if (mode === "none" || mode === "fixed") return null;
@@ -223,95 +95,7 @@ const ANYTIME_SLOT = { id: "anytime", label: "Anytime", sublabel: "No specific t
 
 const CATEGORIES = ["Oral", "Rx", "Injectable", "Topical"];
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
 
-const pad        = (n) => String(n).padStart(2, "0");
-const fmtTime    = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const addMins    = (d, m) => new Date(d.getTime() + m * 60000);
-const parseHHMM  = (s) => { const [h, m] = s.split(":"); const d = new Date(); d.setHours(+h, +m, 0, 0); return d; };
-const dateKey    = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const startOfDay = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
-const notifOK    = () => "Notification" in window;
-
-const TODAY = startOfDay(new Date());
-
-// ── Notifications ─────────────────────────────────────────────────────────────
-
-function scheduleNotifications(pt, supps, vd, dk, offsets) {
-  if (window._nto) window._nto.forEach(clearTimeout);
-  window._nto = [];
-  if (!pt || Notification.permission !== "granted") return;
-  const base = parseHHMM(pt), now = new Date();
-  SLOTS.forEach(slot => {
-    if (slot.id === "injectable" || slot.id === "topical") return;
-    const offset = slot.id === "rx" ? 0 : (offsets?.[slot.id] ?? null);
-    if (offset === null) return;
-    const t = addMins(base, offset), diff = t - now; if (diff < 0) return;
-    const sl = supps.filter(s => s.slots.includes(slot.id) && s.days.includes(vd));
-    if (!sl.length) return;
-    window._nto.push(setTimeout(() => {
-      try { new Notification("Time for your protocol", { body: `${slot.label}: ${sl.map(s => s.name).join(", ")}`, tag: `${dk}_${slot.id}` }); } catch (e) {}
-    }, diff));
-  });
-}
-
-// ── SignIn ────────────────────────────────────────────────────────────────────
-
-function SignIn({ onSignIn }) {
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode]         = useState("signin");
-  const [loading, setLoading]   = useState(false);
-  const [msg, setMsg]           = useState("");
-
-  const handleSubmit = async () => {
-    if (!email.trim() || !password.trim()) return;
-    setLoading(true); setMsg("");
-    const user = mode === "signin"
-      ? await signInPassword(email.trim(), password)
-      : await signUp(email.trim(), password);
-    setLoading(false);
-    if (user) onSignIn(user);
-    else setMsg(mode === "signin" ? "Invalid email or password." : "Could not create account — try again.");
-  };
-
-  return (
-    <div style={{ fontFamily: typography.fontBody, background: BG_GRADIENT, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
-      <div style={{ width: "100%", maxWidth: layout.signInWidth, textAlign: "center" }}>
-        <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
-        <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>Tether</div>
-        <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />built around your life.</div>
-        <div style={{ marginBottom: spacing.md, textAlign: "left" }}>
-          <Label>Email</Label>
-          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="your@email.com" />
-        </div>
-        <div style={{ marginBottom: spacing.md, textAlign: "left" }}>
-          <Label>Password</Label>
-          <Input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="password" />
-        </div>
-        <Button variant="primary" fullWidth onClick={handleSubmit} disabled={loading}>
-          {loading ? (mode === "signin" ? "Signing in…" : "Creating account…") : (mode === "signin" ? "Sign in" : "Create account")}
-        </Button>
-        <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setMsg(""); }} style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-          {mode === "signin" ? "No account? Sign up" : "Have an account? Sign in"}
-        </button>
-        {msg && <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: colors.danger }}>{msg}</div>}
-      </div>
-    </div>
-  );
-}
-
-// ── Loader ────────────────────────────────────────────────────────────────────
-
-function Loader({ text }) {
-  return (
-    <div style={{ background: BG_GRADIENT, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: spacing.md, fontFamily: typography.fontBody }}>
-      <style>{`@keyframes tetherPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.8); opacity: 0.5; } }`}</style>
-      <div style={{ width: 32, height: 32, borderRadius: radius.full, background: colors.accent, animation: "tetherPulse 1.4s ease-in-out infinite" }} />
-      <div style={{ fontSize: typography.caption, color: colors.textMuted, fontFamily: typography.fontBody, letterSpacing: typography.labelSpacingTight }}>{text}</div>
-    </div>
-  );
-}
 
 // ── EditForm ──────────────────────────────────────────────────────────────────
 
@@ -698,7 +482,7 @@ export default function App() {
       {authLoading
         ? <Loader text="Loading…" />
         : !user
-          ? <SignIn onSignIn={u => setUser(u)} />
+          ? <Auth onSignIn={u => setUser(u)} />
           : <ProtocolApp user={user} token={token()} onSignOut={() => { signOut(); setUser(null); }} />
       }
       <Toast />
