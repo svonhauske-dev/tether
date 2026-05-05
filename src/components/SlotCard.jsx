@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Pencil } from 'lucide-react';
 import { colors, spacing, radius, typography, touch } from '../design-system';
 import Badge from './Badge';
 import Button from './Button';
@@ -54,7 +55,7 @@ export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset
                   </div>
                   <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxxs, minHeight: 14 }}>{supp.dose}{supp.notes ? " · " + supp.notes : ""}</div>
                 </div>
-                <Button variant="secondary" size="compact" onClick={e => { e.stopPropagation(); openEdit(supp); }}>Edit</Button>
+                <Button variant="icon" aria-label={`Edit ${supp.name}`} onClick={e => { e.stopPropagation(); openEdit(supp); }} style={{ border: "none" }}><Pencil size={16} /></Button>
               </div>
             );
           })}

@@ -89,39 +89,25 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
                       </span>
                       {supp.paused && <Badge variant="neutral">Paused</Badge>}
                     </div>
-                    <div
+                    <Button
+                      variant="icon"
+                      aria-label={supp.paused ? `Resume ${supp.name}` : `Pause ${supp.name}`}
                       onClick={(e) => { e.stopPropagation(); onTogglePause(supp); }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: touch.min,
-                        height: touch.min,
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        WebkitTapHighlightColor: "transparent",
-                      }}
+                      style={{ border: "none" }}
                     >
                       {supp.paused
-                        ? <Play size={16} color={colors.textSecondary} />
-                        : <Pause size={16} color={colors.textSecondary} />
+                        ? <Play size={18} color={colors.textSecondary} />
+                        : <Pause size={18} color={colors.textSecondary} />
                       }
-                    </div>
-                    <div
+                    </Button>
+                    <Button
+                      variant="icon"
+                      aria-label={`Delete ${supp.name}`}
                       onClick={(e) => handleTrash(e, supp)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: touch.min,
-                        height: touch.min,
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        WebkitTapHighlightColor: "transparent",
-                      }}
+                      style={{ border: "none", color: colors.danger }}
                     >
-                      <Trash2 size={16} color={colors.danger} />
-                    </div>
+                      <Trash2 size={18} />
+                    </Button>
                   </>
                 )}
               </div>
