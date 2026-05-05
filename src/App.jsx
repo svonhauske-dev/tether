@@ -14,6 +14,7 @@ import SettingsModal from "./components/SettingsModal";
 import { ToastProvider, useToast } from "./components/ToastContext";
 import Toast from "./components/Toast";
 import ManageSupplementsSheet from "./components/ManageSupplementsSheet";
+import Onboarding from "./components/Onboarding";
 
 const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
@@ -779,6 +780,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [showSettings, setShowSettings]     = useState(false);
   const [showManage, setShowManage]         = useState(false);
   const [pendingDeletes, setPendingDeletes] = useState({});
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const saveTimer = useRef(null);
   const schedSaveRef = useRef(null);
   const { show: showToast } = useToast();
@@ -843,6 +845,8 @@ function ProtocolApp({ user, token, onSignOut }) {
             fixed_times: { ...DEFAULT_CONFIG.fixed_times, ...(savedConfig.fixed_times || {}) },
           });
         }
+
+        if (!sched) setNeedsOnboarding(true);
 
         // auto-set pill time for consistent mode if not already logged today
         if (behavior === "consistent" && !log?.pill_time) {
@@ -1028,9 +1032,10 @@ function ProtocolApp({ user, token, onSignOut }) {
     } catch (err) {
       showToast("Couldn't save — try again");
       console.error(err);
-      return;
+      return false;
     }
     setShowSchedule(false);
+    return true;
   };
 
   const togglePause = async (supp) => {
@@ -1102,6 +1107,12 @@ function ProtocolApp({ user, token, onSignOut }) {
   const heroDisplayTime = pillTime || consistentTime;
 
   if (loading) return <Loader text="Loading your protocol…" />;
+  if (needsOnboarding) return (
+    <Onboarding onComplete={async (mode, config, behavior, cTime) => {
+      const ok = await saveSchedule(mode, config, behavior, cTime);
+      if (ok) setNeedsOnboarding(false);
+    }} />
+  );
 
   return (
     <div style={{ fontFamily: typography.fontBody, color: colors.textPrimary, maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
