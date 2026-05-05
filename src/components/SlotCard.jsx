@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { colors, spacing, radius, typography, touch } from '../design-system';
+import { colors, spacing, radius, typography } from '../design-system';
 import Badge from './Badge';
+import Button from './Button';
 
 export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isFuture, isChecked, toggleCheck, openEdit, noSchedule }) {
   const allDone = slotSupps.every(s => isChecked(slot.id, s.id));
@@ -53,7 +54,7 @@ export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset
                   </div>
                   <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xxxs, minHeight: 14 }}>{supp.dose}{supp.notes ? " · " + supp.notes : ""}</div>
                 </div>
-                <button onClick={e => { e.stopPropagation(); openEdit(supp); }} style={{ fontSize: typography.label, padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm, cursor: "pointer", border: `1px solid ${colors.borderBase}`, background: colors.bgCard, color: colors.textSecondary, flexShrink: 0, minHeight: touch.min, display: "flex", alignItems: "center" }}>Edit</button>
+                <Button variant="secondary" size="compact" onClick={e => { e.stopPropagation(); openEdit(supp); }}>Edit</Button>
               </div>
             );
           })}

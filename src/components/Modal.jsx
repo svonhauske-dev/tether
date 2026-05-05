@@ -60,7 +60,7 @@ export default function Modal({ open, onClose, title, children, footer }) {
             maxWidth: layout.maxContentWidth,
             maxHeight: `calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48px)`,
             background: colors.bgModal,
-            borderRadius: radius.lg,
+            borderRadius: radius.md,
             boxShadow: shadows.modal,
             transform: open ? "scale(1)" : "scale(0.95)",
             opacity: open ? 1 : 0,

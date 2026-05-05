@@ -439,19 +439,19 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
-        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)}><ChevronLeft size={24} color={colors.textSecondary} /></Button>
+        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)}><ChevronLeft size={24} color={colors.textSecondary} style={{ marginRight: spacing.xxxs }} /></Button>
         <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
           <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
           <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: typography.headingLetterSpacing, background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
           <div style={{ fontSize: typography.caption2, color: colors.textFaint, marginTop: spacing.xxxs, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
         </div>
-        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)}><ChevronRight size={24} color={colors.textSecondary} /></Button>
+        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)}><ChevronRight size={24} color={colors.textSecondary} style={{ marginLeft: spacing.xxxs }} /></Button>
       </div>
 
       {/* Add row */}
       <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
         <Button variant="primary" onClick={openAdd} style={{ flex: 1 }}>+ Add Supplement</Button>
-        <Button variant="secondary" onClick={() => setShowSchedule(true)} style={{ flex: 1 }}>Edit Schedule</Button>
+        <Button variant="secondary" onClick={() => setShowSchedule(true)} style={{ flex: 1, background: colors.bgModal }}>Edit Schedule</Button>
       </div>
 
       {/* Hero card */}
@@ -523,7 +523,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         onClose={closeForm}
         title={editingId ? "Edit supplement" : "New supplement"}
         footer={
-          <Button variant="primary" fullWidth onClick={submitForm}>
+          <Button variant="primary" fullWidth onClick={submitForm} disabled={!form.name?.trim()}>
             {editingId ? "Save changes" : "Add supplement"}
           </Button>
         }

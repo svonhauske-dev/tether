@@ -1,4 +1,5 @@
-import { spacing } from '../design-system';
+import { useState } from 'react';
+import { colors, spacing, typography } from '../design-system';
 import { SLOTS } from '../lib/notifications';
 import Button from './Button';
 import Input from './Input';
@@ -9,6 +10,7 @@ const CATEGORIES = ["Oral", "Rx", "Injectable", "Topical"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function EditForm({ form, setForm, editingId }) {
+  const [nameTouched, setNameTouched] = useState(false);
   const toggleSlot = (sid) => setForm(f => ({ ...f, slots: f.slots.includes(sid) ? f.slots.filter(x => x !== sid) : [...f.slots, sid] }));
   const toggleDay  = (i)   => setForm(f => ({ ...f, days:  f.days.includes(i)   ? f.days.filter(x => x !== i)   : [...f.days, i]   }));
   return (
@@ -21,7 +23,15 @@ export default function EditForm({ form, setForm, editingId }) {
       {[["Name", "name", "e.g. Magnesium Glycinate"], ["Dose", "dose", "e.g. 2 caps (300 mg)"], ["Notes", "notes", "e.g. Thorne · with food"]].map(([lbl, key, ph]) => (
         <div key={key} style={{ marginBottom: spacing.md }}>
           <Label>{lbl}</Label>
-          <Input value={form[key]} placeholder={ph} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+          <Input
+            value={form[key]}
+            placeholder={ph}
+            onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+            {...(key === "name" ? { onBlur: () => setNameTouched(true) } : {})}
+          />
+          {key === "name" && nameTouched && !form.name?.trim() && (
+            <div style={{ fontSize: typography.label, color: colors.danger, marginTop: spacing.xxxs }}>Name is required</div>
+          )}
         </div>
       ))}
       <div style={{ marginBottom: spacing.md }}>

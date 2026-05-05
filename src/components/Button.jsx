@@ -103,7 +103,7 @@ export default function Button({
       width: touch.min,
       height: touch.min,
       borderRadius: radius.full,
-      background: colors.bgCardHover,
+      background: "transparent",
       border: `1px solid ${colors.borderSubtle}`,
       color: colors.textSecondary,
       fontSize: typography.caption,
