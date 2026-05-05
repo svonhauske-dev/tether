@@ -812,6 +812,7 @@ function ProtocolApp({ user, token, onSignOut }) {
           dbGetLog(dk, token),
           dbGetSchedule(token),
         ]);
+        console.log("[onboarding-debug] dbGetSchedule returned:", sched, "type:", typeof sched);
         const migrated = [];
         const toWrite  = [];
         for (const supp of (s || [])) {
@@ -846,7 +847,12 @@ function ProtocolApp({ user, token, onSignOut }) {
           });
         }
 
-        if (!sched) setNeedsOnboarding(true);
+        if (!sched) {
+          console.log("[onboarding-debug] sched is falsy, setting needsOnboarding=true");
+          setNeedsOnboarding(true);
+        } else {
+          console.log("[onboarding-debug] sched exists, skipping onboarding. schedule_type:", sched.schedule_type);
+        }
 
         // auto-set pill time for consistent mode if not already logged today
         if (behavior === "consistent" && !log?.pill_time) {
@@ -1106,6 +1112,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   const heroHasTime    = pillTime != null || isConsistent;
   const heroDisplayTime = pillTime || consistentTime;
 
+  console.log("[onboarding-debug] render check — loading:", loading, "needsOnboarding:", needsOnboarding);
   if (loading) return <Loader text="Loading your protocol…" />;
   if (needsOnboarding) return (
     <Onboarding onComplete={async (mode, config, behavior, cTime) => {
