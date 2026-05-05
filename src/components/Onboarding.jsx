@@ -178,6 +178,7 @@ export default function Onboarding({ onComplete }) {
                       <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
                       <Input
                         variant="number" width={52} min="0" max="23"
+                        inputMode="numeric" pattern="[0-9]*"
                         value={isEmpty ? "" : h}
                         onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(e.target.value, isEmpty ? 0 : m))}
                         placeholder="0"
@@ -185,6 +186,7 @@ export default function Onboarding({ onComplete }) {
                       <span style={{ fontSize: typography.caption, color: colors.textMuted }}>hr</span>
                       <Input
                         variant="number" width={52} min="0" max="59"
+                        inputMode="numeric" pattern="[0-9]*"
                         value={isEmpty ? "" : m}
                         onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(isEmpty ? 0 : h, e.target.value))}
                         placeholder="0"
@@ -202,6 +204,7 @@ export default function Onboarding({ onComplete }) {
                 <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal items</span>
                 <Input
                   variant="number" width={52} min="0" max="120"
+                  inputMode="numeric" pattern="[0-9]*"
                   value={config.pre_meal_window ?? 30}
                   onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
                 />
@@ -238,6 +241,7 @@ export default function Onboarding({ onComplete }) {
               <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal items</span>
               <Input
                 variant="number" width={52} min="0" max="120"
+                inputMode="numeric" pattern="[0-9]*"
                 value={config.pre_meal_window ?? 30}
                 onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
               />

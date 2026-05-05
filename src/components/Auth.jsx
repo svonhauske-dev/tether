@@ -64,8 +64,12 @@ export default function Auth({ onSignIn }) {
       setLoading(false);
       if (err.message === "EMAIL_TAKEN") {
         setMsg("EMAIL_TAKEN");
+      } else if (err instanceof TypeError || err.message?.includes("fetch") || err.message?.includes("Failed to fetch") || err.message?.includes("network")) {
+        setMsg("Couldn't reach Tether. Check your connection.");
+      } else if (mode === "signin") {
+        setMsg("Email or password is incorrect.");
       } else {
-        setMsg(mode === "signin" ? "Invalid email or password." : "Could not create account — try again.");
+        setMsg("Something went wrong. Try again.");
       }
     }
   };

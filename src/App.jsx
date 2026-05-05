@@ -99,6 +99,8 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [profile, setProfile]               = useState(null);
   const [needsNamePrompt, setNeedsNamePrompt] = useState(false);
   const [pastDayEditing, setPastDayEditing]   = useState(false);
+  const [submitting, setSubmitting]           = useState(false);
+  const [submitError, setSubmitError]         = useState(null);
   const saveTimer = useRef(null);
   const schedSaveRef = useRef(null);
   const { show: showToast } = useToast();
@@ -206,8 +208,8 @@ function ProtocolApp({ user, token, onSignOut }) {
     saveTimer.current = setTimeout(() => {
       const pt = pillTimes[dk];
       const dayChecked = Object.fromEntries(Object.entries(checked).filter(([k]) => k.startsWith(dk)));
-      dbUpsertLog({ user_id: user.id, log_date: dk, pill_time: pt || null, checked: dayChecked }, token).catch(e => console.error(e));
-    }, 800);
+      dbUpsertLog({ user_id: user.id, log_date: dk, pill_time: pt || null, checked: dayChecked }, token).catch(() => showToast("Couldn't save check — try again"));
+    }, 200);
   }, [checked, pillTimes, dk, loading]);
 
   // Streak
@@ -280,36 +282,33 @@ function ProtocolApp({ user, token, onSignOut }) {
   });
   const pct = coreTotal > 0 ? Math.round((coreDone / coreTotal) * 100) : 0;
 
-  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false }); setFormOpen(true); };
-  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false }); setFormOpen(true); };
+  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false }); setSubmitError(null); setFormOpen(true); };
+  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false }); setSubmitError(null); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
 
   const submitForm = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
     const cat = form.category || "Oral";
     const finalDays = form.days.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : form.days;
-    if (editingId) {
-      try {
+    try {
+      if (editingId) {
         await dbUpdateSupp({ ...form, days: finalDays, category: cat, id: editingId }, token);
         setSupps(s => s.map(x => x.id === editingId ? { ...form, days: finalDays, category: cat, id: editingId } : x));
         showToast(`Updated ${form.name}`);
-      } catch (err) {
-        showToast("Couldn't save — try again");
-        console.error(err);
-        return;
-      }
-    } else {
-      try {
+      } else {
         const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, timePreference: form.timePreference || "Anytime", paused: false, user_id: user.id }, token);
         if (rows?.[0]) setSupps(s => [...s, rows[0]]);
         showToast(`Added ${form.name}`);
-      } catch (err) {
-        showToast("Couldn't save — try again");
-        console.error(err);
-        return;
       }
+      closeForm();
+    } catch (err) {
+      setSubmitError("Couldn't save — try again");
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
-    closeForm();
   };
 
   const deleteSupp = async () => {
@@ -561,9 +560,12 @@ function ProtocolApp({ user, token, onSignOut }) {
         onClose={closeForm}
         title={editingId ? "Edit item" : "New item"}
         footer={
-          <Button variant="primary" fullWidth onClick={submitForm} disabled={!form.name?.trim()}>
-            {editingId ? "Save changes" : "Add to protocol"}
-          </Button>
+          <>
+            {submitError && <div style={{ fontSize: typography.label, color: colors.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
+            <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
+              {submitting ? "Saving…" : (editingId ? "Save changes" : "Add to protocol")}
+            </Button>
+          </>
         }
       >
         <EditForm form={form} setForm={setForm} editingId={editingId} />

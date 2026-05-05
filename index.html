@@ -20,6 +20,7 @@
       /* Width-lock: invisible bold ghost prevents layout shift when pill weight changes */
       .pill-label { position: relative; display: inline-block; }
       .pill-label::before { content: attr(data-text); font-weight: 600; visibility: hidden; height: 0; display: block; overflow: hidden; pointer-events: none; }
+      button:active { opacity: 0.75; transition: opacity 60ms ease-out; }
     </style>
   </head>
   <body>
