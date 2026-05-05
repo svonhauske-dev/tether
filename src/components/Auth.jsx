@@ -84,7 +84,7 @@ export default function Auth({ onSignIn }) {
         <div style={{ fontSize: typography.display, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>
           {mode === "signin" ? "Welcome back" : "Hello"}
         </div>
-        <div style={{ fontSize: typography.body, color: colors.textSecondary, marginBottom: spacing.xl, lineHeight: 1.6 }}>
+        <div style={{ fontSize: typography.caption, color: colors.textSecondary, marginBottom: spacing.xl, lineHeight: 1.5 }}>
           {mode === "signin" ? "Pick up where you left off" : "Let's set up your protocol"}
         </div>
 

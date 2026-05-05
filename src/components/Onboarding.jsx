@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { colors, spacing, radius, typography, layout, gradients, segBtnStyle } from "../design-system";
-import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin } from "../config";
+import { DEFAULT_CONFIG, FIXED_SLOTS, toHrMin, fromHrMin } from "../config";
 import Button from "./Button";
 import Card from "./Card";
+import HelperText from "./HelperText";
 import Input from "./Input";
 import Label from "./Label";
 
@@ -45,12 +46,12 @@ function ProgressDots({ step }) {
 }
 
 export default function Onboarding({ onComplete }) {
-  const [step, setStep]             = useState(1);
-  const [selectedMode, setMode]     = useState(null);
-  const [config, setConfig]         = useState({ ...DEFAULT_CONFIG, fixed_times: { ...DEFAULT_CONFIG.fixed_times } });
-  const [behavior, setBehavior]     = useState("flexible");
-  const [cTime, setCTime]           = useState("07:00");
-  const [saving, setSaving]         = useState(false);
+  const [step, setStep]         = useState(1);
+  const [selectedMode, setMode] = useState(null);
+  const [config, setConfig]     = useState({ ...DEFAULT_CONFIG, fixed_times: { ...DEFAULT_CONFIG.fixed_times } });
+  const [behavior, setBehavior] = useState("flexible");
+  const [cTime, setCTime]       = useState("07:00");
+  const [saving, setSaving]     = useState(false);
 
   const updateConfig = (key, value) => setConfig(c => ({ ...c, [key]: value }));
   const updateFixed  = (key, value) => setConfig(c => ({ ...c, fixed_times: { ...c.fixed_times, [key]: value || null } }));
@@ -96,7 +97,7 @@ export default function Onboarding({ onComplete }) {
             <div style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading, marginBottom: spacing.xs }}>
               Set up your protocol
             </div>
-            <div style={{ fontSize: typography.body, color: colors.textSecondary, lineHeight: 1.6 }}>
+            <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5 }}>
               Choose how Tether tracks your day.
             </div>
           </div>
@@ -139,22 +140,18 @@ export default function Onboarding({ onComplete }) {
           <div style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading, marginBottom: spacing.xs }}>
             Configure your schedule
           </div>
-          <div style={{ fontSize: typography.body, color: colors.textSecondary, lineHeight: 1.6 }}>
+          <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5 }}>
             {STEP2_SUBTITLES[selectedMode]}
           </div>
         </div>
-
-        {/* Anchor note */}
-        {ANCHOR_NOTES[selectedMode] && (
-          <Card variant="accent" style={{ padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.label, color: colors.accent, marginBottom: spacing.md }}>
-            {ANCHOR_NOTES[selectedMode]}
-          </Card>
-        )}
 
         {/* Flexible / Consistent toggle — not for fixed */}
         {selectedMode !== "fixed" && (
           <div style={{ marginBottom: spacing.md }}>
             <Label>Daily timing</Label>
+            {behavior === "flexible" && (
+              <HelperText>Tap each morning to set your schedule for the day.</HelperText>
+            )}
             <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.xs }}>
               {[["flexible", "Flexible"], ["consistent", "Consistent"]].map(([val, label]) => {
                 const on = behavior === val;
@@ -162,11 +159,6 @@ export default function Onboarding({ onComplete }) {
                   <button key={val} onClick={() => setBehavior(val)} style={segBtnStyle(on)}>{label}</button>
                 );
               })}
-            </div>
-            <div style={{ fontSize: typography.label, color: colors.textMuted, lineHeight: 1.6 }}>
-              {behavior === "flexible"
-                ? "Tap each morning to set your schedule for the day."
-                : "Your schedule runs automatically at the same time every day."}
             </div>
             {behavior === "consistent" && (
               <div style={{ marginTop: spacing.sm }}>
@@ -182,6 +174,7 @@ export default function Onboarding({ onComplete }) {
           <>
             <div style={{ marginBottom: spacing.md }}>
               <Label>Meal schedule</Label>
+              <HelperText>Times relative to your anchor</HelperText>
               <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
                 {MEAL_ROWS.map(({ key, label }) => {
                   const total   = config[key];
@@ -196,14 +189,14 @@ export default function Onboarding({ onComplete }) {
                         onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(e.target.value, isEmpty ? 0 : m))}
                         placeholder="0"
                       />
-                      <span style={{ fontSize: typography.label, color: colors.textMuted }}>hr</span>
+                      <span style={{ fontSize: typography.caption, color: colors.textMuted }}>hr</span>
                       <Input
                         variant="number" width={52} min="0" max="59"
                         value={isEmpty ? "" : m}
                         onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(isEmpty ? 0 : h, e.target.value))}
                         placeholder="0"
                       />
-                      <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: layout.labelColumn }}>after anchor</span>
+                      <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
                     </Card>
                   );
                 })}
@@ -211,6 +204,7 @@ export default function Onboarding({ onComplete }) {
             </div>
             <div style={{ marginBottom: spacing.lg }}>
               <Label>Pre-meal window</Label>
+              <HelperText>Time before each meal to take pre-meal supplements</HelperText>
               <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
                 <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Take pre-meal supplements</span>
                 <Input
@@ -218,9 +212,8 @@ export default function Onboarding({ onComplete }) {
                   value={config.pre_meal_window ?? 30}
                   onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
                 />
-                <span style={{ fontSize: typography.label, color: colors.textMuted }}>min before eating</span>
+                <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
               </Card>
-              <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>applies to all meals</div>
             </div>
           </>
         )}
@@ -246,6 +239,8 @@ export default function Onboarding({ onComplete }) {
                 })}
               </div>
             </div>
+            <Label>Pre-meal window</Label>
+            <HelperText>Time before each meal to take pre-meal supplements</HelperText>
             <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal supplements</span>
               <Input
@@ -253,7 +248,7 @@ export default function Onboarding({ onComplete }) {
                 value={config.pre_meal_window ?? 30}
                 onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
               />
-              <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: layout.labelColumn }}>min before</span>
+              <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
             </Card>
           </div>
         )}

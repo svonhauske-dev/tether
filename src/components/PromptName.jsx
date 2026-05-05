@@ -21,7 +21,7 @@ export default function PromptName({ onSave }) {
         <div style={{ fontSize: typography.display, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>
           What's your name?
         </div>
-        <div style={{ fontSize: typography.body, color: colors.textSecondary, marginBottom: spacing.xl, lineHeight: 1.6 }}>
+        <div style={{ fontSize: typography.caption, color: colors.textSecondary, marginBottom: spacing.xl, lineHeight: 1.5 }}>
           We'll use it to personalize your experience.
         </div>
         <div style={{ marginBottom: spacing.md, textAlign: "left" }}>

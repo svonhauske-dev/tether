@@ -5,6 +5,7 @@ import Button from "./Button";
 import Input from "./Input";
 import Label from "./Label";
 import { dbUpdateProfile, updateEmail, updatePassword } from "../lib/api";
+import HelperText from "./HelperText";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -111,6 +112,7 @@ export default function ManageAccount({ user, token, profile, onProfileUpdate, o
       <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, marginBottom: spacing.lg }} />
 
       <Label style={{ marginBottom: spacing.xs }}>Email</Label>
+      <HelperText style={{ marginBottom: spacing.xs }}>Changing your email will send a confirmation link.</HelperText>
       <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>{user.email}</div>
       <Input
         type="email"

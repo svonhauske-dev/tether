@@ -4,9 +4,10 @@ import { parseHHMM, fmtTime, addMins } from '../lib/time';
 import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, MODES, deriveOffsets, toHrMin, fromHrMin } from '../config';
 import { SLOTS } from '../lib/notifications';
 import Button from './Button';
+import Card from './Card';
+import HelperText from './HelperText';
 import Input from './Input';
 import Label from './Label';
-import Card from './Card';
 
 export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setScheduleConfig,
                                         anchorBehavior, consistentTime, onSave, onClose, saveFnRef }) {
@@ -57,9 +58,15 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
 
   return (
     <div>
-      {/* Mode grid — "none" spans full width, others 2-col */}
+      {/* Schedule type picker */}
       <div style={{ marginBottom: spacing.lg }}>
         <Label>Schedule type</Label>
+        {localMode === "none" && (
+          <HelperText>Add supplements without picking a time slot to use a pure checklist.</HelperText>
+        )}
+        {(localMode === "medication" || localMode === "wakeup") && (
+          <HelperText>{ANCHOR_NOTES[localMode]}</HelperText>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.xs }}>
           {MODES.map(m => {
             const on = localMode === m.id;
@@ -73,24 +80,13 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
         </div>
       </div>
 
-      {/* No Schedule — explanation only, no config */}
-      {localMode === "none" && (
-        <Card variant="accent" style={{ padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.label, color: colors.accent, marginBottom: spacing.md }}>
-          Tracking only — no notifications. Add supplements without picking "when to take it" to use a pure checklist.
-        </Card>
-      )}
-
-      {/* Anchor note */}
-      {localMode !== "fixed" && localMode !== "none" && (
-        <Card variant="accent" style={{ padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.label, color: colors.accent, marginBottom: spacing.md }}>
-          {ANCHOR_NOTES[localMode]}
-        </Card>
-      )}
-
       {/* Flexible / Consistent toggle (non-fixed, non-none modes) */}
       {localMode !== "fixed" && localMode !== "none" && (
         <div style={{ marginBottom: spacing.md }}>
           <Label>Daily timing</Label>
+          {localBehavior === "flexible" && (
+            <HelperText>Tap each morning to set your schedule for the day.</HelperText>
+          )}
           <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.xs }}>
             {[["flexible", "Flexible"], ["consistent", "Consistent"]].map(([val, label]) => {
               const on = localBehavior === val;
@@ -98,11 +94,6 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
                 <button key={val} onClick={() => setLocalBehavior(val)} style={segBtnStyle(on)}>{label}</button>
               );
             })}
-          </div>
-          <div style={{ fontSize: typography.label, color: colors.textMuted, lineHeight: 1.6 }}>
-            {localBehavior === "flexible"
-              ? "Tap each morning to set your schedule for the day."
-              : "Your schedule runs automatically at the same time every day."}
           </div>
           {localBehavior === "consistent" && (
             <div style={{ marginTop: spacing.sm }}>
@@ -118,6 +109,7 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
         <>
           <div style={{ marginBottom: spacing.md }}>
             <Label>Meal schedule</Label>
+            <HelperText>Times relative to your anchor</HelperText>
             <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
               {mealRows.map(({ key, label }) => {
                 const total   = localConfig[key];
@@ -132,14 +124,14 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
                       onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(e.target.value, isEmpty ? 0 : m))}
                       placeholder="0"
                     />
-                    <span style={{ fontSize: typography.label, color: colors.textMuted }}>hr</span>
+                    <span style={{ fontSize: typography.caption, color: colors.textMuted }}>hr</span>
                     <Input
                       variant="number" width={52} min="0" max="59"
                       value={isEmpty ? "" : m}
                       onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(isEmpty ? 0 : h, e.target.value))}
                       placeholder="0"
                     />
-                    <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: layout.labelColumn }}>after anchor</span>
+                    <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
                   </Card>
                 );
               })}
@@ -147,6 +139,7 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
           </div>
           <div style={{ marginBottom: spacing.lg }}>
             <Label>Pre-meal window</Label>
+            <HelperText>Time before each meal to take pre-meal supplements</HelperText>
             <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Take pre-meal supplements</span>
               <Input
@@ -154,9 +147,8 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
                 value={localConfig.pre_meal_window ?? 30}
                 onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
               />
-              <span style={{ fontSize: typography.label, color: colors.textMuted }}>min before eating</span>
+              <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
             </Card>
-            <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>applies to all meals</div>
           </div>
         </>
       )}
@@ -182,12 +174,13 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
               })}
             </div>
           </div>
+          <Label>Pre-meal window</Label>
+          <HelperText>Time before each meal to take pre-meal supplements</HelperText>
           <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
             <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal supplements</span>
             <Input variant="number" width={52} min="0" max="120" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)} />
-            <span style={{ fontSize: typography.label, color: colors.textMuted, minWidth: layout.labelColumn }}>min before</span>
+            <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
           </Card>
-          <div style={{ fontSize: typography.label, color: colors.textMuted, marginTop: spacing.xs, paddingLeft: spacing.xs }}>How many minutes before each meal to take pre-meal supplements</div>
         </div>
       )}
 
@@ -212,24 +205,25 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
       )}
 
       {/* Live preview — hidden in no-schedule mode */}
-      {localMode !== "none" && <div style={{ marginBottom: spacing.lg }}>
-        <Label>{localMode === "fixed" ? "Schedule preview" : "Preview (7:00 am anchor)"}</Label>
-        <div style={{ borderRadius: radius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.bgCard, padding: spacing.md, display: "flex", flexDirection: "column", gap: spacing.xs }}>
-          {previewRows.length === 0
-            ? <span style={{ fontSize: typography.caption, color: colors.textMuted }}>No times configured yet</span>
-            : previewRows.map((row, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
-                  <span style={{ fontSize: typography.caption, fontVariantNumeric: "tabular-nums", color: colors.accent, fontWeight: typography.semibold, minWidth: touch.min }}>
-                    {row.timeStr ?? fmtTime(addMins(previewBase, row.offset))}
-                  </span>
-                  <span style={{ fontSize: typography.caption, color: colors.textMuted }}>—</span>
-                  <span style={{ fontSize: typography.caption, color: colors.textSecondary }}>{row.label}</span>
-                </div>
-              ))
-          }
+      {localMode !== "none" && (
+        <div style={{ marginBottom: spacing.lg }}>
+          <Label>{localMode === "fixed" ? "Schedule preview" : "Preview (7:00 am anchor)"}</Label>
+          <div style={{ borderRadius: radius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.bgCard, padding: spacing.md, display: "flex", flexDirection: "column", gap: spacing.xs }}>
+            {previewRows.length === 0
+              ? <span style={{ fontSize: typography.caption, color: colors.textMuted }}>No times configured yet</span>
+              : previewRows.map((row, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
+                    <span style={{ fontSize: typography.caption, fontVariantNumeric: "tabular-nums", color: colors.accent, fontWeight: typography.semibold, minWidth: touch.min }}>
+                      {row.timeStr ?? fmtTime(addMins(previewBase, row.offset))}
+                    </span>
+                    <span style={{ fontSize: typography.caption, color: colors.textMuted }}>—</span>
+                    <span style={{ fontSize: typography.caption, color: colors.textSecondary }}>{row.label}</span>
+                  </div>
+                ))
+            }
+          </div>
         </div>
-      </div>}
-
+      )}
     </div>
   );
 }

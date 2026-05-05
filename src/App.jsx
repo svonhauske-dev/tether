@@ -490,7 +490,7 @@ function ProtocolApp({ user, token, onSignOut }) {
           <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
             <div style={{ fontSize: typography.display, marginBottom: spacing.md }}>💊</div>
             <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
-            <div style={{ fontSize: typography.caption, color: colors.textMuted, lineHeight: 1.7, marginBottom: spacing.lg }}>Add your first supplement to get started.</div>
+            <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5, marginBottom: spacing.lg }}>Add your first supplement to get started.</div>
             <Button variant="primary" fullWidth onClick={openAdd}>Add first supplement</Button>
           </div>
         ) : (
