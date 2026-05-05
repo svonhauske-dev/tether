@@ -2,7 +2,7 @@ import { colors, spacing, radius, typography } from "../design-system";
 
 const VARIANTS = {
   now:      { background: colors.statusNowBadgeBg,    color: colors.accent },
-  missed:   { background: colors.statusMissedBadgeBg, color: colors.statusMissedBadgeColor },
+  missed:   { background: colors.warningSubtle,        color: colors.warning },
   category: { background: colors.accentDim,            color: colors.accent },
   neutral:  { background: colors.bgCardHover,          color: colors.textMuted },
 };

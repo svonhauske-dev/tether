@@ -17,6 +17,9 @@
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { background: #FAFAF8; color: #1A1A1A; }
+      /* Width-lock: invisible bold ghost prevents layout shift when pill weight changes */
+      .pill-label { position: relative; display: inline-block; }
+      .pill-label::before { content: attr(data-text); font-weight: 600; visibility: hidden; height: 0; display: block; overflow: hidden; pointer-events: none; }
     </style>
   </head>
   <body>

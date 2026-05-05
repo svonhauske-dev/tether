@@ -183,7 +183,7 @@ export const segBtnStyle = (on) => ({
   fontFamily: typography.fontBody,
   background: on ? colors.accentSubtle : "transparent",
   color: on ? colors.accent : colors.textSecondary,
-  border: `1px solid ${on ? colors.accentBorder : colors.borderSubtle}`,
+  border: `1px solid ${on ? colors.accent : colors.borderSubtle}`,
   fontWeight: on ? typography.semibold : typography.regular,
   minHeight: layout.segHeight,
 });

@@ -451,7 +451,7 @@ function ScheduleModal({ scheduleMode, setScheduleMode, scheduleConfig, setSched
           {MODES.map(m => {
             const on = localMode === m.id;
             return (
-              <Card key={m.id} onClick={() => setLocalMode(m.id)} style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: spacing.xxs, minHeight: layout.modeButtonHeight, background: on ? colors.accentDim : "transparent", border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`, marginBottom: 0, ...(m.id === "none" ? { gridColumn: "1 / -1" } : {}) }}>
+              <Card key={m.id} onClick={() => setLocalMode(m.id)} style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: spacing.xxs, minHeight: layout.modeButtonHeight, background: on ? colors.accentSubtle : "transparent", border: `1px solid ${on ? colors.accent : colors.borderSubtle}`, marginBottom: 0, ...(m.id === "none" ? { gridColumn: "1 / -1" } : {}) }}>
                 <span style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: on ? colors.accent : colors.textPrimary }}>{m.title}</span>
                 <span style={{ fontSize: typography.label, color: colors.textMuted, lineHeight: 1.4 }}>{m.desc}</span>
               </Card>
@@ -631,7 +631,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
 
   const SC = {
     done:   { border: colors.borderSubtle,          bg: colors.cardSubtle,        hbg: "transparent",                badge: null },
-    missed: { border: colors.statusMissedBorder,    bg: colors.statusMissedBg,    hbg: colors.statusMissedHover,     badge: { label: "missed", bg: colors.statusMissedBadgeBg,  color: colors.statusMissedBadgeColor } },
+    missed: { border: colors.borderSubtle,           bg: colors.cardSubtle,        hbg: "transparent",                badge: { label: "late",   bg: colors.warningSubtle,          color: colors.warning } },
     now:    { border: colors.statusNowBorder,       bg: colors.statusNowBg,       hbg: colors.statusNowHover,        badge: { label: "now",    bg: colors.statusNowBadgeBg,     color: colors.accent } },
     future: { border: colors.borderSubtle,          bg: colors.cardSubtle,        hbg: "transparent",                badge: null },
   };
@@ -642,7 +642,7 @@ function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset, pillTime, isF
       <div onClick={() => setExpanded(e => !e)} style={{ padding: `${spacing.sm}px ${spacing.md}px`, display: "flex", justifyContent: "space-between", alignItems: "center", background: sc.hbg, cursor: "pointer", userSelect: "none" }}>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flex: 1, minWidth: 0 }}>
           {allDone
-            ? <div style={{ width: 20, height: 20, borderRadius: radius.xs, background: colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: colors.textPrimary, fontSize: typography.label, fontWeight: typography.bold }}>✓</span></div>
+            ? <div style={{ width: 20, height: 20, borderRadius: radius.xs, background: colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: colors.textOnAccent, fontSize: typography.label, fontWeight: typography.bold }}>✓</span></div>
             : <span style={{ color: slot.color, fontSize: typography.caption, flexShrink: 0, width: 20, textAlign: "center" }}>{slot.icon}</span>
           }
           <div style={{ minWidth: 0 }}>
@@ -997,14 +997,18 @@ function ProtocolApp({ user, token, onSignOut }) {
       await dbUpdateSupp(updated, token);
       setSupps(s => s.map(x => x.id === supp.id ? updated : x));
       showToast(updated.paused ? `Paused ${supp.name}` : `Resumed ${supp.name}`);
-      const updatedHome = supps.map(x => x.id === supp.id ? updated : x).filter(s => !pendingDeletes[s.id] && !s.paused);
-      scheduleNotifications(effectivePillTime, updatedHome, viewDay, dk, slotOffsets);
-      return true;
     } catch (err) {
       showToast("Couldn't update — try again");
       console.error(err);
       return false;
     }
+    try {
+      const updatedHome = supps.map(x => x.id === supp.id ? updated : x).filter(s => !pendingDeletes[s.id] && !s.paused);
+      scheduleNotifications(effectivePillTime, updatedHome, viewDay, dk, slotOffsets);
+    } catch (e) {
+      console.warn("scheduleNotifications failed (non-fatal):", e);
+    }
+    return true;
   };
 
   const handleEditFormTogglePause = async () => {
@@ -1206,19 +1210,9 @@ function ProtocolApp({ user, token, onSignOut }) {
         onClose={closeForm}
         title={editingId ? "Edit supplement" : "New supplement"}
         footer={
-          editingId ? (
-            <>
-              <Button variant="primary" fullWidth onClick={submitForm} style={{ marginBottom: spacing.xs }}>Save changes</Button>
-              <div style={{ display: "flex", gap: spacing.xs }}>
-                <Button variant="secondary" secondaryStyle="solid" style={{ flex: 1 }} onClick={handleEditFormTogglePause}>
-                  {form.paused ? "Resume" : "Pause"}
-                </Button>
-                <Button variant="destructive" style={{ flex: 1 }} onClick={deleteSupp}>Delete</Button>
-              </div>
-            </>
-          ) : (
-            <Button variant="primary" fullWidth onClick={submitForm}>Add supplement</Button>
-          )
+          <Button variant="primary" fullWidth onClick={submitForm}>
+            {editingId ? "Save changes" : "Add supplement"}
+          </Button>
         }
       >
         <EditForm form={form} setForm={setForm} editingId={editingId} />

@@ -61,7 +61,7 @@ export default function Button({
     } else if (active) {
       v = { ...pillBase, background: colors.accentDim, color: colors.accent, border: `1px solid ${colors.accent}`, fontWeight: typography.semibold };
     } else {
-      v = { ...pillBase, background: "transparent", color: colors.textSecondary, border: `1px solid ${colors.borderStrong}`, fontWeight: typography.regular };
+      v = { ...pillBase, background: "transparent", color: colors.textSecondary, border: `1px solid ${colors.borderSubtle}`, fontWeight: typography.regular };
     }
   } else if (variant === "tertiary") {
     v = {
@@ -116,7 +116,9 @@ export default function Button({
 
   return (
     <button type={type} disabled={disabled} style={{ ...base, ...v, ...style }} {...rest}>
-      {children}
+      {variant === "pill" && typeof children === "string"
+        ? <span className="pill-label" data-text={children}>{children}</span>
+        : children}
     </button>
   );
 }
