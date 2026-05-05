@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { colors, spacing, radius, typography } from "../design-system";
+import { colors, spacing, radius, typography, layout, shadows, zIndex as zIndexTokens } from "../design-system";
 import Button from "./Button";
 
 export default function Modal({ open, onClose, title, children, footer }) {
@@ -35,7 +35,7 @@ export default function Modal({ open, onClose, title, children, footer }) {
           opacity: open ? 1 : 0,
           transition: "opacity 250ms ease-out",
           pointerEvents: open ? "all" : "none",
-          zIndex: 199,
+          zIndex: zIndexTokens.backdrop,
         }}
       />
       {/* Modal positioning wrapper */}
@@ -44,7 +44,7 @@ export default function Modal({ open, onClose, title, children, footer }) {
           fontFamily: typography.fontBody,
           position: "fixed",
           top: 0, left: 0, right: 0, bottom: 0,
-          zIndex: 200,
+          zIndex: zIndexTokens.modal,
           pointerEvents: open ? "all" : "none",
           display: "flex",
           alignItems: "center",
@@ -56,11 +56,11 @@ export default function Modal({ open, onClose, title, children, footer }) {
           style={{
             position: "relative",
             width: `calc(100% - ${spacing.md * 2}px)`,
-            maxWidth: 480,
+            maxWidth: layout.maxContentWidth,
             maxHeight: `calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48px)`,
             background: colors.bgModal,
             borderRadius: radius.lg,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            boxShadow: shadows.modal,
             transform: open ? "scale(1)" : "scale(0.95)",
             opacity: open ? 1 : 0,
             transition: "transform 250ms ease-out, opacity 250ms ease-out",

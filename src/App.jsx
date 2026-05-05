@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import {
   colors, spacing, radius, typography, touch, layout,
-  ghostButtonStyle,
+  gradients, shadows, zIndex, ghostButtonStyle, segBtnStyle,
 } from "./design-system";
+import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin } from "./config";
 import { Settings, Trash2, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import Button from "./components/Button";
 import Input from "./components/Input";
@@ -144,7 +145,7 @@ const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedule?on_co
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const BG_GRADIENT = `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`;
+const BG_GRADIENT = gradients.bg;
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -160,15 +161,6 @@ const SLOTS = [
   { id: "injectable",    label: "Injectables",       sublabel: "Subcutaneous",                icon: "⊕", color: colors.slotInjectable },
   { id: "topical",       label: "Topicals",          sublabel: "Skin & external",             icon: "◐", color: colors.slotTopical },
 ];
-
-const DEFAULT_CONFIG = {
-  pre_meal_window: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660,
-  window_start: 0, window_length: 480, meals_per_day: 2,
-  fixed_times: {
-    pre_breakfast: "07:30", breakfast: "08:00", pre_lunch: "11:30", lunch: "12:00",
-    pre_dinner: "17:30", dinner: "18:00", after_dinner: "20:00", injectable: null, topical: null,
-  },
-};
 
 function deriveOffsets(mode, cfg) {
   if (mode === "none" || mode === "fixed") return null;
@@ -211,24 +203,6 @@ const MODES = [
   { id: "wakeup",     title: "Wake Up Anchor",       desc: "Cascades from when you wake up" },
   { id: "fasting",    title: "Intermittent Fasting", desc: "Builds around your eating window" },
   { id: "fixed",      title: "Fixed Times",          desc: "Same schedule every day" },
-];
-
-const ANCHOR_NOTES = {
-  medication: "Anchor = when you take your medication each morning",
-  fasting:    "Anchor = when your eating window opens",
-  wakeup:     "Anchor = when you wake up each morning",
-};
-
-const FIXED_SLOTS = [
-  { key: "pre_breakfast", label: "Before Breakfast" },
-  { key: "breakfast",     label: "Breakfast" },
-  { key: "pre_lunch",    label: "Before Lunch" },
-  { key: "lunch",        label: "Lunch" },
-  { key: "pre_dinner",   label: "Before Dinner" },
-  { key: "dinner",       label: "Dinner" },
-  { key: "after_dinner", label: "Evening" },
-  { key: "injectable",   label: "Injectables" },
-  { key: "topical",      label: "Topicals" },
 ];
 
 const START_LABELS = {
@@ -303,9 +277,9 @@ function SignIn({ onSignIn }) {
 
   return (
     <div style={{ fontFamily: typography.fontBody, background: BG_GRADIENT, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
-      <div style={{ width: "100%", maxWidth: 360, textAlign: "center" }}>
+      <div style={{ width: "100%", maxWidth: layout.signInWidth, textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: spacing.md }}>💊</div>
-        <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: "-0.02em", marginBottom: spacing.xs }}>Tether</div>
+        <div style={{ fontSize: typography.hero, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>Tether</div>
         <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xl, lineHeight: 1.7 }}>Your supplement schedule,<br />built around your life.</div>
         <div style={{ marginBottom: spacing.md, textAlign: "left" }}>
           <Label>Email</Label>
@@ -418,27 +392,6 @@ function EditForm({ form, setForm, editingId }) {
     </div>
   );
 }
-
-// ── Schedule helpers ──────────────────────────────────────────────────────────
-
-function toHrMin(totalMins) {
-  if (!totalMins && totalMins !== 0) return { h: 0, m: 0 };
-  return { h: Math.floor(totalMins / 60), m: totalMins % 60 };
-}
-function fromHrMin(h, m) { return (parseInt(h) || 0) * 60 + (parseInt(m) || 0); }
-
-const segBtnStyle = (on) => ({
-  flex: 1,
-  padding: `${spacing.sm}px`,
-  borderRadius: radius.md,
-  cursor: "pointer",
-  fontSize: typography.caption,
-  background: on ? colors.accentDim : "transparent",
-  color: on ? colors.accent : colors.textSecondary,
-  border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`,
-  fontWeight: on ? typography.semibold : typography.regular,
-  minHeight: layout.segHeight,
-});
 
 // ── ScheduleModal ─────────────────────────────────────────────────────────────
 
@@ -1115,7 +1068,7 @@ function ProtocolApp({ user, token, onSignOut }) {
   );
 
   return (
-    <div style={{ fontFamily: typography.fontBody, color: colors.textPrimary, maxWidth: 480, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
+    <div style={{ fontFamily: typography.fontBody, color: colors.textPrimary, maxWidth: layout.maxContentWidth, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
 
       {/* Greeting */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm }}>
@@ -1130,7 +1083,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)} style={{ width: touch.min, height: touch.min, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}><ChevronLeft size={24} color={colors.textSecondary} /></Button>
         <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
           <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
-          <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: "-0.02em", background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
+          <button onClick={() => { if (!isToday) setViewDate(TODAY); }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: typography.headingLetterSpacing, background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
           <div style={{ fontSize: typography.caption2, color: colors.textFaint, marginTop: 2, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
         </div>
         <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)} style={{ width: touch.min, height: touch.min, borderRadius: radius.md, border: `1px solid ${colors.borderBase}` }}><ChevronRight size={24} color={colors.textSecondary} /></Button>
@@ -1173,7 +1126,7 @@ function ProtocolApp({ user, token, onSignOut }) {
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "baseline", gap: spacing.xs }}>
-                    <span style={{ fontSize: typography.display, fontWeight: typography.bold, letterSpacing: "-0.04em", color: colors.accent, fontFamily: typography.fontHeading }}>{heroDisplayTime}</span>
+                    <span style={{ fontSize: typography.display, fontWeight: typography.bold, letterSpacing: typography.displayLetterSpacing, color: colors.accent, fontFamily: typography.fontHeading }}>{heroDisplayTime}</span>
                     {pillTime && <button onClick={() => { setTmpTime(pillTime); setEditPillTime(true); }} style={{ fontSize: typography.caption, color: colors.textMuted, background: "none", border: "none", cursor: "pointer", padding: 0 }}>edit</button>}
                   </div>
                 )}

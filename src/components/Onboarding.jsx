@@ -1,16 +1,10 @@
-// NOTE: constants (BG_GRADIENT, DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES) and
-// config UI sections (toHrMin, fromHrMin, segBtnStyle) are duplicated from App.jsx
-// because those definitions are not exported. If they're ever extracted to shared
-// modules, this file should be updated to import them.
-
 import { useState } from "react";
-import { colors, spacing, radius, typography, layout } from "../design-system";
+import { colors, spacing, radius, typography, layout, gradients, segBtnStyle } from "../design-system";
+import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin } from "../config";
 import Button from "./Button";
 import Card from "./Card";
 import Input from "./Input";
 import Label from "./Label";
-
-const BG_GRADIENT = `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`;
 
 const ONBOARDING_MODES = [
   { id: "none",       title: "No Schedule",          desc: "Just a checklist. No times, no notifications." },
@@ -27,59 +21,12 @@ const STEP2_SUBTITLES = {
   fixed:      "Set your daily times. You can change these anytime.",
 };
 
-const ANCHOR_NOTES = {
-  medication: "Anchor = when you take your medication each morning",
-  fasting:    "Anchor = when your eating window opens",
-  wakeup:     "Anchor = when you wake up each morning",
-};
-
-const FIXED_SLOTS = [
-  { key: "pre_breakfast", label: "Before Breakfast" },
-  { key: "breakfast",     label: "Breakfast" },
-  { key: "pre_lunch",     label: "Before Lunch" },
-  { key: "lunch",         label: "Lunch" },
-  { key: "pre_dinner",    label: "Before Dinner" },
-  { key: "dinner",        label: "Dinner" },
-  { key: "after_dinner",  label: "Evening" },
-  { key: "injectable",    label: "Injectables" },
-  { key: "topical",       label: "Topicals" },
-];
-
-const DEFAULT_CONFIG = {
-  pre_meal_window: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660,
-  window_start: 0, window_length: 480, meals_per_day: 2,
-  fixed_times: {
-    pre_breakfast: "07:30", breakfast: "08:00", pre_lunch: "11:30", lunch: "12:00",
-    pre_dinner: "17:30", dinner: "18:00", after_dinner: "20:00", injectable: null, topical: null,
-  },
-};
-
 const MEAL_ROWS = [
   { key: "breakfast",    label: "Breakfast" },
   { key: "lunch",        label: "Lunch" },
   { key: "dinner",       label: "Dinner" },
   { key: "after_dinner", label: "Evening" },
 ];
-
-const toHrMin = (totalMins) => {
-  if (!totalMins && totalMins !== 0) return { h: 0, m: 0 };
-  return { h: Math.floor(totalMins / 60), m: totalMins % 60 };
-};
-const fromHrMin = (h, m) => (parseInt(h) || 0) * 60 + (parseInt(m) || 0);
-
-const segBtnStyle = (on) => ({
-  flex: 1,
-  padding: `${spacing.sm}px`,
-  borderRadius: radius.md,
-  cursor: "pointer",
-  fontSize: typography.caption,
-  background: on ? colors.accentDim : "transparent",
-  color: on ? colors.accent : colors.textSecondary,
-  border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`,
-  fontWeight: on ? typography.semibold : typography.regular,
-  minHeight: layout.segHeight,
-  fontFamily: typography.fontBody,
-});
 
 function ProgressDots({ step }) {
   return (
@@ -127,7 +74,7 @@ export default function Onboarding({ onComplete }) {
 
   const screenStyle = {
     fontFamily: typography.fontBody,
-    background: BG_GRADIENT,
+    background: gradients.bg,
     minHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
@@ -142,7 +89,7 @@ export default function Onboarding({ onComplete }) {
   if (step === 1) {
     return (
       <div style={screenStyle}>
-        <div style={{ width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", flex: 1 }}>
+        <div style={{ width: "100%", maxWidth: layout.maxContentWidth, display: "flex", flexDirection: "column", flex: 1 }}>
           <ProgressDots step={1} />
 
           <div style={{ marginBottom: spacing.xl }}>
@@ -185,7 +132,7 @@ export default function Onboarding({ onComplete }) {
 
   return (
     <div style={screenStyle}>
-      <div style={{ width: "100%", maxWidth: 480 }}>
+      <div style={{ width: "100%", maxWidth: layout.maxContentWidth }}>
         <ProgressDots step={2} />
 
         <div style={{ marginBottom: spacing.xl }}>

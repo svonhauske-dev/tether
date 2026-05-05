@@ -98,9 +98,11 @@ export const typography = {
   bold:     700,
 
   // Letter spacing
-  labelSpacingTight: "0.04em",
-  labelSpacing:      "0.08em",
-  labelSpacingWide:  "0.1em",
+  labelSpacingTight:    "0.04em",
+  labelSpacing:         "0.08em",
+  labelSpacingWide:     "0.1em",
+  headingLetterSpacing: "-0.02em", // headings and display dates
+  displayLetterSpacing: "-0.04em", // large anchor time display
 
   // Font families
   fontBody:    "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
@@ -112,9 +114,27 @@ export const touch = {
 };
 
 export const layout = {
-  closeButton:      32, // close button (✕) width/height
-  modeButtonHeight: 64, // schedule mode grid button height
-  segHeight:        40, // segmented control height (intentionally below touch.min)
+  closeButton:      32,  // close button (✕) width/height
+  modeButtonHeight: 64,  // schedule mode grid button height
+  segHeight:        40,  // segmented control height (intentionally below touch.min)
+  maxContentWidth:  480, // maximum width for page/modal content
+  signInWidth:      360, // sign-in form max width
+  toastMaxWidth:    448, // toast container max width (maxContentWidth - md*2)
+};
+
+export const gradients = {
+  bg: `linear-gradient(160deg,${colors.bgBase} 0%,${colors.bgGradientMid} 50%,${colors.bgGradientEnd} 100%)`,
+};
+
+export const shadows = {
+  modal:   "0 8px 32px rgba(0,0,0,0.4)",
+  popover: "0 8px 24px rgba(0,0,0,0.4)",
+};
+
+export const zIndex = {
+  backdrop: 199,
+  modal:    200,
+  toast:    400,
 };
 
 // ── Reusable style objects ──────────────────────────────────────────────────────
@@ -134,3 +154,17 @@ export const ghostButtonStyle = {
   justifyContent: "center",
   WebkitTapHighlightColor: "transparent",
 };
+
+export const segBtnStyle = (on) => ({
+  flex: 1,
+  padding: `${spacing.sm}px`,
+  borderRadius: radius.md,
+  cursor: "pointer",
+  fontSize: typography.caption,
+  fontFamily: typography.fontBody,
+  background: on ? colors.accentDim : "transparent",
+  color: on ? colors.accent : colors.textSecondary,
+  border: `1px solid ${on ? colors.accentBorder : colors.borderStrong}`,
+  fontWeight: on ? typography.semibold : typography.regular,
+  minHeight: layout.segHeight,
+});

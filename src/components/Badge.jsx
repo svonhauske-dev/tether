@@ -12,7 +12,7 @@ export default function Badge({ variant = "neutral", style, children }) {
     fontFamily: typography.fontBody,
     fontSize: typography.label,
     borderRadius: radius.xs,
-    padding: `2px ${spacing.xs}px`,
+    padding: `${spacing.xxxs}px ${spacing.xs}px`,
     fontWeight: typography.semibold,
     letterSpacing: typography.labelSpacing,
     flexShrink: 0,

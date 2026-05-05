@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { colors, spacing, radius, typography, touch } from "../design-system";
+import { colors, spacing, radius, typography, touch, layout, shadows, zIndex as zIndexTokens } from "../design-system";
 import { ToastContext } from "./ToastContext";
 
 function ToastItem({ toast, onDismiss }) {
@@ -23,7 +23,7 @@ function ToastItem({ toast, onDismiss }) {
         border: `1px solid ${colors.borderStrong}`,
         borderRadius: radius.md,
         padding: `${spacing.sm}px ${spacing.md}px`,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        boxShadow: shadows.popover,
         transform: visible ? "translateY(0)" : "translateY(calc(100% + 16px))",
         opacity: visible ? 1 : 0,
         transition: "transform 250ms ease-out, opacity 200ms ease-out",
@@ -76,9 +76,9 @@ export default function Toast() {
         bottom: spacing.md,
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 400,
+        zIndex: zIndexTokens.toast,
         width: `calc(100% - ${spacing.md * 2}px)`,
-        maxWidth: 448,
+        maxWidth: layout.toastMaxWidth,
         display: "flex",
         flexDirection: "column",
         gap: spacing.xs,
