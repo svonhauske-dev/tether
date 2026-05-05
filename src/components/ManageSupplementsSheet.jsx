@@ -33,7 +33,7 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
 
   if (supplements.length === 0) {
     return (
-      <BottomSheetopen={open} onClose={onClose} title="Manage supplements">
+      <BottomSheet open={open} onClose={onClose} title="Manage supplements">
         <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
           <div style={{ fontSize: typography.hero, marginBottom: spacing.md }}>💊</div>
           <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
@@ -44,7 +44,7 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
   }
 
   return (
-    <BottomSheetopen={open} onClose={onClose} title="Manage supplements">
+    <BottomSheet open={open} onClose={onClose} title="Manage supplements">
       {grouped.map(({ cat, items }) => (
         <div key={cat} style={{ marginBottom: spacing.lg }}>
           <Label style={{ marginBottom: spacing.xs }}>{cat}</Label>

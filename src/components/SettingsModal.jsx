@@ -14,7 +14,7 @@ export default function SettingsModal({ open, onClose, notifStatus, onEnableNoti
   };
 
   return (
-    <BottomSheetopen={open} onClose={onClose} title="Settings">
+    <BottomSheet open={open} onClose={onClose} title="Settings">
       <Label style={{ marginBottom: spacing.xs }}>Supplements</Label>
       <div
         onClick={onOpenManage}

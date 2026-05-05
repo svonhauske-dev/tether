@@ -1228,10 +1228,10 @@ function ProtocolApp({ user, token, onSignOut }) {
         onDelete={requestDelete}
         onTogglePause={togglePause}
       />
-      <BottomSheetopen={formOpen} onClose={closeForm} title={editingId ? "Edit supplement" : "New supplement"}>
+      <BottomSheet open={formOpen} onClose={closeForm} title={editingId ? "Edit supplement" : "New supplement"}>
         <EditForm form={form} setForm={setForm} editingId={editingId} onSubmit={submitForm} onCancel={closeForm} onDelete={deleteSupp} onTogglePause={handleEditFormTogglePause} />
       </BottomSheet>
-      <BottomSheetopen={showSchedule} onClose={() => setShowSchedule(false)} title="Daily Schedule">
+      <BottomSheet open={showSchedule} onClose={() => setShowSchedule(false)} title="Daily Schedule">
         <ScheduleModal
           key={String(showSchedule)}
           scheduleMode={scheduleMode}
