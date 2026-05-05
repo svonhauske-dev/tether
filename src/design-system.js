@@ -10,7 +10,7 @@ export const colors = {
   bgCardSubtle:    "#F4F6F8",   // matches base for nested elements
   bgBackdrop:      "rgba(26,26,26,0.4)",
   bgInput:         "#FFFFFF",
-  bgInputDisabled: "#F5F5F3",
+  bgInputDisabled: "#F2F4F6",
 
   // Text — near-black ink, soft greys
   textPrimary:     "#1A1A1A",   // near-black, deep but not harsh
@@ -23,7 +23,7 @@ export const colors = {
   // Accent — deep ink-blue, single confident color
   accent:          "#1A1A1A",   // near-black ink — action color
   accentHover:     "#000000",   // pure black on hover/press
-  accentSubtle:    "#F0F0EE",   // pale warm grey for ghost-active states
+  accentSubtle:    "#EEF1F4",   // cool pale grey for ghost-active states
 
   // Borders — hairline restraint
   borderSubtle:    "#E2E6EA",   // cool hairline
@@ -50,9 +50,9 @@ export const colors = {
   warningSubtle:   "#F2EDE5",
 
   // ── Backward-compat aliases — components reference these; do not remove ──────
-  accentDim:              "#F0F0EE",             // → accentSubtle
+  accentDim:              "#EEF1F4",             // → accentSubtle
   accentBorder:           "rgba(26,26,26,0.3)",  // derived from accent
-  bgCardHover:            "#F0F0EE",             // subtle hover on white
+  bgCardHover:            "#EEF1F4",             // subtle hover on white — cool grey
   borderBase:             "#E2E6EA",             // → borderSubtle
   textDone:               "#8C8C8C",             // → textMuted
   textFaint:              "rgba(26,26,26,0.3)",  // very faint (date sublabel)
