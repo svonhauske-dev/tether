@@ -146,7 +146,7 @@ export default function Onboarding({ onComplete }) {
 
         {/* Anchor note */}
         {ANCHOR_NOTES[selectedMode] && (
-          <Card variant="accent" style={{ padding: `${spacing.xs}px ${spacing.sm}px`, borderRadius: radius.sm, fontSize: typography.label, color: colors.accent, marginBottom: spacing.md }}>
+          <Card variant="accent" style={{ padding: `${spacing.xs}px ${spacing.sm}px`, fontSize: typography.label, color: colors.accent, marginBottom: spacing.md }}>
             {ANCHOR_NOTES[selectedMode]}
           </Card>
         )}

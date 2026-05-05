@@ -11,7 +11,7 @@ export default function Badge({ variant = "neutral", style, children }) {
   const base = {
     fontFamily: typography.fontBody,
     fontSize: typography.label,
-    borderRadius: radius.xs,
+    borderRadius: radius.full,
     padding: `${spacing.xxxs}px ${spacing.xs}px`,
     fontWeight: typography.semibold,
     letterSpacing: typography.labelSpacing,

@@ -114,14 +114,13 @@ export default function Button({
     v = {
       width: 36,
       height: 36,
-      borderRadius: "50%",
+      borderRadius: radius.full,
       fontSize: typography.label,
-      fontWeight: typography.semibold,
       flexShrink: 0,
       padding: 0,
       ...(active
-        ? { background: colors.accentDim, color: colors.accent, border: `1px solid ${colors.accent}` }
-        : { background: "transparent", color: colors.textSecondary, border: `1px solid ${colors.borderStrong}` }),
+        ? { background: colors.accentSubtle, color: colors.accent, border: `1.5px solid ${colors.accent}`, fontWeight: typography.semibold }
+        : { background: "transparent", color: colors.textPrimary, border: `1px solid ${colors.borderSubtle}`, fontWeight: typography.regular }),
     };
   } else {
     v = {};

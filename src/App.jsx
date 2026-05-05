@@ -465,7 +465,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       />
 
       {/* Main slot list */}
-      <div style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>
+      <div style={{ borderRadius: radius.md, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>
         {homeSupps.length === 0 ? (
           <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
             <div style={{ fontSize: typography.display, marginBottom: spacing.md }}>💊</div>

@@ -30,7 +30,7 @@ export default function Hero({
   const r = 30, circ = 2 * Math.PI * r, dash = circ * (pct / 100);
 
   return (
-    <Card style={{ borderRadius: radius.xl, border: `1px solid ${colors.borderBase}`, backdropFilter: effects.backdropBlur, WebkitBackdropFilter: effects.backdropBlur, padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" }}>
+    <Card style={{ border: `1px solid ${colors.borderBase}`, backdropFilter: effects.backdropBlur, WebkitBackdropFilter: effects.backdropBlur, padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? colors.accentDim : colors.bgCard, transition: "background 0.4s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
         <div style={{ flex: 1 }}>
           {scheduleMode === "none" ? (

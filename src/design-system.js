@@ -162,7 +162,7 @@ export const effects = {
 export const segBtnStyle = (on) => ({
   flex: 1,
   padding: `${spacing.sm}px`,
-  borderRadius: radius.md,
+  borderRadius: radius.full,
   cursor: "pointer",
   fontSize: typography.caption,
   fontFamily: typography.fontBody,
