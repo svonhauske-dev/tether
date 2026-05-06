@@ -15,7 +15,7 @@ export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset
   const SC = {
     done:   { border: theme.border.subtle,          bg: theme.surface.cardSubtle,        hbg: "transparent",                badge: null },
     missed: { border: theme.border.subtle,           bg: theme.surface.cardSubtle,        hbg: "transparent",                badge: { label: "late",   bg: theme.status.warningSubtle,          color: theme.status.warning } },
-    now:    { border: theme.status.nowBorder,       bg: theme.status.nowBg,       hbg: theme.status.nowHover,        badge: { label: "now",    bg: theme.status.nowBadgeBg,     color: theme.accent.default } },
+    now:    { border: theme.status.nowBorder,       bg: theme.status.nowBg,       hbg: theme.status.nowHover,        badge: { label: "now",    bg: theme.status.nowBadgeBg,     color: theme.status.nowBadgeText } },
     future: { border: theme.border.subtle,          bg: theme.surface.cardSubtle,        hbg: "transparent",                badge: null },
   };
   const sc = SC[status];

@@ -38,7 +38,7 @@ export default function Hero({
     : null;
 
   return (
-    <Card style={{ border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, backdropFilter: effects.backdropBlur, WebkitBackdropFilter: effects.backdropBlur, padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? theme.accent.subtle : theme.surface.card, transition: "background 0.4s ease" }}>
+    <Card style={{ border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, backdropFilter: effects.backdropBlur, WebkitBackdropFilter: effects.backdropBlur, padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? theme.status.successSubtle : theme.surface.card, transition: "background 0.4s ease" }}>
 
       {/* Past-day header: eyebrow label + Edit / Done button */}
       {isPast && (
@@ -65,14 +65,14 @@ export default function Hero({
               {!isPast && <Label style={{ color: theme.text.muted, marginBottom: spacing.xxs }}>No schedule</Label>}
               <div style={{ fontSize: typography.title, fontWeight: typography.bold, color: theme.text.primary }}>{isToday ? "Today" : viewDate.toLocaleDateString("en-US", { weekday: "long" })}</div>
               <div style={{ fontSize: typography.caption, color: theme.text.muted, marginTop: spacing.xxxs }}>{shortDate}</div>
-              {pct === 100 && coreTotal > 0 && <div style={{ fontSize: typography.caption, color: theme.accent.default, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
+              {pct === 100 && coreTotal > 0 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
               {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
             </div>
           ) : scheduleMode === "fixed" ? (
             <div>
               {!isPast && <Label style={{ color: theme.text.muted, marginBottom: spacing.xxs }}>Fixed schedule</Label>}
               <div style={{ fontSize: typography.title, fontWeight: typography.bold, color: theme.text.primary }}>{DAYS[viewDay]}</div>
-              {pct === 100 && <div style={{ fontSize: typography.caption, color: theme.accent.default, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
+              {pct === 100 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
               {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
             </div>
           ) : heroHasTime ? (
@@ -95,7 +95,7 @@ export default function Hero({
                   )}
                 </div>
               )}
-              {pct === 100 && <div style={{ fontSize: typography.caption, color: theme.accent.default, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
+              {pct === 100 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
             </div>
           ) : isPast ? (
             // Past day with no anchor time — no CTA, neutral message
