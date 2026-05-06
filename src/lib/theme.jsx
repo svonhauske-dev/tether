@@ -106,6 +106,10 @@ export function ThemeProvider({ children }) {
 
   const theme = themes[name] ?? themes.light;
 
+  useEffect(() => {
+    document.body.style.background = theme.surface.canvas;
+  }, [theme]);
+
   return (
     <ThemeContext.Provider value={{ theme, themeName: name, themePreference: pref, setTheme, setThemePreference, syncFromDB }}>
       {children}
