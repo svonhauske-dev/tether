@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { colors, spacing, radius, typography, layout, gradients, segBtnStyle } from "../design-system";
+import { spacing, radius, typography, layout } from "../design-system";
+import { useTheme } from "../lib/theme";
 import { DEFAULT_CONFIG, FIXED_SLOTS, MODES, toHrMin, fromHrMin } from "../config";
 import Button from "./Button";
 import Card from "./Card";
@@ -23,6 +24,7 @@ const MEAL_ROWS = [
 ];
 
 function ProgressDots({ step }) {
+  const { theme } = useTheme();
   return (
     <div style={{ display: "flex", gap: spacing.xs, justifyContent: "center", marginBottom: spacing.lg }}>
       {[1, 2].map(i => (
@@ -30,7 +32,7 @@ function ProgressDots({ step }) {
           width: i === step ? 20 : 8,
           height: 8,
           borderRadius: radius.full,
-          background: i === step ? colors.accent : colors.borderStrong,
+          background: i === step ? theme.accent.default : theme.border.strong,
           transition: "width 0.2s, background 0.2s",
         }} />
       ))}
@@ -39,6 +41,7 @@ function ProgressDots({ step }) {
 }
 
 export default function Onboarding({ onComplete }) {
+  const { theme } = useTheme();
   const [step, setStep]         = useState(1);
   const [selectedMode, setMode] = useState(null);
   const [config, setConfig]     = useState({ ...DEFAULT_CONFIG, fixed_times: { ...DEFAULT_CONFIG.fixed_times } });
@@ -66,9 +69,23 @@ export default function Onboarding({ onComplete }) {
 
   const isOffsetMode = selectedMode === "medication" || selectedMode === "wakeup";
 
+  const segBtnStyle = (on) => ({
+    flex: 1,
+    padding: `${spacing.sm}px`,
+    borderRadius: radius.full,
+    cursor: "pointer",
+    fontSize: typography.caption,
+    fontFamily: typography.fontBody,
+    background: on ? theme.accent.subtle : "transparent",
+    color: on ? theme.accent.default : theme.text.secondary,
+    border: `1px solid ${on ? theme.accent.default : theme.border.subtle}`,
+    fontWeight: on ? typography.semibold : typography.regular,
+    minHeight: layout.segHeight,
+  });
+
   const screenStyle = {
     fontFamily: typography.fontBody,
-    background: gradients.bg,
+    background: theme.gradients.bg,
     minHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
@@ -87,10 +104,10 @@ export default function Onboarding({ onComplete }) {
           <ProgressDots step={1} />
 
           <div style={{ marginBottom: spacing.xl }}>
-            <div style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading, marginBottom: spacing.xs }}>
+            <div style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading, marginBottom: spacing.xs }}>
               Set up your protocol
             </div>
-            <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5 }}>
+            <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.5 }}>
               Choose how Origin tracks your day.
             </div>
           </div>
@@ -105,8 +122,8 @@ export default function Onboarding({ onComplete }) {
                   onClick={() => setMode(m.id)}
                   style={{ display: "flex", flexDirection: "column", gap: spacing.xxs }}
                 >
-                  <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: on ? colors.accent : colors.textPrimary }}>{m.title}</span>
-                  <span style={{ fontSize: typography.caption, color: colors.textMuted, lineHeight: 1.4 }}>{m.desc}</span>
+                  <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: on ? theme.accent.default : theme.text.primary }}>{m.title}</span>
+                  <span style={{ fontSize: typography.caption, color: theme.text.muted, lineHeight: 1.4 }}>{m.desc}</span>
                 </Card>
               );
             })}
@@ -130,10 +147,10 @@ export default function Onboarding({ onComplete }) {
         <ProgressDots step={2} />
 
         <div style={{ marginBottom: spacing.xl }}>
-          <div style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading, marginBottom: spacing.xs }}>
+          <div style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading, marginBottom: spacing.xs }}>
             Configure your schedule
           </div>
-          <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5 }}>
+          <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.5 }}>
             {STEP2_SUBTITLES[selectedMode]}
           </div>
         </div>
@@ -175,7 +192,7 @@ export default function Onboarding({ onComplete }) {
                   const { h, m } = toHrMin(isEmpty ? 0 : total);
                   return (
                     <Card key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-                      <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
+                      <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>{label}</span>
                       <Input
                         variant="number" width={52} min="0" max="23"
                         inputMode="numeric" pattern="[0-9]*"
@@ -183,7 +200,7 @@ export default function Onboarding({ onComplete }) {
                         onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(e.target.value, isEmpty ? 0 : m))}
                         placeholder="0"
                       />
-                      <span style={{ fontSize: typography.caption, color: colors.textMuted }}>hr</span>
+                      <span style={{ fontSize: typography.caption, color: theme.text.muted }}>hr</span>
                       <Input
                         variant="number" width={52} min="0" max="59"
                         inputMode="numeric" pattern="[0-9]*"
@@ -191,7 +208,7 @@ export default function Onboarding({ onComplete }) {
                         onChange={e => updateConfig(key, e.target.value === "" ? 0 : fromHrMin(isEmpty ? 0 : h, e.target.value))}
                         placeholder="0"
                       />
-                      <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
+                      <span style={{ fontSize: typography.caption, color: theme.text.muted }}>min</span>
                     </Card>
                   );
                 })}
@@ -201,14 +218,14 @@ export default function Onboarding({ onComplete }) {
               <Label>Pre-meal window</Label>
               <HelperText>How early before each meal to schedule pre-meal items</HelperText>
               <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-                <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal items</span>
+                <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
                 <Input
                   variant="number" width={52} min="0" max="120"
                   inputMode="numeric" pattern="[0-9]*"
                   value={config.pre_meal_window ?? 30}
                   onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
                 />
-                <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
+                <span style={{ fontSize: typography.caption, color: theme.text.muted }}>min</span>
               </Card>
             </div>
           </>
@@ -238,14 +255,14 @@ export default function Onboarding({ onComplete }) {
             <Label>Pre-meal window</Label>
             <HelperText>How early before each meal to schedule pre-meal items</HelperText>
             <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-              <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>Pre-meal items</span>
+              <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
               <Input
                 variant="number" width={52} min="0" max="120"
                 inputMode="numeric" pattern="[0-9]*"
                 value={config.pre_meal_window ?? 30}
                 onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
               />
-              <span style={{ fontSize: typography.caption, color: colors.textMuted }}>min</span>
+              <span style={{ fontSize: typography.caption, color: theme.text.muted }}>min</span>
             </Card>
           </div>
         )}
@@ -257,7 +274,7 @@ export default function Onboarding({ onComplete }) {
             <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
               {FIXED_SLOTS.map(({ key, label }) => (
                 <Card key={key} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-                  <span style={{ flex: 1, fontSize: typography.caption, color: colors.textSecondary }}>{label}</span>
+                  <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>{label}</span>
                   <Input
                     variant="time"
                     value={config.fixed_times?.[key] || ""}

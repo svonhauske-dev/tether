@@ -172,3 +172,75 @@ export const segBtnStyle = (on) => ({
   fontWeight: on ? typography.semibold : typography.regular,
   minHeight: layout.segHeight,
 });
+
+// ── Theme tokens ───────────────────────────────────────────────────────────────
+
+export const themes = {
+  light: {
+    surface: {
+      canvas:        "#F4F6F8",
+      gradientMid:   "#F2F4F6",
+      gradientEnd:   "#EEF1F4",
+      modal:         "#FFFFFF",
+      card:          "#FFFFFF",
+      cardSubtle:    "#F4F6F8",
+      backdrop:      "rgba(26,26,26,0.55)",
+      input:         "#FFFFFF",
+      inputDisabled: "#F2F4F6",
+      cardHover:     "#EEF1F4",
+    },
+    text: {
+      primary:   "#1A1A1A",
+      secondary: "#5A6168",
+      muted:     "#8A929A",
+      disabled:  "#BFC4CA",
+      onAccent:  "#FFFFFF",
+      onDanger:  "#FFFFFF",
+      faint:     "rgba(26,26,26,0.3)",
+    },
+    accent: {
+      default: "#1A1A1A",
+      hover:   "#000000",
+      subtle:  "#EEF1F4",
+      border:  "rgba(26,26,26,0.3)",
+    },
+    border: {
+      subtle: "#E2E6EA",
+      strong: "#2C2C2C",
+      focus:  "#1A1A1A",
+    },
+    slot: {
+      anchor:       "#5C5C5C",
+      preBreakfast: "#5C5C5C",
+      breakfast:    "#5C5C5C",
+      preLunch:     "#5C5C5C",
+      lunch:        "#5C5C5C",
+      preDinner:    "#5C5C5C",
+      dinner:       "#5C5C5C",
+      evening:      "#5C5C5C",
+      injectable:   "#5C5C5C",
+      topical:      "#5C5C5C",
+    },
+    status: {
+      success:          "#3D6647",
+      danger:           "#8C3F3F",
+      dangerSubtle:     "#F2E8E8",
+      dangerBorder:     "rgba(140,63,63,0.3)",
+      warning:          "#8C7240",
+      warningSubtle:    "#F2EDE5",
+      missedBorder:     "rgba(140,114,64,0.35)",
+      missedBg:         "rgba(140,114,64,0.05)",
+      missedHover:      "rgba(140,114,64,0.08)",
+      missedBadgeBg:    "#F2EDE5",
+      missedBadgeColor: "#8C7240",
+      nowBorder:        "rgba(26,26,26,0.35)",
+      nowBg:            "rgba(26,26,26,0.04)",
+      nowHover:         "rgba(26,26,26,0.07)",
+      nowBadgeBg:       "rgba(26,26,26,0.14)",
+    },
+    gradients: {
+      bg: "linear-gradient(180deg,#F4F6F8 0%,#F2F4F6 50%,#EEF1F4 100%)",
+    },
+  },
+  dark: {},
+};

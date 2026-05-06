@@ -1,13 +1,16 @@
-import { colors, spacing, radius, typography } from "../design-system";
-
-const VARIANTS = {
-  now:      { background: colors.statusNowBadgeBg,    color: colors.accent },
-  missed:   { background: colors.warningSubtle,        color: colors.warning },
-  category: { background: colors.accentDim,            color: colors.accent },
-  neutral:  { background: colors.bgCardHover,          color: colors.textMuted },
-};
+import { spacing, radius, typography } from "../design-system";
+import { useTheme } from "../lib/theme";
 
 export default function Badge({ variant = "neutral", style, children }) {
+  const { theme } = useTheme();
+
+  const VARIANTS = {
+    now:      { background: theme.status.nowBadgeBg,    color: theme.accent.default },
+    missed:   { background: theme.status.warningSubtle,  color: theme.status.warning },
+    category: { background: theme.accent.subtle,         color: theme.accent.default },
+    neutral:  { background: theme.surface.cardHover,     color: theme.text.muted },
+  };
+
   const base = {
     fontFamily: typography.fontBody,
     fontSize: typography.label,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
-import { colors, spacing, typography, radius } from "../design-system";
+import { spacing, typography, radius } from "../design-system";
+import { useTheme } from "../lib/theme";
 import Button from "./Button";
 import Input from "./Input";
 import Label from "./Label";
@@ -17,23 +18,25 @@ const PASSWORD_RULES = [
 ];
 
 function PasswordRule({ met, label }) {
+  const { theme } = useTheme();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, marginBottom: spacing.xxs }}>
       <div style={{
         width: 16, height: 16, borderRadius: radius.full,
-        background: met ? colors.accent : "transparent",
-        border: `1px solid ${met ? colors.accent : colors.borderSubtle}`,
+        background: met ? theme.accent.default : "transparent",
+        border: `1px solid ${met ? theme.accent.default : theme.border.subtle}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0, transition: "background 150ms, border-color 150ms",
       }}>
-        {met && <Check size={10} color={colors.textOnAccent} strokeWidth={3} />}
+        {met && <Check size={10} color={theme.text.onAccent} strokeWidth={3} />}
       </div>
-      <span style={{ fontSize: typography.label, color: met ? colors.textPrimary : colors.textMuted, transition: "color 150ms" }}>{label}</span>
+      <span style={{ fontSize: typography.label, color: met ? theme.text.primary : theme.text.muted, transition: "color 150ms" }}>{label}</span>
     </div>
   );
 }
 
 export default function ManageAccount({ user, token, profile, onProfileUpdate, onShowToast }) {
+  const { theme } = useTheme();
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
   const [nameSaving, setNameSaving]   = useState(false);
 
@@ -109,11 +112,11 @@ export default function ManageAccount({ user, token, profile, onProfileUpdate, o
         {nameSaving ? "Saving…" : "Save full name"}
       </Button>
 
-      <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, marginBottom: spacing.lg }} />
+      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, marginBottom: spacing.lg }} />
 
       <Label style={{ marginBottom: spacing.xs }}>Email</Label>
       <HelperText style={{ marginBottom: spacing.xs }}>Changing your email will send a confirmation link.</HelperText>
-      <div style={{ fontSize: typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>{user.email}</div>
+      <div style={{ fontSize: typography.caption, color: theme.text.muted, marginBottom: spacing.xs }}>{user.email}</div>
       <Input
         type="email"
         value={newEmail}
@@ -121,7 +124,7 @@ export default function ManageAccount({ user, token, profile, onProfileUpdate, o
         placeholder="New email address"
         style={{ marginBottom: spacing.xs }}
       />
-      {emailMsg && <div style={{ fontSize: typography.label, color: colors.danger, marginBottom: spacing.xs }}>{emailMsg}</div>}
+      {emailMsg && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs }}>{emailMsg}</div>}
       <Button
         variant="secondary"
         fullWidth
@@ -132,7 +135,7 @@ export default function ManageAccount({ user, token, profile, onProfileUpdate, o
         {emailSaving ? "Saving…" : "Update email"}
       </Button>
 
-      <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, marginBottom: spacing.lg }} />
+      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, marginBottom: spacing.lg }} />
 
       <Label style={{ marginBottom: spacing.xs }}>New password</Label>
       <Input

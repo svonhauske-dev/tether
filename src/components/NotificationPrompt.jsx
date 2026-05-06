@@ -1,11 +1,13 @@
-import { colors, spacing, typography, layout, gradients } from "../design-system";
+import { spacing, typography, layout } from "../design-system";
+import { useTheme } from "../lib/theme";
 import Button from "./Button";
 
 export default function NotificationPrompt({ onEnable, onSkip }) {
+  const { theme } = useTheme();
   return (
     <div style={{
       fontFamily: typography.fontBody,
-      background: gradients.bg,
+      background: theme.gradients.bg,
       minHeight: "100dvh",
       display: "flex",
       flexDirection: "column",
@@ -19,7 +21,7 @@ export default function NotificationPrompt({ onEnable, onSkip }) {
         <div style={{
           fontSize: typography.heading,
           fontWeight: typography.semibold,
-          color: colors.textPrimary,
+          color: theme.text.primary,
           fontFamily: typography.fontHeading,
           marginBottom: spacing.xs,
         }}>
@@ -27,7 +29,7 @@ export default function NotificationPrompt({ onEnable, onSkip }) {
         </div>
         <div style={{
           fontSize: typography.caption,
-          color: colors.textSecondary,
+          color: theme.text.secondary,
           marginBottom: spacing.xl,
           lineHeight: 1.5,
         }}>

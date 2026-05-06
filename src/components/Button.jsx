@@ -1,6 +1,7 @@
 import {
-  colors, spacing, radius, typography, touch, layout,
+  spacing, radius, typography, touch, layout,
 } from "../design-system";
+import { useTheme } from "../lib/theme";
 
 export default function Button({
   variant = "primary",
@@ -15,6 +16,8 @@ export default function Button({
   children,
   ...rest
 }) {
+  const { theme } = useTheme();
+
   const base = {
     cursor: disabled ? "not-allowed" : "pointer",
     display: "flex",
@@ -30,8 +33,8 @@ export default function Button({
 
   if (variant === "primary") {
     v = {
-      background: colors.accent,
-      color: colors.textOnAccent,
+      background: theme.accent.default,
+      color: theme.text.onAccent,
       border: "none",
       fontWeight: typography.semibold,
       borderRadius: radius.full,
@@ -41,8 +44,8 @@ export default function Button({
     };
   } else if (variant === "startDay") {
     v = {
-      background: isFuture ? colors.bgCardHover : colors.accent,
-      color: isFuture ? colors.textMuted : colors.textOnAccent,
+      background: isFuture ? theme.surface.cardHover : theme.accent.default,
+      color: isFuture ? theme.text.muted : theme.text.onAccent,
       border: "none",
       fontWeight: typography.semibold,
       borderRadius: radius.full,
@@ -54,8 +57,8 @@ export default function Button({
   } else if (variant === "secondary") {
     v = {
       background: "transparent",
-      color: colors.textPrimary,
-      border: `1px solid ${colors.borderSubtle}`,
+      color: theme.text.primary,
+      border: `1px solid ${theme.border.subtle}`,
       fontWeight: typography.medium,
       borderRadius: radius.full,
       minHeight: touch.min,
@@ -70,17 +73,17 @@ export default function Button({
       fontSize: typography.caption,
     };
     if (active && solidActive) {
-      v = { ...pillBase, background: colors.accent, color: colors.textOnAccent, border: `1px solid ${colors.accent}`, fontWeight: typography.semibold };
+      v = { ...pillBase, background: theme.accent.default, color: theme.text.onAccent, border: `1px solid ${theme.accent.default}`, fontWeight: typography.semibold };
     } else if (active) {
-      v = { ...pillBase, background: colors.accentDim, color: colors.accent, border: `1px solid ${colors.accent}`, fontWeight: typography.semibold };
+      v = { ...pillBase, background: theme.accent.subtle, color: theme.accent.default, border: `1px solid ${theme.accent.default}`, fontWeight: typography.semibold };
     } else {
-      v = { ...pillBase, background: "transparent", color: colors.textSecondary, border: `1px solid ${colors.borderSubtle}`, fontWeight: typography.regular };
+      v = { ...pillBase, background: "transparent", color: theme.text.secondary, border: `1px solid ${theme.border.subtle}`, fontWeight: typography.regular };
     }
   } else if (variant === "tertiary") {
     v = {
       background: "transparent",
-      color: colors.textSecondary,
-      border: `1px solid ${colors.borderStrong}`,
+      color: theme.text.secondary,
+      border: `1px solid ${theme.border.strong}`,
       fontWeight: typography.semibold,
       borderRadius: radius.full,
       minHeight: touch.min,
@@ -90,8 +93,8 @@ export default function Button({
   } else if (variant === "destructive") {
     v = {
       background: "transparent",
-      color: colors.danger,
-      border: `1px solid ${colors.dangerBorder}`,
+      color: theme.status.danger,
+      border: `1px solid ${theme.status.dangerBorder}`,
       fontWeight: typography.medium,
       borderRadius: radius.full,
       minHeight: touch.min,
@@ -104,8 +107,8 @@ export default function Button({
       height: touch.min,
       borderRadius: radius.full,
       background: "transparent",
-      border: `1px solid ${colors.borderSubtle}`,
-      color: colors.textSecondary,
+      border: `1px solid ${theme.border.subtle}`,
+      color: theme.text.secondary,
       fontSize: typography.caption,
       flexShrink: 0,
       padding: 0,
@@ -119,8 +122,8 @@ export default function Button({
       flexShrink: 0,
       padding: 0,
       ...(active
-        ? { background: colors.accentSubtle, color: colors.accent, border: `1.5px solid ${colors.accent}`, fontWeight: typography.semibold }
-        : { background: "transparent", color: colors.textPrimary, border: `1px solid ${colors.borderSubtle}`, fontWeight: typography.regular }),
+        ? { background: theme.accent.subtle, color: theme.accent.default, border: `1.5px solid ${theme.accent.default}`, fontWeight: typography.semibold }
+        : { background: "transparent", color: theme.text.primary, border: `1px solid ${theme.border.subtle}`, fontWeight: typography.regular }),
     };
   } else {
     v = {};

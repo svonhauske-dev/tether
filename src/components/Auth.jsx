@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { signInPassword, signUp, dbCreateProfile } from '../lib/api';
-import { colors, spacing, typography, layout, touch, gradients, radius } from '../design-system';
+import { spacing, typography, layout, touch, radius } from '../design-system';
+import { useTheme } from '../lib/theme';
 import Button from './Button';
 import Input from './Input';
 import Label from './Label';
@@ -16,23 +17,25 @@ const PASSWORD_RULES = [
 ];
 
 function PasswordRule({ met, label }) {
+  const { theme } = useTheme();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, marginBottom: spacing.xxs }}>
       <div style={{
         width: 16, height: 16, borderRadius: radius.full,
-        background: met ? colors.accent : "transparent",
-        border: `1px solid ${met ? colors.accent : colors.borderSubtle}`,
+        background: met ? theme.accent.default : "transparent",
+        border: `1px solid ${met ? theme.accent.default : theme.border.subtle}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0, transition: "background 150ms, border-color 150ms",
       }}>
-        {met && <Check size={10} color={colors.textOnAccent} strokeWidth={3} />}
+        {met && <Check size={10} color={theme.text.onAccent} strokeWidth={3} />}
       </div>
-      <span style={{ fontSize: typography.label, color: met ? colors.textPrimary : colors.textMuted, transition: "color 150ms" }}>{label}</span>
+      <span style={{ fontSize: typography.label, color: met ? theme.text.primary : theme.text.muted, transition: "color 150ms" }}>{label}</span>
     </div>
   );
 }
 
 export default function Auth({ onSignIn }) {
+  const { theme } = useTheme();
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [name, setName]             = useState("");
@@ -81,17 +84,17 @@ export default function Auth({ onSignIn }) {
   };
 
   return (
-    <div style={{ fontFamily: typography.fontBody, background: gradients.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
+    <div style={{ fontFamily: typography.fontBody, background: theme.gradients.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
       <div style={{ width: "100%", maxWidth: layout.signInWidth, textAlign: "center" }}>
         <div style={{
           // Decorative emoji — sized outside the typography system intentionally
           fontSize: 40,
           marginBottom: spacing.md,
         }}>💊</div>
-        <div style={{ fontSize: typography.display, fontWeight: typography.bold, color: colors.textPrimary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>
+        <div style={{ fontSize: typography.display, fontWeight: typography.bold, color: theme.text.primary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>
           {mode === "signin" ? "Welcome back" : "Hello"}
         </div>
-        <div style={{ fontSize: typography.caption, color: colors.textSecondary, marginBottom: spacing.xl, lineHeight: 1.5 }}>
+        <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginBottom: spacing.xl, lineHeight: 1.5 }}>
           {mode === "signin" ? "Pick up where you left off" : "Let's set up your protocol"}
         </div>
 
@@ -111,7 +114,7 @@ export default function Auth({ onSignIn }) {
                 placeholder="e.g. Sofia von Hauske"
               />
               {nameTouched && !name.trim() && (
-                <div style={{ fontSize: typography.label, color: colors.danger, marginTop: spacing.xxxs }}>Full name is required</div>
+                <div style={{ fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs }}>Full name is required</div>
               )}
             </div>
           )}
@@ -157,25 +160,25 @@ export default function Auth({ onSignIn }) {
           </Button>
 
           {msg === "EMAIL_TAKEN" ? (
-            <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: colors.danger }}>
+            <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: theme.status.danger }}>
               That email is already registered.{" "}
               <button
                 type="button"
                 onClick={() => { setMode("signin"); setMsg(""); }}
-                style={{ background: "none", border: "none", color: colors.accent, fontSize: typography.caption, cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                style={{ background: "none", border: "none", color: theme.accent.default, fontSize: typography.caption, cursor: "pointer", padding: 0, textDecoration: "underline" }}
               >
                 Sign in instead?
               </button>
             </div>
           ) : msg ? (
-            <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: colors.danger }}>{msg}</div>
+            <div style={{ marginTop: spacing.md, fontSize: typography.caption, color: theme.status.danger }}>{msg}</div>
           ) : null}
         </form>
 
         <button
           type="button"
           onClick={switchMode}
-          style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent", minHeight: touch.min, display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
+          style={{ marginTop: spacing.md, background: "none", border: "none", color: theme.text.muted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent", minHeight: touch.min, display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
         >
           {mode === "signin" ? "New to Origin? Sign up" : "Already have an account? Sign in"}
         </button>

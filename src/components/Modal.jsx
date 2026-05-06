@@ -1,9 +1,12 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
-import { colors, spacing, radius, typography, layout, touch, shadows, effects, zIndex as zIndexTokens } from "../design-system";
+import { spacing, radius, typography, layout, shadows, effects, zIndex as zIndexTokens } from "../design-system";
+import { useTheme } from "../lib/theme";
 import Button from "./Button";
 
 export default function Modal({ open, onClose, title, children, footer, leftAction }) {
+  const { theme } = useTheme();
+
   useEffect(function() {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -32,7 +35,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
           bottom: "calc(-1 * env(safe-area-inset-bottom))",
           left: 0,
           right: 0,
-          background: colors.bgBackdrop,
+          background: theme.surface.backdrop,
           backdropFilter: effects.backdropBlur,
           WebkitBackdropFilter: effects.backdropBlur,
           opacity: open ? 1 : 0,
@@ -61,7 +64,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
             width: `calc(100% - ${spacing.md * 2}px)`,
             maxWidth: layout.maxContentWidth,
             maxHeight: `calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48px)`,
-            background: colors.bgBase,
+            background: theme.surface.canvas,
             borderRadius: radius.md,
             boxShadow: shadows.modal,
             transform: open ? "scale(1)" : "scale(0.95)",
@@ -79,7 +82,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
             alignItems: "center",
             padding: `${spacing.sm}px ${spacing.md}px`,
             flexShrink: 0,
-            borderBottom: `1px solid ${colors.borderSubtle}`,
+            borderBottom: `1px solid ${theme.border.subtle}`,
           }}>
             {leftAction ? (
               <>
@@ -87,7 +90,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
                 <span style={{
                   fontSize: typography.title,
                   fontWeight: typography.semibold,
-                  color: colors.textPrimary,
+                  color: theme.text.primary,
                   fontFamily: typography.fontHeading,
                 }}>{title}</span>
               </>
@@ -95,7 +98,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
               <span style={{
                 fontSize: typography.title,
                 fontWeight: typography.semibold,
-                color: colors.textPrimary,
+                color: theme.text.primary,
                 fontFamily: typography.fontHeading,
               }}>{title}</span>
             )}
@@ -115,7 +118,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
             <div style={{
               padding: `${spacing.sm}px ${spacing.md}px`,
               flexShrink: 0,
-              borderTop: `1px solid ${colors.borderSubtle}`,
+              borderTop: `1px solid ${theme.border.subtle}`,
             }}>
               {footer}
             </div>

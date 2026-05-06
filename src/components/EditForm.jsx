@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { colors, spacing, typography } from '../design-system';
+import { spacing, typography } from '../design-system';
+import { useTheme } from '../lib/theme';
 import { SLOTS } from '../lib/notifications';
 import Button from './Button';
 import Input from './Input';
@@ -10,6 +11,7 @@ const CATEGORIES = ["Oral", "Rx", "Injectable", "Topical"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function EditForm({ form, setForm, editingId }) {
+  const { theme } = useTheme();
   const [nameTouched, setNameTouched] = useState(false);
   const toggleSlot = (sid) => setForm(f => ({ ...f, slots: f.slots.includes(sid) ? f.slots.filter(x => x !== sid) : [...f.slots, sid] }));
   const toggleDay  = (i)   => setForm(f => ({ ...f, days:  f.days.includes(i)   ? f.days.filter(x => x !== i)   : [...f.days, i]   }));
@@ -30,7 +32,7 @@ export default function EditForm({ form, setForm, editingId }) {
             {...(key === "name" ? { onBlur: () => setNameTouched(true) } : {})}
           />
           {key === "name" && nameTouched && !form.name?.trim() && (
-            <div style={{ fontSize: typography.label, color: colors.danger, marginTop: spacing.xxxs }}>Name is required</div>
+            <div style={{ fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs }}>Name is required</div>
           )}
         </div>
       ))}

@@ -1,8 +1,10 @@
 import { useState, useEffect, useContext } from "react";
-import { colors, spacing, radius, typography, touch, layout, shadows, zIndex as zIndexTokens } from "../design-system";
+import { spacing, radius, typography, touch, layout, shadows, zIndex as zIndexTokens } from "../design-system";
+import { useTheme } from "../lib/theme";
 import { ToastContext } from "./ToastContext";
 
 function ToastItem({ toast, onDismiss }) {
+  const { theme } = useTheme();
   const [entered, setEntered] = useState(false);
 
   useEffect(() => {
@@ -19,8 +21,8 @@ function ToastItem({ toast, onDismiss }) {
         display: "flex",
         alignItems: "center",
         gap: spacing.sm,
-        background: colors.bgModal,
-        border: `1px solid ${colors.borderStrong}`,
+        background: theme.surface.modal,
+        border: `1px solid ${theme.border.strong}`,
         borderRadius: radius.md,
         padding: `${spacing.sm}px ${spacing.md}px`,
         boxShadow: shadows.popover,
@@ -31,11 +33,11 @@ function ToastItem({ toast, onDismiss }) {
       }}
     >
       {toast.icon && (
-        <span style={{ display: "flex", alignItems: "center", flexShrink: 0, color: colors.textSecondary }}>
+        <span style={{ display: "flex", alignItems: "center", flexShrink: 0, color: theme.text.secondary }}>
           {toast.icon}
         </span>
       )}
-      <span style={{ flex: 1, fontSize: typography.body, color: colors.textPrimary }}>{toast.message}</span>
+      <span style={{ flex: 1, fontSize: typography.body, color: theme.text.primary }}>{toast.message}</span>
       {toast.action && (
         <button
           onClick={() => {
@@ -48,7 +50,7 @@ function ToastItem({ toast, onDismiss }) {
             cursor: "pointer",
             fontSize: typography.body,
             fontWeight: typography.semibold,
-            color: colors.accent,
+            color: theme.accent.default,
             padding: `${spacing.xs}px ${spacing.sm}px`,
             minHeight: touch.min,
             display: "flex",

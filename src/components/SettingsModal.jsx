@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
-import { colors, spacing, typography, touch } from "../design-system";
+import { spacing, typography, touch } from "../design-system";
+import { useTheme } from "../lib/theme";
 import Button from "./Button";
 import Label from "./Label";
 import Modal from "./Modal";
@@ -13,6 +14,7 @@ import {
 import { dbUpdateScheduleField } from "../lib/api";
 
 export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled }) {
+  const { theme } = useTheme();
   const { show: showToast } = useToast();
   const [view, setView]                   = useState("main");
   const [permission, setPermission]       = useState("default");
@@ -104,10 +106,10 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
         }
       >
         <div style={{ paddingTop: spacing.xs }}>
-          <p style={{ fontSize: typography.body, color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 1.6 }}>
+          <p style={{ fontSize: typography.body, color: theme.text.secondary, marginBottom: spacing.md, lineHeight: 1.6 }}>
             To enable reminders on iOS, Origin must be installed to your home screen.
           </p>
-          <ol style={{ paddingLeft: spacing.lg, color: colors.textSecondary, lineHeight: 1.8, fontSize: typography.body }}>
+          <ol style={{ paddingLeft: spacing.lg, color: theme.text.secondary, lineHeight: 1.8, fontSize: typography.body }}>
             <li>Tap the Share button in Safari</li>
             <li>Scroll down and tap "Add to Home Screen"</li>
             <li>Open Origin from your home screen</li>
@@ -122,13 +124,13 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
   let notifContent;
   if (!pushSupported) {
     notifContent = (
-      <div style={{ fontSize: typography.caption, color: colors.textMuted }}>
+      <div style={{ fontSize: typography.caption, color: theme.text.muted }}>
         Notifications aren't supported in this browser.
       </div>
     );
   } else if (permission === "denied") {
     notifContent = (
-      <div style={{ fontSize: typography.caption, color: colors.danger }}>
+      <div style={{ fontSize: typography.caption, color: theme.status.danger }}>
         Permission blocked. Enable Origin in your device settings.
       </div>
     );
@@ -142,10 +144,10 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
           minHeight: touch.min,
         }}
       >
-        <span style={{ fontSize: typography.caption, color: colors.textMuted, flex: 1, paddingRight: spacing.sm }}>
+        <span style={{ fontSize: typography.caption, color: theme.text.muted, flex: 1, paddingRight: spacing.sm }}>
           Install Origin to your home screen to enable reminders.
         </span>
-        <ChevronRight size={18} color={colors.textSecondary} style={{ flexShrink: 0 }} />
+        <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
       </div>
     );
   } else {
@@ -155,14 +157,14 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
         display: "flex", alignItems: "center", justifyContent: "space-between",
         minHeight: touch.min,
       }}>
-        <span style={{ fontSize: typography.body, color: colors.textPrimary }}>Reminders</span>
+        <span style={{ fontSize: typography.body, color: theme.text.primary }}>Reminders</span>
         <button
           onClick={handleToggleNotifications}
           disabled={toggling}
           aria-label={hasSubscription ? "Turn off reminders" : "Turn on reminders"}
           style={{
             width: 44, height: 26, borderRadius: 13,
-            background: hasSubscription ? colors.accent : colors.borderStrong,
+            background: hasSubscription ? theme.accent.default : theme.border.strong,
             border: "none",
             cursor: toggling ? "default" : "pointer",
             transition: "background 200ms",
@@ -199,11 +201,11 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
           marginBottom: spacing.xs,
         }}
       >
-        <span style={{ fontSize: typography.body, color: colors.textPrimary }}>Manage account</span>
-        <ChevronRight size={20} color={colors.textSecondary} />
+        <span style={{ fontSize: typography.body, color: theme.text.primary }}>Manage account</span>
+        <ChevronRight size={20} color={theme.text.secondary} />
       </div>
 
-      <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, margin: `${spacing.lg}px 0` }} />
+      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
 
       <Label style={{ marginBottom: spacing.xs }}>Protocol</Label>
       <div
@@ -215,16 +217,16 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
           marginBottom: spacing.xs,
         }}
       >
-        <span style={{ fontSize: typography.body, color: colors.textPrimary }}>Manage protocol</span>
-        <ChevronRight size={20} color={colors.textSecondary} />
+        <span style={{ fontSize: typography.body, color: theme.text.primary }}>Manage protocol</span>
+        <ChevronRight size={20} color={theme.text.secondary} />
       </div>
 
-      <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, margin: `${spacing.lg}px 0` }} />
+      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
 
       <Label style={{ marginBottom: spacing.xs }}>Notifications</Label>
       {notifContent}
 
-      <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, margin: `${spacing.lg}px 0` }} />
+      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
 
       <Button variant="destructive" fullWidth onClick={() => { onSignOut(); onClose(); }}>Sign out</Button>
     </Modal>

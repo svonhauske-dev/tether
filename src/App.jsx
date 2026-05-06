@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  colors, spacing, radius, typography, touch, layout,
-  gradients, shadows, zIndex, segBtnStyle,
+  spacing, radius, typography, touch, layout,
+  shadows, zIndex,
 } from "./design-system";
+import { ThemeProvider, useTheme } from './lib/theme';
 import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin, MODES, deriveOffsets, getSlotLabelForMode } from "./config";
 import { Settings, Trash2, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import Button from "./components/Button";
@@ -38,11 +39,11 @@ import NotificationPrompt from "./components/NotificationPrompt";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const BG_GRADIENT = gradients.bg;
+// BG_GRADIENT is derived from theme inside ProtocolApp
 
 const CORE_SLOTS = ["rx", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
 
-const ANYTIME_SLOT = { id: "anytime", label: "Anytime", sublabel: "No specific time", icon: "◦", color: colors.textMuted };
+// ANYTIME_SLOT color is set inside ProtocolApp after theme is available
 
 
 
@@ -59,21 +60,26 @@ export default function App() {
   useEffect(() => { getSession().then(u => { setUser(u); setAuthLoading(false); }); }, []);
 
   return (
-    <ToastProvider>
-      {authLoading
-        ? <Loader text="Loading…" />
-        : !user
-          ? <Auth onSignIn={u => setUser(u)} />
-          : <ProtocolApp user={user} token={token()} onSignOut={() => { signOut(); setUser(null); }} />
-      }
-      <Toast />
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        {authLoading
+          ? <Loader text="Loading…" />
+          : !user
+            ? <Auth onSignIn={u => setUser(u)} />
+            : <ProtocolApp user={user} token={token()} onSignOut={() => { signOut(); setUser(null); }} />
+        }
+        <Toast />
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 
 // ── ProtocolApp ───────────────────────────────────────────────────────────────
 
 function ProtocolApp({ user, token, onSignOut }) {
+  const { theme } = useTheme();
+  const ANYTIME_SLOT = { id: "anytime", label: "Anytime", sublabel: "No specific time", icon: "◦", color: theme.text.muted };
+  const BG_GRADIENT = theme.gradients.bg;
   const [supps, setSupps]                   = useState([]);
   const [pillTimes, setPillTimes]           = useState({});
   const [checked, setChecked]               = useState({});
@@ -473,11 +479,11 @@ function ProtocolApp({ user, token, onSignOut }) {
   );
 
   return (
-    <div style={{ fontFamily: typography.fontBody, color: colors.textPrimary, maxWidth: layout.maxContentWidth, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
+    <div style={{ fontFamily: typography.fontBody, color: theme.text.primary, maxWidth: layout.maxContentWidth, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
 
       {/* Greeting */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
-        <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: colors.textPrimary, fontFamily: typography.fontHeading }}>
+        <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading }}>
           {profile?.display_name ? `Hello, ${profile.display_name.trim().split(" ")[0]}` : "Hello"}
         </span>
         <Button variant="icon" aria-label="Settings" onClick={() => setShowSettings(true)}>
@@ -487,20 +493,20 @@ function ProtocolApp({ user, token, onSignOut }) {
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
-        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)}><ChevronLeft size={24} color={colors.textSecondary} style={{ marginRight: spacing.xxxs }} /></Button>
+        <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)}><ChevronLeft size={24} color={theme.text.secondary} style={{ marginRight: spacing.xxxs }} /></Button>
         <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
-          <div style={{ fontSize: typography.label, color: colors.textMuted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
-          <button onClick={() => { if (!isToday) { setViewDate(TODAY); setPastDayEditing(false); } }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: typography.headingLetterSpacing, background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? colors.textPrimary : colors.accent, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
-          <div style={{ fontSize: typography.caption2, color: colors.textFaint, marginTop: spacing.xxxs, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
+          <div style={{ fontSize: typography.label, color: theme.text.muted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
+          <button onClick={() => { if (!isToday) { setViewDate(TODAY); setPastDayEditing(false); } }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: typography.headingLetterSpacing, background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? theme.text.primary : theme.accent.default, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
+          <div style={{ fontSize: typography.caption2, color: theme.text.faint, marginTop: spacing.xxxs, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
         </div>
-        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)}><ChevronRight size={24} color={colors.textSecondary} style={{ marginLeft: spacing.xxxs }} /></Button>
+        <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)}><ChevronRight size={24} color={theme.text.secondary} style={{ marginLeft: spacing.xxxs }} /></Button>
       </div>
 
       {/* Add row — hidden on past days (not scope of past-day editing) */}
       {!isPast && (
         <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
           <Button variant="primary" onClick={openAdd} style={{ flex: 1 }}>+ Add item</Button>
-          <Button variant="secondary" onClick={() => setShowSchedule(true)} style={{ flex: 1, background: colors.bgModal }}>Edit schedule</Button>
+          <Button variant="secondary" onClick={() => setShowSchedule(true)} style={{ flex: 1, background: theme.surface.modal }}>Edit schedule</Button>
         </div>
       )}
 
@@ -520,12 +526,12 @@ function ProtocolApp({ user, token, onSignOut }) {
         />
 
         {/* Main slot list */}
-        <div style={{ borderRadius: radius.md, border: `1px solid ${colors.borderBase}`, background: colors.bgCard, padding: spacing.md, marginBottom: spacing.md }}>
+        <div style={{ borderRadius: radius.md, border: `1px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, marginBottom: spacing.md }}>
           {homeSupps.length === 0 ? (
             <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
               <div style={{ fontSize: typography.display, marginBottom: spacing.md }}>💊</div>
-              <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>Your protocol is empty</div>
-              <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5, marginBottom: spacing.lg }}>Add your first item to get started.</div>
+              <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>Your protocol is empty</div>
+              <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.5, marginBottom: spacing.lg }}>Add your first item to get started.</div>
               {!isPast && <Button variant="primary" fullWidth onClick={openAdd}>Add to protocol</Button>}
             </div>
           ) : (
@@ -586,7 +592,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         title={editingId ? "Edit item" : "New item"}
         footer={
           <>
-            {submitError && <div style={{ fontSize: typography.label, color: colors.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
+            {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
             <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
               {submitting ? "Saving…" : (editingId ? "Save changes" : "Add to protocol")}
             </Button>
