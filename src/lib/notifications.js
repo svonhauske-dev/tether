@@ -77,7 +77,7 @@ export async function subscribeToPush() {
     throw new Error("Push notifications not supported in this browser");
   }
   if (needsHomeScreenInstall()) {
-    throw new Error("PWA install required on iOS — please add Tether to your home screen first");
+    throw new Error("PWA install required on iOS — please add Origin to your home screen first");
   }
   if (!VAPID_PUBLIC_KEY) {
     throw new Error("VAPID public key missing — check VITE_VAPID_PUBLIC_KEY env var");

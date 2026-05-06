@@ -65,7 +65,7 @@ export default function Auth({ onSignIn }) {
       if (err.message === "EMAIL_TAKEN") {
         setMsg("EMAIL_TAKEN");
       } else if (err instanceof TypeError || err.message?.includes("fetch") || err.message?.includes("Failed to fetch") || err.message?.includes("network")) {
-        setMsg("Couldn't reach Tether. Check your connection.");
+        setMsg("Couldn't reach Origin. Check your connection.");
       } else if (mode === "signin") {
         setMsg("Email or password is incorrect.");
       } else {
@@ -174,7 +174,7 @@ export default function Auth({ onSignIn }) {
           onClick={switchMode}
           style={{ marginTop: spacing.md, background: "none", border: "none", color: colors.textMuted, fontSize: typography.caption, cursor: "pointer", WebkitTapHighlightColor: "transparent", minHeight: touch.min, display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}
         >
-          {mode === "signin" ? "New to Tether? Sign up" : "Already have an account? Sign in"}
+          {mode === "signin" ? "New to Origin? Sign up" : "Already have an account? Sign in"}
         </button>
       </div>
     </div>

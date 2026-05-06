@@ -1,6 +1,6 @@
 {
-  "name": "Tether",
-  "short_name": "Tether",
+  "name": "Origin",
+  "short_name": "Origin",
   "description": "Your supplement schedule, anchored to your morning Rx",
   "start_url": "/",
   "display": "standalone",

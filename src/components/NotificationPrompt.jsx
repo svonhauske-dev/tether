@@ -31,7 +31,7 @@ export default function NotificationPrompt({ onEnable, onSkip }) {
           marginBottom: spacing.xl,
           lineHeight: 1.5,
         }}>
-          Tether can ping you when it's time to take your medication and supplements. You can change this any time in Settings.
+          Origin can ping you when it's time to take your medication and supplements. You can change this any time in Settings.
         </div>
         <Button variant="primary" fullWidth onClick={onEnable} style={{ marginBottom: spacing.sm }}>
           Enable reminders

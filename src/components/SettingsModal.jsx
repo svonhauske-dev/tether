@@ -105,12 +105,12 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
       >
         <div style={{ paddingTop: spacing.xs }}>
           <p style={{ fontSize: typography.body, color: colors.textSecondary, marginBottom: spacing.md, lineHeight: 1.6 }}>
-            To enable reminders on iOS, Tether must be installed to your home screen.
+            To enable reminders on iOS, Origin must be installed to your home screen.
           </p>
           <ol style={{ paddingLeft: spacing.lg, color: colors.textSecondary, lineHeight: 1.8, fontSize: typography.body }}>
             <li>Tap the Share button in Safari</li>
             <li>Scroll down and tap "Add to Home Screen"</li>
-            <li>Open Tether from your home screen</li>
+            <li>Open Origin from your home screen</li>
             <li>Return to Settings and enable reminders</li>
           </ol>
         </div>
@@ -129,7 +129,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
   } else if (permission === "denied") {
     notifContent = (
       <div style={{ fontSize: typography.caption, color: colors.danger }}>
-        Permission blocked. Enable Tether in your device settings.
+        Permission blocked. Enable Origin in your device settings.
       </div>
     );
   } else if (needsInstall) {
@@ -143,7 +143,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
         }}
       >
         <span style={{ fontSize: typography.caption, color: colors.textMuted, flex: 1, paddingRight: spacing.sm }}>
-          Install Tether to your home screen to enable reminders.
+          Install Origin to your home screen to enable reminders.
         </span>
         <ChevronRight size={18} color={colors.textSecondary} style={{ flexShrink: 0 }} />
       </div>

@@ -7,15 +7,15 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: "Tether", body: event.data.text() };
+    payload = { title: "Origin", body: event.data.text() };
   }
 
-  const title = payload.title || "Tether";
+  const title = payload.title || "Origin";
   const options = {
     body: payload.body || "",
     icon: "/icon.svg",
     badge: "/icon.svg",
-    tag: payload.tag || "tether-notification",
+    tag: payload.tag || "origin-notification",
     data: payload.data || {},
   };
 

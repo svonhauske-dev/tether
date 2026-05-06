@@ -91,7 +91,7 @@ export default function Onboarding({ onComplete }) {
               Set up your protocol
             </div>
             <div style={{ fontSize: typography.caption, color: colors.textSecondary, lineHeight: 1.5 }}>
-              Choose how Tether tracks your day.
+              Choose how Origin tracks your day.
             </div>
           </div>
 
