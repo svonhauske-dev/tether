@@ -1,5 +1,5 @@
 import { Pencil } from 'lucide-react';
-import { spacing, radius, typography, effects } from '../design-system';
+import { spacing, typography, effects } from '../design-system';
 import { useTheme } from '../lib/theme';
 import Button from './Button';
 import Input from './Input';
@@ -38,7 +38,7 @@ export default function Hero({
     : null;
 
   return (
-    <Card style={{ border: `1px solid ${theme.border.subtle}`, backdropFilter: effects.backdropBlur, WebkitBackdropFilter: effects.backdropBlur, padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? theme.accent.subtle : theme.surface.card, transition: "background 0.4s ease" }}>
+    <Card style={{ border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, backdropFilter: effects.backdropBlur, WebkitBackdropFilter: effects.backdropBlur, padding: `${spacing.sm}px ${spacing.md}px`, marginBottom: spacing.md, background: flashGreen ? theme.accent.subtle : theme.surface.card, transition: "background 0.4s ease" }}>
 
       {/* Past-day header: eyebrow label + Edit / Done button */}
       {isPast && (
@@ -114,7 +114,7 @@ export default function Hero({
           )}
         </div>
         <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0, width: 72, height: 72, display: "block" }}>
-          <circle cx="36" cy="36" r={r} fill="none" stroke={theme.border.subtle} strokeWidth="5" />
+          <circle cx="36" cy="36" r={r} fill="none" stroke={theme.accent.track} strokeWidth="5" />
           <circle cx="36" cy="36" r={r} fill="none" stroke={theme.accent.default} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={circ - dash} strokeLinecap="round" transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
           <text x="36" y="36" textAnchor="middle" dominantBaseline="middle" fill={theme.text.primary} fontSize={typography.caption} fontWeight={typography.bold} fontFamily={typography.fontHeading}>{pct}%</text>
         </svg>

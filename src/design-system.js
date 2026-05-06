@@ -211,6 +211,7 @@ export const themes = {
       subtle:    "#EEF1F4",
       border:    "rgba(26,26,26,0.3)",
       onSubtle:  "#1A1A1A",
+      track:     "rgba(26,26,26,0.1)",
     },
     border: {
       subtle: "#E2E6EA",
@@ -272,6 +273,7 @@ export const themes = {
       subtle:   "rgba(255,255,255,0.08)",
       border:   "#FFFAF5",
       onSubtle: "#F5F5F7",
+      track:    "rgba(245,245,247,0.1)",
     },
     border: {
       subtle: "rgba(255,250,245,0.10)",
@@ -333,6 +335,7 @@ export const themes = {
       subtle:   "rgba(0,0,0,0.92)",
       border:   "#000000",
       onSubtle: "#FFFFFF",
+      track:    "rgba(0,0,0,0.15)",
     },
     border: {
       subtle: "#000000",
@@ -394,6 +397,7 @@ export const themes = {
       subtle:   "rgba(255,255,255,0.92)",
       border:   "#FFFFFF",
       onSubtle: "#000000",
+      track:    "rgba(255,255,255,0.15)",
     },
     border: {
       subtle: "#FFFFFF",
