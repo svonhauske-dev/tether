@@ -256,7 +256,7 @@ export const themes = {
       modal:         "#04060A",
       card:          "#06080D",
       cardSubtle:    "#030507",
-      backdrop:      "rgba(0,0,0,0.55)",
+      backdrop:      "rgba(255,255,255,0.30)",
       input:         "#06080D",
       inputDisabled: "#030507",
       cardHover:     "#0C0F16",
