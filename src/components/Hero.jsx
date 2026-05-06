@@ -26,6 +26,7 @@ export default function Hero({
   editPillTime, setEditPillTime, tmpTime, setTmpTime, setPillForDay,
   isFuture, flashGreen, startDay, viewDay,
   isPast, isReadOnly, pastDayEditing, setPastDayEditing,
+  nextFixedSlot,
 }) {
   const { theme } = useTheme();
   const isConsistent    = anchorBehavior === "consistent";
@@ -70,10 +71,27 @@ export default function Hero({
             </div>
           ) : scheduleMode === "fixed" ? (
             <div>
-              {!isPast && <Label style={{ color: theme.text.muted, marginBottom: spacing.xxs }}>Fixed schedule</Label>}
-              <div style={{ fontSize: typography.title, fontWeight: typography.bold, color: theme.text.primary }}>{DAYS[viewDay]}</div>
-              {pct === 100 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
-              {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
+              {!isPast && nextFixedSlot ? (
+                <>
+                  <Label style={{ color: theme.text.muted, marginBottom: spacing.xxs }}>Next</Label>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: spacing.xs }}>
+                    <span style={{ fontSize: typography.display, fontWeight: typography.bold, letterSpacing: typography.displayLetterSpacing, color: theme.accent.default, fontFamily: typography.fontHeading }}>{nextFixedSlot.time}</span>
+                  </div>
+                  <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxxs }}>{nextFixedSlot.label}</div>
+                  {pct === 100 && coreTotal > 0 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
+                </>
+              ) : !isPast ? (
+                <>
+                  <Label style={{ color: theme.text.muted, marginBottom: spacing.xxs }}>Fixed schedule</Label>
+                  {pct === 100 && coreTotal > 0 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>All slots done</div>}
+                  {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
+                </>
+              ) : (
+                <>
+                  {pct === 100 && coreTotal > 0 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
+                  {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
+                </>
+              )}
             </div>
           ) : heroHasTime ? (
             <div>

@@ -302,6 +302,24 @@ function ProtocolApp({ user, token, onSignOut }) {
   });
   const pct = coreTotal > 0 ? Math.round((coreDone / coreTotal) * 100) : 0;
 
+  let nextFixedSlot = null;
+  if (scheduleMode === "fixed" && isToday) {
+    const now = new Date();
+    let earliest = null;
+    for (const sid of CORE_SLOTS) {
+      if (getSuppsForSlot(sid).length === 0) continue;
+      const t = getSlotTime(sid);
+      if (!t || t <= now) continue;
+      if (!earliest || t < earliest.t) earliest = { t, sid };
+    }
+    if (earliest) {
+      nextFixedSlot = {
+        time: slotTimeStr(earliest.sid),
+        label: SLOTS.find(s => s.id === earliest.sid)?.label ?? earliest.sid,
+      };
+    }
+  }
+
   const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false }); setSubmitError(null); setFormOpen(true); };
   const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false }); setSubmitError(null); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
@@ -529,6 +547,7 @@ function ProtocolApp({ user, token, onSignOut }) {
           isFuture={isFuture} flashGreen={flashGreen} startDay={startDay} viewDay={viewDay}
           isPast={isPast} isReadOnly={isReadOnly}
           pastDayEditing={pastDayEditing} setPastDayEditing={setPastDayEditing}
+          nextFixedSlot={nextFixedSlot}
         />
 
         {/* Main slot list */}
