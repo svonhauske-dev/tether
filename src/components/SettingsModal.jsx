@@ -168,7 +168,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
             onClick={handleToggleNotifications}
             aria-label={hasSubscription ? "Turn off reminders" : "Turn on reminders"}
             style={{
-              width: 44, height: 26, borderRadius: 13,
+              width: 44, height: 26, borderRadius: theme.radius.toggle,
               background: hasSubscription ? theme.accent.default : theme.border.strong,
               border: "none",
               cursor: "pointer",
@@ -183,7 +183,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
               top: 3,
               left: hasSubscription ? 21 : 3,
               width: 20, height: 20,
-              borderRadius: "50%",
+              borderRadius: theme.radius.pill,
               background: theme.surface.knob,
               transition: "left 200ms",
               display: "block",
@@ -210,7 +210,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
         <ChevronRight size={20} color={theme.text.secondary} />
       </div>
 
-      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
+      <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
 
       <Label style={{ marginBottom: spacing.xs }}>Protocol</Label>
       <div
@@ -226,12 +226,12 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
         <ChevronRight size={20} color={theme.text.secondary} />
       </div>
 
-      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
+      <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
 
       <Label style={{ marginBottom: spacing.xs }}>Notifications</Label>
       {notifContent}
 
-      <div style={{ borderTop: `1px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
+      <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
 
       <Button variant="destructive" fullWidth onClick={() => { onSignOut(); onClose(); }}>Sign out</Button>
     </Modal>

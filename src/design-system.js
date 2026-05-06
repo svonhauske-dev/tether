@@ -239,7 +239,7 @@ export const themes = {
     gradients: {
       bg: "linear-gradient(180deg,#F4F6F8 0%,#F2F4F6 50%,#EEF1F4 100%)",
     },
-    radius: { surface: 12, surfaceInner: 4, pill: 999, badge: 999, button: 12, iconButton: 999 },
+    radius: { surface: 12, surfaceInner: 4, pill: 999, badge: 999, button: 12, iconButton: 999, toggle: 13 },
     borderWidth: { subtle: 0.5, default: 1, accent: 1.5 },
   },
 
@@ -300,7 +300,7 @@ export const themes = {
     gradients: {
       bg: "#04060A",
     },
-    radius: { surface: 12, surfaceInner: 4, pill: 999, badge: 999, button: 12, iconButton: 999 },
+    radius: { surface: 12, surfaceInner: 4, pill: 999, badge: 999, button: 12, iconButton: 999, toggle: 13 },
     borderWidth: { subtle: 0.5, default: 1, accent: 1.5 },
   },
 
@@ -361,7 +361,7 @@ export const themes = {
     gradients: {
       bg: "#FFFFFF",
     },
-    radius: { surface: 0, surfaceInner: 0, pill: 0, badge: 0, button: 0, iconButton: 0 },
+    radius: { surface: 0, surfaceInner: 0, pill: 0, badge: 0, button: 0, iconButton: 0, toggle: 0 },
     borderWidth: { subtle: 2, default: 2, accent: 3 },
   },
 
@@ -422,7 +422,7 @@ export const themes = {
     gradients: {
       bg: "#000000",
     },
-    radius: { surface: 0, surfaceInner: 0, pill: 0, badge: 0, button: 0, iconButton: 0 },
+    radius: { surface: 0, surfaceInner: 0, pill: 0, badge: 0, button: 0, iconButton: 0, toggle: 0 },
     borderWidth: { subtle: 2, default: 2, accent: 3 },
   },
 };
