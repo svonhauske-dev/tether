@@ -46,7 +46,7 @@ export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset
           {slotSupps.map((supp, i) => {
             const done = isChecked(slot.id, supp.id);
             return (
-              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid ${theme.border.subtle}` : "none", minHeight: touch.row, borderRadius: radius.sm }}>
+              <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.sm}px 0`, borderBottom: i < slotSupps.length - 1 ? `1px solid ${theme.border.subtle}` : "none", minHeight: touch.row, borderRadius: radius.xs /* outer(12) - h-pad(16) = -4 → edge case → minimum 2 */ }}>
                 <div onClick={() => { if (!isFuture && !isReadOnly) toggleCheck(slot.id, supp.id); }} style={{ width: 24, height: 24, borderRadius: radius.sm, flexShrink: 0, border: `1.5px solid ${done ? theme.accent.default : theme.border.strong}`, background: done ? theme.accent.default : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: (isFuture || isReadOnly) ? "default" : "pointer" }}>
                   {done && <span style={{ color: theme.text.onAccent, fontSize: typography.label, fontWeight: typography.bold }}>✓</span>}
                 </div>
