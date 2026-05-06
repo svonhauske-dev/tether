@@ -1,0 +1,255 @@
+// supabase/functions/recompute_notifications/index.ts
+// On-demand recompute: clears the 48-hour notification window for a user and
+// re-inserts fresh rows based on their current schedule + supplements.
+
+import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  addMins,
+  getLocalDateStr,
+  getLocalDayOfWeek,
+  parseLocalHHMM,
+  deriveOffsets,
+  getModeSlotLabel,
+  getAnchorTitle,
+  SLOT_LABELS,
+  TIMED_SLOT_IDS,
+} from "../_shared/helpers.ts";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+};
+
+Deno.serve(async (req: Request) => {
+  // Preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
+  // ── Authenticate ─────────────────────────────────────────────────────────────
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return new Response("Unauthorized", { status: 401, headers: CORS_HEADERS });
+  }
+  const jwt = authHeader.slice(7);
+
+  // ── Parse optional body ───────────────────────────────────────────────────────
+  let tz = "UTC";
+  try {
+    const body = await req.json();
+    if (typeof body?.timezone === "string" && body.timezone.length > 0) {
+      tz = body.timezone;
+    }
+  } catch { /* empty body or non-JSON — fall back to UTC */ }
+
+  // ── Supabase clients ──────────────────────────────────────────────────────────
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey     = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  // Verify the user JWT
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+  });
+  const { data: { user }, error: authErr } = await userClient.auth.getUser();
+  if (authErr || !user) {
+    return new Response("Unauthorized", { status: 401, headers: CORS_HEADERS });
+  }
+  const userId = user.id;
+
+  // Admin client for all DB writes (bypasses RLS)
+  const admin = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false },
+  });
+
+  // ── Read user state in parallel ───────────────────────────────────────────────
+  const localToday = getLocalDateStr(tz, 0);
+
+  const [schedResult, suppsResult, logResult, subResult] = await Promise.all([
+    admin.from("user_schedule").select("*").eq("user_id", userId).maybeSingle(),
+    admin.from("supplements")
+      .select("id, name, slots, days")
+      .eq("user_id", userId)
+      .eq("paused", false),
+    admin.from("daily_logs")
+      .select("pill_time")
+      .eq("user_id", userId)
+      .eq("log_date", localToday)
+      .maybeSingle(),
+    admin.from("push_subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
+
+  const sched    = schedResult.data;
+  // deno-lint-ignore no-explicit-any
+  const supps: any[] = suppsResult.data ?? [];
+  const pillTime: string | null = logResult.data?.pill_time?.slice(0, 5) ?? null;
+  const hasSub   = (subResult.count ?? 0) > 0;
+
+  // ── Early exits ───────────────────────────────────────────────────────────────
+  const mode: string = sched?.schedule_type ?? "none";
+
+  if (!hasSub || !sched?.notifications_enabled || mode === "none") {
+    return new Response(
+      JSON.stringify({ queued: 0, reason: "skip", hasSub, notifEnabled: sched?.notifications_enabled ?? false, mode }),
+      { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Extract schedule config ───────────────────────────────────────────────────
+  // deno-lint-ignore no-explicit-any
+  const cfg: Record<string, any> = sched.offsets ?? {};
+  const anchorBehavior: string = cfg._anchor_behavior ?? "flexible";
+  const consistentTime: string | null = cfg._consistent_time ?? null;
+
+  // ── Compute notifications for today + tomorrow ────────────────────────────────
+  const now = new Date();
+  const plus48 = new Date(now.getTime() + 48 * 3_600_000);
+
+  type QueueRow = {
+    user_id: string;
+    fire_at: string;
+    title: string;
+    body: string;
+    slot_id: string;
+    tag: string;
+    fired: boolean;
+  };
+
+  const rows: QueueRow[] = [];
+
+  for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
+    const dateStr   = getLocalDateStr(tz, dayOffset);
+    const dayOfWeek = getLocalDayOfWeek(dateStr, tz);
+    const isToday   = dayOffset === 0;
+
+    // ── Fixed mode ──────────────────────────────────────────────────────────────
+    if (mode === "fixed") {
+      const fixedTimes: Record<string, string | null> = cfg.fixed_times ?? {};
+
+      for (const slotId of TIMED_SLOT_IDS) {
+        if (slotId === "rx") continue; // no single anchor in fixed mode
+
+        const fixedTime = fixedTimes[slotId];
+        if (!fixedTime) continue;
+
+        const fireAt = parseLocalHHMM(dateStr, fixedTime, tz);
+        if (fireAt <= now) continue;
+
+        const slotSupps = supps.filter(
+          (s) => Array.isArray(s.slots) && s.slots.includes(slotId) &&
+                 Array.isArray(s.days)  && s.days.includes(dayOfWeek),
+        );
+        if (!slotSupps.length) continue;
+
+        rows.push({
+          user_id: userId,
+          fire_at: fireAt.toISOString(),
+          title:   `Time for ${SLOT_LABELS[slotId] ?? slotId}`,
+          body:    slotSupps.map((s) => s.name).join(", "),
+          slot_id: slotId,
+          tag:     `${dateStr}_${slotId}`,
+          fired:   false,
+        });
+      }
+      continue; // done with this day for fixed mode
+    }
+
+    // ── Offset-based modes (medication / wakeup / fasting) ──────────────────────
+
+    // Determine anchor time for this day
+    let anchorHHMM: string | null = null;
+
+    if (anchorBehavior === "consistent" && consistentTime) {
+      anchorHHMM = consistentTime;
+    } else {
+      // flexible — only today has a known anchor (user sets it each morning)
+      if (!isToday || !pillTime) continue;
+      anchorHHMM = pillTime;
+    }
+
+    const anchorDate = parseLocalHHMM(dateStr, anchorHHMM, tz);
+
+    // rx slot — fires at anchor time, mode-specific title
+    const rxSupps = supps.filter(
+      (s) => Array.isArray(s.slots) && s.slots.includes("rx") &&
+             Array.isArray(s.days)  && s.days.includes(dayOfWeek),
+    );
+    if (rxSupps.length > 0 && anchorDate > now) {
+      rows.push({
+        user_id: userId,
+        fire_at: anchorDate.toISOString(),
+        title:   getAnchorTitle(mode),
+        body:    rxSupps.map((s) => s.name).join(", "),
+        slot_id: "rx",
+        tag:     `${dateStr}_rx`,
+        fired:   false,
+      });
+    }
+
+    // All other timed slots (anchor + offset)
+    const offsets = deriveOffsets(mode, cfg);
+    if (!offsets) continue;
+
+    for (const slotId of TIMED_SLOT_IDS) {
+      if (slotId === "rx") continue; // already handled above
+
+      const offset = offsets[slotId];
+      if (offset === null || offset === undefined) continue;
+
+      const fireAt = addMins(anchorDate, offset);
+      if (fireAt <= now) continue;
+
+      const slotSupps = supps.filter(
+        (s) => Array.isArray(s.slots) && s.slots.includes(slotId) &&
+               Array.isArray(s.days)  && s.days.includes(dayOfWeek),
+      );
+      if (!slotSupps.length) continue;
+
+      rows.push({
+        user_id: userId,
+        fire_at: fireAt.toISOString(),
+        title:   `Time for ${getModeSlotLabel(slotId, mode)}`,
+        body:    slotSupps.map((s) => s.name).join(", "),
+        slot_id: slotId,
+        tag:     `${dateStr}_${slotId}`,
+        fired:   false,
+      });
+    }
+  }
+
+  // ── Delete stale pending rows in the 48-hour window ───────────────────────────
+  const { error: delErr } = await admin
+    .from("notifications_queue")
+    .delete()
+    .eq("user_id", userId)
+    .eq("fired", false)
+    .gte("fire_at", now.toISOString())
+    .lt("fire_at", plus48.toISOString());
+
+  if (delErr) {
+    console.error("Delete failed:", delErr);
+    return new Response(
+      JSON.stringify({ error: "Delete failed", detail: delErr.message }),
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+    );
+  }
+
+  // ── Insert fresh rows ─────────────────────────────────────────────────────────
+  if (rows.length > 0) {
+    const { error: insErr } = await admin.from("notifications_queue").insert(rows);
+    if (insErr) {
+      console.error("Insert failed:", insErr);
+      return new Response(
+        JSON.stringify({ error: "Insert failed", detail: insErr.message }),
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ queued: rows.length, tz, mode, anchorBehavior }),
+    { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+  );
+});

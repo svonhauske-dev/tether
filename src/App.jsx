@@ -30,6 +30,7 @@ import {
   dbGetSchedule, dbSaveSchedule,
   dbUpdateScheduleField,
   dbGetProfile, dbCreateProfile,
+  recomputeNotifications,
 } from './lib/api';
 import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY } from './lib/time';
 import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
@@ -233,7 +234,10 @@ function ProtocolApp({ user, token, onSignOut }) {
   }, [checked, pillTimes, supps, scheduleMode, anchorBehavior]);
 
   const goDay         = (offset) => { const d = new Date(viewDate); d.setDate(d.getDate() + offset); setViewDate(startOfDay(d)); setPastDayEditing(false); };
-  const setPillForDay = (t) => setPillTimes(pt => ({ ...pt, [dk]: t }));
+  const setPillForDay = (t) => {
+    setPillTimes(pt => ({ ...pt, [dk]: t }));
+    recomputeNotifications(token);
+  };
 
   const getSlotTime = (sid) => {
     if (sid === "injectable" || sid === "topical") return null;
@@ -306,6 +310,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         if (rows?.[0]) setSupps(s => [...s, rows[0]]);
         showToast(`Added ${form.name}`);
       }
+      recomputeNotifications(token);
       closeForm();
     } catch (err) {
       setSubmitError("Couldn't save — try again");
@@ -355,6 +360,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       }
 
       showToast("Schedule updated");
+      recomputeNotifications(token);
     } catch (err) {
       showToast("Couldn't save — try again");
       console.error(err);
@@ -370,6 +376,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       await dbUpdateSupp(updated, token);
       setSupps(s => s.map(x => x.id === supp.id ? updated : x));
       showToast(updated.paused ? `Paused ${supp.name}` : `Resumed ${supp.name}`);
+      recomputeNotifications(token);
     } catch (err) {
       showToast("Couldn't update — try again");
       console.error(err);
@@ -399,6 +406,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       try {
         await dbDeleteSupp(supp.id, token);
         setSupps(s => s.filter(x => x.id !== supp.id));
+        recomputeNotifications(token);
       } catch (err) {
         showToast("Couldn't delete — try again");
         console.error(err);
@@ -562,6 +570,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         token={token}
         profile={profile}
         onProfileUpdate={(updated) => setProfile(updated)}
+        onNotificationsEnabled={() => recomputeNotifications(token)}
       />
       <ManageSupplementsSheet
         open={showManage}

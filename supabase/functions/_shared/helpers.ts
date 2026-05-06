@@ -1,0 +1,149 @@
+// supabase/functions/_shared/helpers.ts
+// Server-side duplicates of the frontend helpers needed for notification computation.
+// Intentionally minimal — only what recompute_notifications actually uses.
+
+// ── Time utilities ─────────────────────────────────────────────────────────────
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+export function addMins(d: Date, mins: number): Date {
+  return new Date(d.getTime() + mins * 60_000);
+}
+
+/** "YYYY-MM-DD" in the given IANA timezone, offset by dayOffset calendar days. */
+export function getLocalDateStr(tz: string, dayOffset = 0): string {
+  const d = new Date(Date.now() + dayOffset * 86_400_000);
+  return d.toLocaleDateString("sv-SE", { timeZone: tz }); // sv-SE gives ISO date format
+}
+
+/**
+ * Return the day-of-week (0=Sun … 6=Sat) for a YYYY-MM-DD date as seen in the
+ * given timezone. Uses noon-UTC to avoid any timezone boundary issues.
+ */
+export function getLocalDayOfWeek(dateStr: string, tz: string): number {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const noon = new Date(Date.UTC(year, month - 1, day, 12));
+  const shortDay = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    weekday: "short",
+  }).format(noon);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(shortDay);
+}
+
+/**
+ * Parse "HH:MM" as a local time on the given date (YYYY-MM-DD) in the given
+ * timezone, returning the equivalent UTC Date.
+ *
+ * Strategy: start with a UTC approximation treating local time as UTC, then
+ * measure the actual local representation via Intl.formatToParts and correct.
+ * Handles DST correctly for any offset shift ≤ 12 hours.
+ */
+export function parseLocalHHMM(dateStr: string, hhMM: string, tz: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = hhMM.split(":").map(Number);
+
+  // Initial approximation: treat local time as if it were UTC
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const approx = new Date(utcMs);
+
+  // Find what local time the UTC approximation maps to
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(approx);
+  let localH = parseInt(parts.find((p) => p.type === "hour")!.value, 10);
+  const localM = parseInt(parts.find((p) => p.type === "minute")!.value, 10);
+  if (localH === 24) localH = 0; // Intl can return 24 for midnight
+
+  // Correct toward the target local time
+  let diffMins = (hour * 60 + minute) - (localH * 60 + localM);
+  if (diffMins > 720) diffMins -= 1440;
+  if (diffMins < -720) diffMins += 1440;
+
+  return new Date(utcMs + diffMins * 60_000);
+}
+
+// ── Slot definitions ───────────────────────────────────────────────────────────
+
+/** Slot IDs that receive scheduled notifications (injectable/topical are variable-time). */
+export const TIMED_SLOT_IDS = [
+  "rx",
+  "pre_breakfast",
+  "breakfast",
+  "pre_lunch",
+  "lunch",
+  "pre_dinner",
+  "dinner",
+  "after_dinner",
+] as const;
+
+export const SLOT_LABELS: Record<string, string> = {
+  rx:            "Anchor Medication",
+  pre_breakfast: "Before Breakfast",
+  breakfast:     "With Breakfast",
+  pre_lunch:     "Before Lunch",
+  lunch:         "With Lunch",
+  pre_dinner:    "Before Dinner",
+  dinner:        "With Dinner",
+  after_dinner:  "Evening",
+};
+
+/** Mode-aware label for a slot (mirrors getSlotLabelForMode in src/config.js). */
+export function getModeSlotLabel(slotId: string, mode: string): string {
+  if (slotId === "rx") {
+    if (mode === "wakeup") return "Empty Stomach";
+    if (mode === "fasting") return "Anchor";
+    return "Anchor Medication";
+  }
+  return SLOT_LABELS[slotId] ?? slotId;
+}
+
+/** Notification title for the anchor event, per schedule mode. */
+export function getAnchorTitle(mode: string): string {
+  if (mode === "medication") return "Time to take your medication";
+  if (mode === "wakeup") return "Good morning — time to start your day";
+  if (mode === "fasting") return "Your eating window is open";
+  return "Time to start your day";
+}
+
+// ── Schedule offset computation (mirrors deriveOffsets in src/config.js) ───────
+
+// deno-lint-ignore no-explicit-any
+export function deriveOffsets(mode: string, cfg: any): Record<string, number | null> | null {
+  if (mode === "none" || mode === "fixed") return null;
+
+  if (mode === "fasting") {
+    const winStart: number = cfg.window_start ?? 0;
+    const winLen: number = cfg.window_length ?? 480;
+    const meals: number = cfg.meals_per_day ?? 2;
+    const interval = Math.floor(winLen / (meals + 1));
+    const pmw: number = cfg.pre_meal_window ?? 30;
+    return {
+      pre_breakfast: winStart + interval - pmw,
+      breakfast:     winStart + interval,
+      pre_lunch:     meals >= 2 ? winStart + interval * 2 - pmw : null,
+      lunch:         meals >= 2 ? winStart + interval * 2 : null,
+      pre_dinner:    meals >= 3 ? winStart + interval * 3 - pmw : null,
+      dinner:        meals >= 3 ? winStart + interval * 3 : null,
+      after_dinner:  winStart + winLen + 30,
+    };
+  }
+
+  // medication / wakeup
+  const pmw: number = cfg.pre_meal_window ?? 30;
+  const bfast: number = cfg.breakfast ?? 60;
+  return {
+    pre_breakfast: bfast - pmw,
+    breakfast:     bfast,
+    pre_lunch:     (cfg.lunch ?? 300) - pmw,
+    lunch:         cfg.lunch ?? 300,
+    pre_dinner:    (cfg.dinner ?? 540) - pmw,
+    dinner:        cfg.dinner ?? 540,
+    after_dinner:  cfg.after_dinner ?? 660,
+  };
+}

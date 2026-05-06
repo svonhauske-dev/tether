@@ -121,6 +121,23 @@ export const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedul
 export const dbUpdateScheduleField = (field, value, userId, token) =>
   supa("PATCH", `/rest/v1/user_schedule?user_id=eq.${userId}`, { [field]: value }, token);
 
+export async function recomputeNotifications(token) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/recompute_notifications`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ timezone }),
+    });
+    if (!res.ok) console.error("Recompute failed:", await res.text());
+  } catch (e) {
+    console.error("Recompute error:", e);
+  }
+}
+
 export const dbGetProfile    = (userId, t)       => supa("GET",   `/rest/v1/user_profiles?id=eq.${userId}&select=*`, null, t).then(r => r?.[0] || null);
 export const dbCreateProfile = (data, t)         => supa("POST",  "/rest/v1/user_profiles", data, t);
 export const dbUpdateProfile = (userId, data, t) => supa("PATCH", `/rest/v1/user_profiles?id=eq.${userId}`, data, t);

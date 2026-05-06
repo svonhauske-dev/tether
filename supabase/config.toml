@@ -1,0 +1,3 @@
+# Supabase project config
+# Run `supabase link --project-ref yahimlivfieuknagusxp` to link to the remote project.
+project_id = "tether"

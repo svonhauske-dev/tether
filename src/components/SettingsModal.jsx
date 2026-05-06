@@ -12,7 +12,7 @@ import {
 } from "../lib/notifications";
 import { dbUpdateScheduleField } from "../lib/api";
 
-export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, user, token, profile, onProfileUpdate }) {
+export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled }) {
   const { show: showToast } = useToast();
   const [view, setView]                   = useState("main");
   const [permission, setPermission]       = useState("default");
@@ -48,6 +48,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
         setPermission("granted");
         setHasSubscription(true);
         showToast("Reminders on");
+        if (onNotificationsEnabled) onNotificationsEnabled();
       }
     } catch (err) {
       if (err.message?.includes("denied")) {
