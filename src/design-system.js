@@ -270,8 +270,8 @@ export const themes = {
       border:  "#F5F5F7",
     },
     border: {
-      subtle: "rgba(255,255,255,0.06)",
-      strong: "rgba(255,255,255,0.12)",
+      subtle: "rgba(255,255,255,0.10)",
+      strong: "rgba(255,255,255,0.18)",
       focus:  "#F5F5F7",
     },
     slot: SLOTS_DARK,
