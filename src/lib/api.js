@@ -55,22 +55,30 @@ export async function supa(method, path, body, token) {
 
 export async function getSession() {
   const token = localStorage.getItem("sb_token");
-  if (!token) return null;
+  const storedRefresh = localStorage.getItem("sb_refresh_token");
+
+  if (!token && !storedRefresh) return null;
+
+  if (token) {
+    try {
+      const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${token}` },
+      });
+      if (res.ok) { const d = await res.json(); return d.id ? d : null; }
+      if (res.status !== 401) return null;
+    } catch { /* network error — fall through to refresh */ }
+  }
+
+  if (!storedRefresh) return null;
+  const newToken = await refreshSession();
+  if (!newToken) return null;
+
   try {
     const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
-      headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${token}` },
+      headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${newToken}` },
     });
     if (res.ok) { const d = await res.json(); return d.id ? d : null; }
-    if (res.status === 401) {
-      const newToken = await refreshSession();
-      if (newToken) {
-        const retry = await fetch(`${SUPA_URL}/auth/v1/user`, {
-          headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${newToken}` },
-        });
-        if (retry.ok) { const d = await retry.json(); return d.id ? d : null; }
-      }
-    }
-  } catch (e) {}
+  } catch {}
   return null;
 }
 
