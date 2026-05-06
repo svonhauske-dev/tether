@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { spacing, radius, typography, layout } from "../design-system";
+import { spacing, typography, layout } from "../design-system";
 import { useTheme } from "../lib/theme";
 import { DEFAULT_CONFIG, FIXED_SLOTS, MODES, toHrMin, fromHrMin } from "../config";
 import Button from "./Button";
@@ -31,7 +31,7 @@ function ProgressDots({ step }) {
         <div key={i} style={{
           width: i === step ? 20 : 8,
           height: 8,
-          borderRadius: radius.full,
+          borderRadius: theme.radius.pill,
           background: i === step ? theme.accent.default : theme.border.strong,
           transition: "width 0.2s, background 0.2s",
         }} />
@@ -72,13 +72,13 @@ export default function Onboarding({ onComplete }) {
   const segBtnStyle = (on) => ({
     flex: 1,
     padding: `${spacing.sm}px`,
-    borderRadius: radius.full,
+    borderRadius: theme.radius.pill,
     cursor: "pointer",
     fontSize: typography.caption,
     fontFamily: typography.fontBody,
     background: on ? theme.accent.subtle : "transparent",
-    color: on ? theme.accent.default : theme.text.secondary,
-    border: `1px solid ${on ? theme.accent.default : theme.border.subtle}`,
+    color: on ? theme.accent.onSubtle : theme.text.secondary,
+    border: `${theme.borderWidth.default}px solid ${on ? theme.accent.default : theme.border.subtle}`,
     fontWeight: on ? typography.semibold : typography.regular,
     minHeight: layout.segHeight,
   });
@@ -122,7 +122,7 @@ export default function Onboarding({ onComplete }) {
                   onClick={() => setMode(m.id)}
                   style={{ display: "flex", flexDirection: "column", gap: spacing.xxs }}
                 >
-                  <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: on ? theme.accent.default : theme.text.primary }}>{m.title}</span>
+                  <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: on ? theme.accent.onSubtle : theme.text.primary }}>{m.title}</span>
                   <span style={{ fontSize: typography.caption, color: theme.text.muted, lineHeight: 1.4 }}>{m.desc}</span>
                 </Card>
               );

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { spacing, radius, typography, layout, touch } from '../design-system';
+import { spacing, typography, layout, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { parseHHMM, fmtTime, addMins } from '../lib/time';
 import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, MODES, deriveOffsets, toHrMin, fromHrMin } from '../config';
@@ -37,13 +37,13 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
   const segBtnStyle = (on) => ({
     flex: 1,
     padding: `${spacing.sm}px`,
-    borderRadius: radius.full,
+    borderRadius: theme.radius.pill,
     cursor: "pointer",
     fontSize: typography.caption,
     fontFamily: typography.fontBody,
     background: on ? theme.accent.subtle : "transparent",
-    color: on ? theme.accent.default : theme.text.secondary,
-    border: `1px solid ${on ? theme.accent.default : theme.border.subtle}`,
+    color: on ? theme.accent.onSubtle : theme.text.secondary,
+    border: `${theme.borderWidth.default}px solid ${on ? theme.accent.default : theme.border.subtle}`,
     fontWeight: on ? typography.semibold : typography.regular,
     minHeight: layout.segHeight,
   });
@@ -87,8 +87,8 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
           {MODES.map(m => {
             const on = localMode === m.id;
             return (
-              <Card key={m.id} onClick={() => setLocalMode(m.id)} style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: spacing.xxs, minHeight: layout.modeButtonHeight, background: on ? theme.accent.subtle : "transparent", border: `1px solid ${on ? theme.accent.default : theme.border.subtle}`, marginBottom: 0, ...(m.id === "none" ? { gridColumn: "1 / -1" } : {}) }}>
-                <span style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: on ? theme.accent.default : theme.text.primary }}>{m.title}</span>
+              <Card key={m.id} onClick={() => setLocalMode(m.id)} style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: spacing.xxs, minHeight: layout.modeButtonHeight, background: on ? theme.accent.subtle : "transparent", border: `${theme.borderWidth.default}px solid ${on ? theme.accent.default : theme.border.subtle}`, marginBottom: 0, ...(m.id === "none" ? { gridColumn: "1 / -1" } : {}) }}>
+                <span style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: on ? theme.accent.onSubtle : theme.text.primary }}>{m.title}</span>
                 <span style={{ fontSize: typography.label, color: theme.text.muted, lineHeight: 1.4 }}>{m.desc}</span>
               </Card>
             );
@@ -227,7 +227,7 @@ export default function ScheduleModal({ scheduleMode, setScheduleMode, scheduleC
       {localMode !== "none" && (
         <div style={{ marginBottom: spacing.lg }}>
           <Label>{localMode === "fixed" ? "Schedule preview" : "Preview — 7:00 am anchor"}</Label>
-          <div style={{ borderRadius: radius.md, border: `1px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, display: "flex", flexDirection: "column", gap: spacing.xs }}>
+          <div style={{ borderRadius: theme.radius.surface, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, display: "flex", flexDirection: "column", gap: spacing.xs }}>
             {previewRows.length === 0
               ? <span style={{ fontSize: typography.caption, color: theme.text.muted }}>No times configured yet</span>
               : previewRows.map((row, i) => (

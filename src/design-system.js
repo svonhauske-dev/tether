@@ -206,10 +206,11 @@ export const themes = {
       faint:     "rgba(26,26,26,0.3)",
     },
     accent: {
-      default: "#1A1A1A",
-      hover:   "#000000",
-      subtle:  "#EEF1F4",
-      border:  "rgba(26,26,26,0.3)",
+      default:   "#1A1A1A",
+      hover:     "#000000",
+      subtle:    "#EEF1F4",
+      border:    "rgba(26,26,26,0.3)",
+      onSubtle:  "#1A1A1A",
     },
     border: {
       subtle: "#E2E6EA",
@@ -238,6 +239,8 @@ export const themes = {
     gradients: {
       bg: "linear-gradient(180deg,#F4F6F8 0%,#F2F4F6 50%,#EEF1F4 100%)",
     },
+    radius: { surface: 12, surfaceInner: 4, pill: 999, badge: 999, button: 12, iconButton: 999 },
+    borderWidth: { subtle: 0.5, default: 1, accent: 1.5 },
   },
 
   dark: {
@@ -264,15 +267,16 @@ export const themes = {
       faint:     "rgba(245,245,247,0.3)",
     },
     accent: {
-      default: "#F5F5F7",
-      hover:   "rgba(255,255,255,0.92)",
-      subtle:  "rgba(255,255,255,0.08)",
-      border:  "#F5F5F7",
+      default:  "#F5F5F7",
+      hover:    "rgba(255,255,255,0.92)",
+      subtle:   "rgba(255,255,255,0.08)",
+      border:   "#FFFAF5",
+      onSubtle: "#F5F5F7",
     },
     border: {
-      subtle: "rgba(255,255,255,0.10)",
-      strong: "rgba(255,255,255,0.18)",
-      focus:  "#F5F5F7",
+      subtle: "rgba(255,250,245,0.10)",
+      strong: "rgba(255,250,245,0.18)",
+      focus:  "#FFFAF5",
     },
     slot: SLOTS_DARK,
     status: {
@@ -296,6 +300,8 @@ export const themes = {
     gradients: {
       bg: "#04060A",
     },
+    radius: { surface: 12, surfaceInner: 4, pill: 999, badge: 999, button: 12, iconButton: 999 },
+    borderWidth: { subtle: 0.5, default: 1, accent: 1.5 },
   },
 
   brutalLight: {
@@ -322,10 +328,11 @@ export const themes = {
       faint:     "rgba(0,0,0,0.3)",
     },
     accent: {
-      default: "#000000",
-      hover:   "#000000",
-      subtle:  "rgba(0,0,0,0.06)",
-      border:  "#000000",
+      default:  "#000000",
+      hover:    "#000000",
+      subtle:   "rgba(0,0,0,0.92)",
+      border:   "#000000",
+      onSubtle: "#FFFFFF",
     },
     border: {
       subtle: "#000000",
@@ -354,6 +361,8 @@ export const themes = {
     gradients: {
       bg: "#FFFFFF",
     },
+    radius: { surface: 0, surfaceInner: 0, pill: 0, badge: 0, button: 0, iconButton: 0 },
+    borderWidth: { subtle: 2, default: 2, accent: 3 },
   },
 
   brutalDark: {
@@ -380,10 +389,11 @@ export const themes = {
       faint:     "rgba(255,255,255,0.3)",
     },
     accent: {
-      default: "#FFFFFF",
-      hover:   "#FFFFFF",
-      subtle:  "rgba(255,255,255,0.06)",
-      border:  "#FFFFFF",
+      default:  "#FFFFFF",
+      hover:    "#FFFFFF",
+      subtle:   "rgba(255,255,255,0.92)",
+      border:   "#FFFFFF",
+      onSubtle: "#000000",
     },
     border: {
       subtle: "#FFFFFF",
@@ -412,5 +422,7 @@ export const themes = {
     gradients: {
       bg: "#000000",
     },
+    radius: { surface: 0, surfaceInner: 0, pill: 0, badge: 0, button: 0, iconButton: 0 },
+    borderWidth: { subtle: 2, default: 2, accent: 3 },
   },
 };

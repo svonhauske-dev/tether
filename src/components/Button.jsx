@@ -1,5 +1,5 @@
 import {
-  spacing, radius, typography, touch, layout,
+  spacing, typography, touch, layout,
 } from "../design-system";
 import { useTheme } from "../lib/theme";
 
@@ -37,7 +37,7 @@ export default function Button({
       color: theme.text.onAccent,
       border: "none",
       fontWeight: typography.semibold,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.button,
       minHeight: touch.min,
       padding: `${spacing.sm}px ${spacing.md}px`,
       fontSize: typography.body,
@@ -48,7 +48,7 @@ export default function Button({
       color: isFuture ? theme.text.muted : theme.text.onAccent,
       border: "none",
       fontWeight: typography.semibold,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.pill,
       minHeight: spacing.xxl,
       padding: `${spacing.sm}px ${spacing.md}px`,
       fontSize: typography.body,
@@ -58,34 +58,34 @@ export default function Button({
     v = {
       background: "transparent",
       color: theme.text.primary,
-      border: `1px solid ${theme.border.subtle}`,
+      border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
       fontWeight: typography.medium,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.button,
       minHeight: touch.min,
       padding: `${spacing.sm}px ${spacing.md}px`,
       fontSize: typography.caption,
     };
   } else if (variant === "pill") {
     const pillBase = {
-      borderRadius: radius.full,
+      borderRadius: theme.radius.pill,
       minHeight: touch.min,
       padding: `${spacing.xs}px ${spacing.sm}px`,
       fontSize: typography.caption,
     };
     if (active && solidActive) {
-      v = { ...pillBase, background: theme.accent.default, color: theme.text.onAccent, border: `1px solid ${theme.accent.default}`, fontWeight: typography.semibold };
+      v = { ...pillBase, background: theme.accent.default, color: theme.text.onAccent, border: `${theme.borderWidth.default}px solid ${theme.accent.default}`, fontWeight: typography.semibold };
     } else if (active) {
-      v = { ...pillBase, background: theme.accent.subtle, color: theme.accent.default, border: `1px solid ${theme.accent.default}`, fontWeight: typography.semibold };
+      v = { ...pillBase, background: theme.accent.subtle, color: theme.accent.onSubtle, border: `${theme.borderWidth.default}px solid ${theme.accent.default}`, fontWeight: typography.semibold };
     } else {
-      v = { ...pillBase, background: "transparent", color: theme.text.secondary, border: `1px solid ${theme.border.subtle}`, fontWeight: typography.regular };
+      v = { ...pillBase, background: "transparent", color: theme.text.secondary, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, fontWeight: typography.regular };
     }
   } else if (variant === "tertiary") {
     v = {
       background: "transparent",
       color: theme.text.secondary,
-      border: `1px solid ${theme.border.strong}`,
+      border: `${theme.borderWidth.default}px solid ${theme.border.strong}`,
       fontWeight: typography.semibold,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.button,
       minHeight: touch.min,
       padding: `${spacing.sm}px ${spacing.md}px`,
       fontSize: typography.caption,
@@ -94,9 +94,9 @@ export default function Button({
     v = {
       background: "transparent",
       color: theme.status.danger,
-      border: `1px solid ${theme.status.dangerBorder}`,
+      border: `${theme.borderWidth.default}px solid ${theme.status.dangerBorder}`,
       fontWeight: typography.medium,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.button,
       minHeight: touch.min,
       padding: `${spacing.sm}px ${spacing.md}px`,
       fontSize: typography.body,
@@ -105,9 +105,9 @@ export default function Button({
     v = {
       width: touch.min,
       height: touch.min,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.iconButton,
       background: "transparent",
-      border: `1px solid ${theme.border.subtle}`,
+      border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
       color: theme.text.secondary,
       fontSize: typography.caption,
       flexShrink: 0,
@@ -117,13 +117,13 @@ export default function Button({
     v = {
       width: 36,
       height: 36,
-      borderRadius: radius.full,
+      borderRadius: theme.radius.pill,
       fontSize: typography.label,
       flexShrink: 0,
       padding: 0,
       ...(active
-        ? { background: theme.accent.subtle, color: theme.accent.default, border: `1.5px solid ${theme.accent.default}`, fontWeight: typography.semibold }
-        : { background: "transparent", color: theme.text.primary, border: `1px solid ${theme.border.subtle}`, fontWeight: typography.regular }),
+        ? { background: theme.accent.subtle, color: theme.accent.onSubtle, border: `${theme.borderWidth.accent}px solid ${theme.accent.default}`, fontWeight: typography.semibold }
+        : { background: "transparent", color: theme.text.primary, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, fontWeight: typography.regular }),
     };
   } else {
     v = {};
