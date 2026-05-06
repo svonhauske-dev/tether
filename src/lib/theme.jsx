@@ -1,5 +1,9 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { themes } from "../design-system";
+import {
+  getThemePreference as dbGetThemePref,
+  setThemePreference as dbSetThemePref,
+} from "./api";
 
 export const THEME_NAMES = Object.keys(themes);
 const PREF_KEY = "origin_theme_preference";
@@ -45,10 +49,12 @@ const ThemeContext = createContext({
   themePreference: "system",
   setTheme: () => {},
   setThemePreference: () => {},
+  syncFromDB: async () => {},
 });
 
 export function ThemeProvider({ children }) {
   const [{ pref, name }, setState] = useState(getInitial);
+  const userIdRef = useRef(null);
 
   // Live system color-scheme listener — only active when preference is 'system'
   useEffect(() => {
@@ -63,11 +69,35 @@ export function ThemeProvider({ children }) {
     } catch {}
   }, [pref]);
 
-  // Persists preference to localStorage and resolves new active theme
-  const setThemePreference = (newPref) => {
+  // Called once by ProtocolApp after auth — fetches DB preference and syncs if it differs from localStorage
+  const syncFromDB = useCallback(async (userId, token) => {
+    userIdRef.current = userId;
+    try {
+      const dbPref = await dbGetThemePref(userId, token);
+      if (dbPref && VALID_PREFS.includes(dbPref)) {
+        const localPref = getStoredPref();
+        if (dbPref !== localPref) {
+          try { localStorage.setItem(PREF_KEY, dbPref); } catch {}
+          setState({ pref: dbPref, name: resolveTheme(dbPref) });
+        }
+      }
+    } catch (e) {
+      console.error("[theme] DB sync failed:", e);
+    }
+  }, []);
+
+  // Persists preference to localStorage, resolves new active theme, and fire-and-forgets to DB
+  const setThemePreference = useCallback((newPref) => {
     try { localStorage.setItem(PREF_KEY, newPref); } catch {}
     setState({ pref: newPref, name: resolveTheme(newPref) });
-  };
+    const userId = userIdRef.current;
+    if (userId) {
+      const token = localStorage.getItem("sb_token") || "";
+      dbSetThemePref(newPref, userId, token).catch(e => {
+        console.error("[theme] DB write failed:", e);
+      });
+    }
+  }, []);
 
   // Dev-only: set active theme without touching stored preference (used by DevThemePicker)
   const setTheme = (newName) => {
@@ -77,7 +107,7 @@ export function ThemeProvider({ children }) {
   const theme = themes[name] ?? themes.light;
 
   return (
-    <ThemeContext.Provider value={{ theme, themeName: name, themePreference: pref, setTheme, setThemePreference }}>
+    <ThemeContext.Provider value={{ theme, themeName: name, themePreference: pref, setTheme, setThemePreference, syncFromDB }}>
       {children}
     </ThemeContext.Provider>
   );

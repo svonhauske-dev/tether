@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  spacing, radius, typography, touch, layout,
+  spacing, typography, touch, layout,
   shadows, zIndex,
 } from "./design-system";
 import { ThemeProvider, useTheme } from './lib/theme';
@@ -80,7 +80,10 @@ export default function App() {
 // ── ProtocolApp ───────────────────────────────────────────────────────────────
 
 function ProtocolApp({ user, token, onSignOut }) {
-  const { theme } = useTheme();
+  const { theme, syncFromDB } = useTheme();
+
+  // Sync theme from DB once on auth — DB wins over localStorage for cross-device consistency
+  useEffect(() => { syncFromDB(user.id, token); }, []);
   const ANYTIME_SLOT = { id: "anytime", label: "Anytime", sublabel: "No specific time", icon: "◦", color: theme.text.muted };
   const BG_GRADIENT = theme.gradients.bg;
   const [supps, setSupps]                   = useState([]);
@@ -529,7 +532,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         />
 
         {/* Main slot list */}
-        <div style={{ borderRadius: radius.md, border: `1px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, marginBottom: spacing.md }}>
+        <div style={{ borderRadius: theme.radius.surface, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, marginBottom: spacing.md }}>
           {homeSupps.length === 0 ? (
             <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
               <div style={{ fontSize: typography.display, marginBottom: spacing.md }}>💊</div>
