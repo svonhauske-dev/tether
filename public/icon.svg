@@ -1,8 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="114" fill="white"/>
-  <g transform="translate(256, 256) rotate(-45)">
-    <rect x="-140" y="-60" width="140" height="120" rx="60" fill="#FF6B6B"/>
-    <rect x="0" y="-60" width="140" height="120" rx="60" fill="#00D4FF"/>
-    <rect x="-2" y="-60" width="4" height="120" fill="white"/>
-  </g>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="centerGlow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="11" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="#1A1A1A"/>
+  <circle cx="512" cy="512" r="439" fill="none" stroke="#F4F6F8" stroke-width="2.56" opacity="0.25"/>
+  <circle cx="512" cy="512" r="347" fill="none" stroke="#F4F6F8" stroke-width="2.82" opacity="0.4"/>
+  <circle cx="512" cy="512" r="256" fill="none" stroke="#F4F6F8" stroke-width="3.58" opacity="0.6"/>
+  <circle cx="512" cy="512" r="165" fill="none" stroke="#F4F6F8" stroke-width="4.35" opacity="0.85"/>
+  <circle cx="512" cy="512" r="91" fill="none" stroke="#F4F6F8" stroke-width="5.12" opacity="1"/>
+  <circle cx="512" cy="512" r="26" fill="#F4F6F8" filter="url(#centerGlow)"/>
 </svg>
