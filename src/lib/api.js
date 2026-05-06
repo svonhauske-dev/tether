@@ -79,7 +79,7 @@ export async function getSession() {
       });
       console.log("[auth] /user with access_token →", res.status);
       if (res.ok) { const d = await res.json(); return d.id ? d : null; }
-      if (res.status !== 401) {
+      if (res.status !== 401 && res.status !== 403) {
         console.warn("[auth] unexpected /user status, not retrying:", res.status);
         return null;
       }
