@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { spacing, typography, radius, shadows, effects, zIndex as zIndexTokens } from "../design-system";
 import { useTheme } from "../lib/theme";
@@ -6,6 +6,9 @@ import Button from "./Button";
 
 export default function Modal({ open, onClose, title, children, footer, leftAction }) {
   const { theme } = useTheme();
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchStartY = useRef(0);
 
   useEffect(function() {
     if (open) {
@@ -17,6 +20,39 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  // Reset drag state whenever modal closes (handles external close triggers)
+  useEffect(function() {
+    if (!open) {
+      setDragOffset(0);
+      setIsDragging(false);
+    }
+  }, [open]);
+
+  const handleDragStart = (e) => {
+    touchStartY.current = e.touches[0].pageY;
+    setIsDragging(true);
+    setDragOffset(0);
+  };
+
+  const handleDragMove = (e) => {
+    const deltaY = e.touches[0].pageY - touchStartY.current;
+    if (deltaY > 0) setDragOffset(deltaY);
+  };
+
+  // Read final position from the event (avoids stale closure on dragOffset state)
+  const handleDragEnd = (e) => {
+    const finalOffset = Math.max(0, e.changedTouches[0].pageY - touchStartY.current);
+    setIsDragging(false);
+    setDragOffset(0);
+    if (finalOffset > 100) onClose();
+  };
+
+  const sheetTransform = isDragging
+    ? `translateY(${dragOffset}px)`
+    : open ? "translateY(0)" : "translateY(100%)";
+
+  const sheetTransition = isDragging ? "none" : "transform 0.3s ease-out";
 
   return (
     <>
@@ -51,8 +87,8 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
           background: theme.surface.modal,
           borderRadius: `${radius.xl}px ${radius.xl}px 0 0`,
           boxShadow: shadows.modal,
-          transform: open ? "translateY(0)" : "translateY(100%)",
-          transition: "transform 0.3s ease-out",
+          transform: sheetTransform,
+          transition: sheetTransition,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -61,16 +97,34 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
           pointerEvents: open ? "all" : "none",
         }}
       >
-        {/* Drag handle */}
-        <div style={{
-          width: 36,
-          height: 5,
-          borderRadius: theme.radius.pill,
-          background: theme.border.subtle,
-          margin: `${spacing.sm}px auto`,
-          flexShrink: 0,
-          opacity: 0.7,
-        }} />
+        {/* Drag zone — full-width touch target around the handle pill */}
+        <div
+          onTouchStart={handleDragStart}
+          onTouchMove={handleDragMove}
+          onTouchEnd={handleDragEnd}
+          style={{
+            width: "100%",
+            paddingTop: 16,
+            paddingBottom: 12,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flexShrink: 0,
+            cursor: "grab",
+            WebkitTapHighlightColor: "transparent",
+            touchAction: "none",
+          }}
+        >
+          {/* Visual drag handle pill */}
+          <div style={{
+            width: 36,
+            height: 5,
+            borderRadius: theme.radius.pill,
+            background: theme.border.subtle,
+            opacity: 0.7,
+            flexShrink: 0,
+          }} />
+        </div>
 
         {/* Header */}
         <div style={{
