@@ -320,23 +320,43 @@ function ProtocolApp({ user, token, onSignOut }) {
     }
   }
 
-  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false }); setSubmitError(null); setFormOpen(true); };
-  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false }); setSubmitError(null); setFormOpen(true); };
+  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false, treatment_mode: "indefinite", starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null }); setSubmitError(null); setFormOpen(true); };
+  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false, treatment_mode: supp.treatment_mode || "indefinite", starts_at: supp.starts_at || null, ends_at: supp.ends_at || null, cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null, cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null }); setSubmitError(null); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
 
   const submitForm = async () => {
     if (!form.name.trim() || submitting) return;
+    const txMode = form.treatment_mode || "indefinite";
+    if (txMode === "scheduled") {
+      if (!form.starts_at || !form.ends_at) { setSubmitError("Start and end dates are required for a scheduled course"); return; }
+      if (form.ends_at <= form.starts_at)   { setSubmitError("End date must be after start date"); return; }
+    }
+    if (txMode === "cycled") {
+      if (!form.starts_at)                                          { setSubmitError("Start date is required for a cycled treatment"); return; }
+      if (!form.cycle_on_value  || form.cycle_on_value  <= 0)       { setSubmitError("On duration must be greater than 0"); return; }
+      if (!form.cycle_off_value || form.cycle_off_value <= 0)       { setSubmitError("Off duration must be greater than 0"); return; }
+      if (form.ends_at && form.ends_at <= form.starts_at)           { setSubmitError("End date must be after start date"); return; }
+    }
     setSubmitting(true);
     setSubmitError(null);
     const cat = form.category || "Oral";
     const finalDays = form.days.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : form.days;
+    const txFields = {
+      treatment_mode:  txMode,
+      starts_at:       txMode === "indefinite" ? null : (form.starts_at || null),
+      ends_at:         txMode === "indefinite" ? null : (form.ends_at   || null),
+      cycle_on_value:  txMode === "cycled" ? (form.cycle_on_value  || null) : null,
+      cycle_on_unit:   txMode === "cycled" ? (form.cycle_on_unit   || (form.cycle_on_value  ? "days" : null)) : null,
+      cycle_off_value: txMode === "cycled" ? (form.cycle_off_value || null) : null,
+      cycle_off_unit:  txMode === "cycled" ? (form.cycle_off_unit  || (form.cycle_off_value ? "days" : null)) : null,
+    };
     try {
       if (editingId) {
-        await dbUpdateSupp({ ...form, days: finalDays, category: cat, id: editingId }, token);
-        setSupps(s => s.map(x => x.id === editingId ? { ...form, days: finalDays, category: cat, id: editingId } : x));
+        await dbUpdateSupp({ ...form, days: finalDays, category: cat, id: editingId, ...txFields }, token);
+        setSupps(s => s.map(x => x.id === editingId ? { ...form, days: finalDays, category: cat, id: editingId, ...txFields } : x));
         showToast(`Updated ${form.name}`);
       } else {
-        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, timePreference: form.timePreference || "Anytime", paused: false, user_id: user.id }, token);
+        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, timePreference: form.timePreference || "Anytime", paused: false, user_id: user.id, ...txFields }, token);
         if (rows?.[0]) setSupps(s => [...s, rows[0]]);
         showToast(`Added ${form.name}`);
       }
