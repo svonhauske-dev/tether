@@ -150,7 +150,7 @@ export function signOut() {
 
 export const dbGetSupps     = (t)       => supa("GET",    "/rest/v1/supplements?select=*&order=created_at.asc", null, t);
 export const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
-export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, updated_at: new Date().toISOString() }, t);
+export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, treatment_mode: s.treatment_mode ?? "indefinite", starts_at: s.starts_at ?? null, ends_at: s.ends_at ?? null, cycle_on_value: s.cycle_on_value ?? null, cycle_on_unit: s.cycle_on_unit ?? null, cycle_off_value: s.cycle_off_value ?? null, cycle_off_unit: s.cycle_off_unit ?? null, updated_at: new Date().toISOString() }, t);
 export const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
 export const dbGetLog       = (date, t) => supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 export const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
