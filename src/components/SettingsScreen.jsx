@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { spacing, typography, touch, layout } from '../design-system';
 import { useTheme } from '../lib/theme';
-import { useNavigation } from '../lib/navigation';
 import { useToast } from './ToastContext';
 import Button from './Button';
 import Input from './Input';
@@ -52,7 +51,6 @@ function PasswordRule({ met, label }) {
 
 export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled }) {
   const { theme, themePreference, setThemePreference } = useTheme();
-  const { pushScreen } = useNavigation();
   const { show: showToast } = useToast();
 
   // Notification state
@@ -350,22 +348,6 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
               >
                 {pwSaving ? <InlineLoader size="sm" /> : 'Update password'}
               </Button>
-            </div>
-
-            {divider}
-
-            {/* ── Protocol ── */}
-            <Label style={{ marginBottom: spacing.xs }}>Protocol</Label>
-            <div
-              onClick={() => pushScreen('manage_protocol')}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: `${spacing.sm}px 0`, cursor: 'pointer', userSelect: 'none',
-                WebkitTapHighlightColor: 'transparent', minHeight: touch.min,
-              }}
-            >
-              <span style={{ fontSize: typography.body, color: theme.text.primary }}>Manage protocol</span>
-              <ChevronRight size={20} color={theme.text.secondary} />
             </div>
 
             {divider}

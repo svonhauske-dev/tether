@@ -5,6 +5,7 @@ import { useTheme } from "../lib/theme";
 import Badge from "./Badge";
 import Label from "./Label";
 import Button from "./Button";
+import ScheduleTab from "./ScheduleTab";
 import { isPausedSupp, isStoppedSupp } from "../lib/time";
 import { dbGetAdherenceCounts } from "../lib/api";
 
@@ -21,7 +22,7 @@ function formatStoppedDate(dateStr) {
   return date.toLocaleDateString("en-US", opts);
 }
 
-export default function ManageProtocolScreen({ isOpen, onBack, supplements, token, onEdit, onDelete, onTogglePause, onResume }) {
+export default function ManageProtocolScreen({ isOpen, onBack, supplements, token, onEdit, onDelete, onTogglePause, onResume, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule }) {
   const { theme } = useTheme();
   const [viewMode, setViewMode]             = useState("active");
   const [confirmId, setConfirmId]           = useState(null);
@@ -118,7 +119,7 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
           <>
             {/* Tab nav */}
             <div style={{ display: "flex", borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, marginBottom: spacing.lg }}>
-              {[["active", "Active"], ["stopped", "Stopped"]].map(([val, label]) => (
+              {[["active", "Active"], ["stopped", "Stopped"], ["schedule", "Schedule"]].map(([val, label]) => (
                 <button
                   key={val}
                   onClick={() => setViewMode(val)}
@@ -298,6 +299,16 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
                   );
                 })
               )
+            )}
+            {/* ── Schedule view ── */}
+            {viewMode === "schedule" && (
+              <ScheduleTab
+                scheduleMode={scheduleMode}
+                scheduleConfig={scheduleConfig}
+                anchorBehavior={anchorBehavior}
+                consistentTime={consistentTime}
+                onSave={onSaveSchedule}
+              />
             )}
           </>
         )}

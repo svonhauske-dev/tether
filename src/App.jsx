@@ -25,7 +25,6 @@ import Auth from "./components/Auth";
 import PromptName from "./components/PromptName";
 import SlotCard from "./components/SlotCard";
 import EditForm from "./components/EditForm";
-import ScheduleModal from "./components/ScheduleModal";
 import Hero from "./components/Hero";
 import {
   supa, getSession, signInPassword, signUp, signOut, refreshSession,
@@ -102,7 +101,6 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [form, setForm]                     = useState({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false });
   const [streak, setStreak]                 = useState(0);
   const [flashGreen, setFlashGreen]         = useState(false);
-  const [showSchedule, setShowSchedule]     = useState(false);
   const [scheduleMode, setScheduleMode]     = useState("none");
   const [scheduleConfig, setScheduleConfig] = useState({
     ...DEFAULT_CONFIG,
@@ -119,7 +117,6 @@ function ProtocolApp({ user, token, onSignOut }) {
   const [submitting, setSubmitting]           = useState(false);
   const [submitError, setSubmitError]         = useState(null);
   const saveTimer = useRef(null);
-  const schedSaveRef = useRef(null);
   const { show: showToast } = useToast();
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
@@ -436,6 +433,8 @@ function ProtocolApp({ user, token, onSignOut }) {
     const offsets = { ...config, _anchor_behavior: behavior, _consistent_time: cTime };
     try {
       await dbSaveSchedule({ user_id: user.id, schedule_type: mode, offsets }, token);
+      setScheduleMode(mode);
+      setScheduleConfig(config);
       setAnchorBehavior(behavior);
       setConsistentTime(cTime);
 
@@ -463,7 +462,6 @@ function ProtocolApp({ user, token, onSignOut }) {
       console.error(err);
       return false;
     }
-    setShowSchedule(false);
     return true;
   };
 
@@ -597,7 +595,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       {!isPast && (
         <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
           <Button variant="primary" onClick={openAdd} style={{ flex: 1 }}>+ Add item</Button>
-          <Button variant="secondary" onClick={() => setShowSchedule(true)} style={{ flex: 1, background: theme.surface.modal }}>Edit schedule</Button>
+          <Button variant="secondary" onClick={() => pushScreen('manage_protocol')} style={{ flex: 1, background: theme.surface.modal }}>Manage</Button>
         </div>
       )}
 
@@ -678,6 +676,11 @@ function ProtocolApp({ user, token, onSignOut }) {
         onDelete={requestDelete}
         onTogglePause={togglePause}
         onResume={resumeSupp}
+        scheduleMode={scheduleMode}
+        scheduleConfig={scheduleConfig}
+        anchorBehavior={anchorBehavior}
+        consistentTime={consistentTime}
+        onSaveSchedule={saveSchedule}
       />
       <Modal
         open={formOpen}
@@ -695,25 +698,6 @@ function ProtocolApp({ user, token, onSignOut }) {
         }
       >
         <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} />
-      </Modal>
-      <Modal
-        open={showSchedule}
-        onClose={() => setShowSchedule(false)}
-        title="Daily schedule"
-        footer={<Button variant="primary" fullWidth onClick={() => schedSaveRef.current?.()}>Save schedule</Button>}
-      >
-        <ScheduleModal
-          key={String(showSchedule)}
-          scheduleMode={scheduleMode}
-          setScheduleMode={setScheduleMode}
-          scheduleConfig={scheduleConfig}
-          setScheduleConfig={setScheduleConfig}
-          anchorBehavior={anchorBehavior}
-          consistentTime={consistentTime}
-          onSave={saveSchedule}
-          onClose={() => setShowSchedule(false)}
-          saveFnRef={schedSaveRef}
-        />
       </Modal>
     </div>
   );
