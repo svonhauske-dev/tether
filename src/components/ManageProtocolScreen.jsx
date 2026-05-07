@@ -25,7 +25,6 @@ function formatStoppedDate(dateStr) {
 export default function ManageProtocolScreen({ isOpen, onBack, supplements, token, onEdit, onDelete, onTogglePause, onResume, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule }) {
   const { theme } = useTheme();
   const [viewMode, setViewMode]             = useState("active");
-  const [confirmId, setConfirmId]           = useState(null);
   const [confirmStopId, setConfirmStopId]   = useState(null);
   const [adherenceCounts, setAdherenceCounts] = useState({});
 
@@ -35,7 +34,6 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
   useEffect(() => {
     if (!isOpen) {
       setViewMode("active");
-      setConfirmId(null);
       setConfirmStopId(null);
     }
   }, [isOpen]);
@@ -162,7 +160,6 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
                   }}>
                     <Label style={{ marginBottom: spacing.xs }}>{cat}</Label>
                     {items.map((supp, i) => {
-                      const isConfirming = confirmId === supp.id;
                       const isLast = i === items.length - 1;
                       return (
                         <div
@@ -177,48 +174,28 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
                             transition: "opacity 0.2s",
                           }}
                         >
-                          {isConfirming ? (
-                            <>
-                              <span style={{ flex: 1, fontSize: typography.body, color: theme.text.secondary, paddingRight: spacing.sm }}>
-                                Delete {supp.name}?
+                          <>
+                            <div
+                              onClick={() => onEdit(supp)}
+                              style={{ flex: 1, cursor: "pointer", userSelect: "none", WebkitTapHighlightColor: "transparent", paddingRight: spacing.sm, display: "flex", alignItems: "center", gap: spacing.xs, minWidth: 0 }}
+                            >
+                              <span style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium }}>
+                                {supp.name}
                               </span>
-                              <div style={{ display: "flex", gap: spacing.xs, flexShrink: 0 }}>
-                                <Button variant="tertiary" size="compact" onClick={() => setConfirmId(null)}>Cancel</Button>
-                                <Button variant="destructive" size="compact" onClick={() => { setConfirmId(null); onDelete(supp); }}>Delete</Button>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div
-                                onClick={() => onEdit(supp)}
-                                style={{ flex: 1, cursor: "pointer", userSelect: "none", WebkitTapHighlightColor: "transparent", paddingRight: spacing.sm, display: "flex", alignItems: "center", gap: spacing.xs, minWidth: 0 }}
-                              >
-                                <span style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium }}>
-                                  {supp.name}
-                                </span>
-                                {isPausedSupp(supp) && <Badge variant="neutral">Paused</Badge>}
-                              </div>
-                              <Button
-                                variant="icon"
-                                aria-label={isPausedSupp(supp) ? `Resume ${supp.name}` : `Pause ${supp.name}`}
-                                onClick={(e) => { e.stopPropagation(); onTogglePause(supp); }}
-                                style={{ border: "none" }}
-                              >
-                                {isPausedSupp(supp)
-                                  ? <Play size={18} color={theme.text.secondary} />
-                                  : <Pause size={18} color={theme.text.secondary} />
-                                }
-                              </Button>
-                              <Button
-                                variant="icon"
-                                aria-label={`Delete ${supp.name}`}
-                                onClick={(e) => { e.stopPropagation(); setConfirmId(supp.id); }}
-                                style={{ border: "none", color: theme.status.danger }}
-                              >
-                                <Trash2 size={18} />
-                              </Button>
-                            </>
-                          )}
+                              {isPausedSupp(supp) && <Badge variant="neutral">Paused</Badge>}
+                            </div>
+                            <Button
+                              variant="icon"
+                              aria-label={isPausedSupp(supp) ? `Resume ${supp.name}` : `Pause ${supp.name}`}
+                              onClick={(e) => { e.stopPropagation(); onTogglePause(supp); }}
+                              style={{ border: "none" }}
+                            >
+                              {isPausedSupp(supp)
+                                ? <Play size={18} color={theme.text.secondary} />
+                                : <Pause size={18} color={theme.text.secondary} />
+                              }
+                            </Button>
+                          </>
                         </div>
                       );
                     })}
