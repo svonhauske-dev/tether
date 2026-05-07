@@ -67,13 +67,13 @@ Deno.serve(async (req: Request) => {
   const localToday    = getLocalDateStr(tz, 0);
   const localTomorrow = getLocalDateStr(tz, 1);
 
-  // Auto-pause supplements whose treatment window has ended
+  // Auto-stop supplements whose treatment window has ended
   await admin
     .from("supplements")
-    .update({ paused: true })
+    .update({ status: "stopped", stopped_at: localToday })
     .eq("user_id", userId)
     .in("treatment_mode", ["scheduled", "cycled"])
-    .eq("paused", false)
+    .eq("status", "active")
     .not("ends_at", "is", null)
     .lte("ends_at", localToday);
 
@@ -82,7 +82,7 @@ Deno.serve(async (req: Request) => {
     admin.from("supplements")
       .select("id, name, slots, days, treatment_mode, starts_at, ends_at, cycle_on_value, cycle_on_unit, cycle_off_value, cycle_off_unit")
       .eq("user_id", userId)
-      .eq("paused", false),
+      .eq("status", "active"),
     admin.from("daily_logs")
       .select("pill_time")
       .eq("user_id", userId)

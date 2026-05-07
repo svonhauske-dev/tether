@@ -40,3 +40,15 @@ export function isSupplementActiveOn(supp, date) {
 
   return true;
 }
+
+export function isActiveSupp(supp) {
+  return supp.status === 'active' || (!supp.status && !supp.paused);
+}
+
+export function isPausedSupp(supp) {
+  return supp.status === 'paused' || (!supp.status && supp.paused === true);
+}
+
+export function isStoppedSupp(supp) {
+  return supp.status === 'stopped';
+}

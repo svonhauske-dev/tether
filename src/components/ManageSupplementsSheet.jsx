@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isPausedSupp } from "../lib/time";
 import { Trash2, Pause, Play } from "lucide-react";
 import { spacing, typography, touch } from "../design-system";
 import { useTheme } from "../lib/theme";
@@ -17,7 +18,7 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
     .map(cat => ({
       cat,
       items: [...supplements.filter(s => s.category === cat)].sort((a, b) => {
-        if (a.paused !== b.paused) return a.paused ? 1 : -1;
+        if (isPausedSupp(a) !== isPausedSupp(b)) return isPausedSupp(a) ? 1 : -1;
         return a.name.localeCompare(b.name);
       }),
     }))
@@ -68,7 +69,7 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
                   padding: `${spacing.sm}px 0`,
                   borderBottom: isLast ? "none" : `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
                   minHeight: touch.min,
-                  opacity: supp.paused ? 0.5 : 1,
+                  opacity: isPausedSupp(supp) ? 0.5 : 1,
                   transition: "opacity 0.2s",
                 }}
               >
@@ -95,15 +96,15 @@ export default function ManageSupplementsSheet({ open, onClose, supplements, onE
                       <span style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium }}>
                         {supp.name}
                       </span>
-                      {supp.paused && <Badge variant="neutral">Paused</Badge>}
+                      {isPausedSupp(supp) && <Badge variant="neutral">Paused</Badge>}
                     </div>
                     <Button
                       variant="icon"
-                      aria-label={supp.paused ? `Resume ${supp.name}` : `Pause ${supp.name}`}
+                      aria-label={isPausedSupp(supp) ? `Resume ${supp.name}` : `Pause ${supp.name}`}
                       onClick={(e) => { e.stopPropagation(); onTogglePause(supp); }}
                       style={{ border: "none" }}
                     >
-                      {supp.paused
+                      {isPausedSupp(supp)
                         ? <Play size={18} color={theme.text.secondary} />
                         : <Pause size={18} color={theme.text.secondary} />
                       }

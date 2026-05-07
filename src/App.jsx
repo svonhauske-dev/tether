@@ -35,7 +35,7 @@ import {
   dbGetProfile, dbCreateProfile,
   recomputeNotifications,
 } from './lib/api';
-import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn } from './lib/time';
+import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp } from './lib/time';
 import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
 import NotificationPrompt from "./components/NotificationPrompt";
 
@@ -122,7 +122,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
   const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
-  const homeSupps     = visibleSupps.filter(s => !s.paused && isSupplementActiveOn(s, viewDate));
+  const homeSupps     = visibleSupps.filter(s => isActiveSupp(s) && isSupplementActiveOn(s, viewDate));
 
   const dk         = dateKey(viewDate);
   const isToday    = dateKey(viewDate) === dateKey(TODAY);
@@ -238,7 +238,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       const pt  = pillTimes[ddk];
       if (!pt && scheduleMode !== "fixed" && scheduleMode !== "none" && anchorBehavior !== "consistent") break;
       const day     = d.getDay();
-      const allDone = CORE_SLOTS.every(sid => supps.filter(x => !x.paused && x.slots.includes(sid) && x.days.includes(day)).every(x => !!checked[`${ddk}_${sid}_${x.id}`]));
+      const allDone = CORE_SLOTS.every(sid => supps.filter(x => isActiveSupp(x) && x.slots.includes(sid) && x.days.includes(day)).every(x => !!checked[`${ddk}_${sid}_${x.id}`]));
       if (!allDone) break;
       s++; d.setDate(d.getDate() - 1);
     }
@@ -356,7 +356,7 @@ function ProtocolApp({ user, token, onSignOut }) {
         setSupps(s => s.map(x => x.id === editingId ? { ...form, days: finalDays, category: cat, id: editingId, ...txFields } : x));
         showToast(`Updated ${form.name}`);
       } else {
-        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, timePreference: form.timePreference || "Anytime", paused: false, user_id: user.id, ...txFields }, token);
+        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, timePreference: form.timePreference || "Anytime", paused: false, status: 'active', stopped_at: null, user_id: user.id, ...txFields }, token);
         if (rows?.[0]) setSupps(s => [...s, rows[0]]);
         showToast(`Added ${form.name}`);
       }
@@ -626,7 +626,7 @@ function ProtocolApp({ user, token, onSignOut }) {
       <ManageSupplementsSheet
         open={showManage}
         onClose={() => setShowManage(false)}
-        supplements={visibleSupps}
+        supplements={visibleSupps.filter(s => !isStoppedSupp(s))}
         onEdit={(supp) => { setShowManage(false); openEdit(supp); }}
         onDelete={requestDelete}
         onTogglePause={togglePause}
