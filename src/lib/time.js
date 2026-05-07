@@ -18,9 +18,10 @@ function convertToDays(value, unit) {
 export function isSupplementActiveOn(supp, date) {
   if (!supp.treatment_mode || supp.treatment_mode === "indefinite") return true;
 
+  const parseLocalDate = (s) => { const [y, m, d] = s.split("-").map(Number); return startOfDay(new Date(y, m - 1, d)); };
   const checkDate = startOfDay(date);
-  const startsAt  = supp.starts_at ? startOfDay(new Date(supp.starts_at)) : null;
-  const endsAt    = supp.ends_at   ? startOfDay(new Date(supp.ends_at))   : null;
+  const startsAt  = supp.starts_at ? parseLocalDate(supp.starts_at) : null;
+  const endsAt    = supp.ends_at   ? parseLocalDate(supp.ends_at)   : null;
 
   if (startsAt && checkDate < startsAt) return false;
   if (endsAt   && checkDate >= endsAt)  return false;
