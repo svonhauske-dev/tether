@@ -111,6 +111,47 @@ export function getAnchorTitle(mode: string): string {
   return "Time to start your day";
 }
 
+// ── Treatment-mode activity check (mirrors isSupplementActiveOn in src/lib/time.js) ──
+
+function parseDateMs(dateStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+function convertToDays(value: number, unit: string): number {
+  if (unit === "days")   return value;
+  if (unit === "weeks")  return value * 7;
+  if (unit === "months") return value * 30;
+  return 0;
+}
+
+// deno-lint-ignore no-explicit-any
+export function isSupplementActiveOn(supp: any, checkDateStr: string): boolean {
+  const mode: string = supp.treatment_mode ?? "indefinite";
+  if (mode === "indefinite") return true;
+
+  const checkMs  = parseDateMs(checkDateStr);
+  const startsMs = supp.starts_at ? parseDateMs(supp.starts_at) : null;
+  const endsMs   = supp.ends_at   ? parseDateMs(supp.ends_at)   : null;
+
+  if (startsMs !== null && checkMs < startsMs) return false;
+  if (endsMs   !== null && checkMs >= endsMs)  return false;
+
+  if (mode === "scheduled") return true;
+
+  if (mode === "cycled") {
+    if (startsMs === null || !supp.cycle_on_value || !supp.cycle_off_value) return false;
+    const daysSinceStart = Math.floor((checkMs - startsMs) / 86_400_000);
+    const onDays   = convertToDays(supp.cycle_on_value,  supp.cycle_on_unit  ?? "days");
+    const offDays  = convertToDays(supp.cycle_off_value, supp.cycle_off_unit ?? "days");
+    const cycleDays = onDays + offDays;
+    if (cycleDays === 0) return false;
+    return (daysSinceStart % cycleDays) < onDays;
+  }
+
+  return true;
+}
+
 // ── Schedule offset computation (mirrors deriveOffsets in src/config.js) ───────
 
 // deno-lint-ignore no-explicit-any

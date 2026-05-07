@@ -11,6 +11,7 @@ import {
   deriveOffsets,
   getModeSlotLabel,
   getAnchorTitle,
+  isSupplementActiveOn,
   SLOT_LABELS,
   TIMED_SLOT_IDS,
 } from "../_shared/helpers.ts";
@@ -63,12 +64,23 @@ Deno.serve(async (req: Request) => {
   });
 
   // ── Read user state in parallel ───────────────────────────────────────────────
-  const localToday = getLocalDateStr(tz, 0);
+  const localToday    = getLocalDateStr(tz, 0);
+  const localTomorrow = getLocalDateStr(tz, 1);
+
+  // Auto-pause supplements whose treatment window has ended
+  await admin
+    .from("supplements")
+    .update({ paused: true })
+    .eq("user_id", userId)
+    .in("treatment_mode", ["scheduled", "cycled"])
+    .eq("paused", false)
+    .not("ends_at", "is", null)
+    .lte("ends_at", localToday);
 
   const [schedResult, suppsResult, logResult, subResult] = await Promise.all([
     admin.from("user_schedule").select("*").eq("user_id", userId).maybeSingle(),
     admin.from("supplements")
-      .select("id, name, slots, days")
+      .select("id, name, slots, days, treatment_mode, starts_at, ends_at, cycle_on_value, cycle_on_unit, cycle_off_value, cycle_off_unit")
       .eq("user_id", userId)
       .eq("paused", false),
     admin.from("daily_logs")
@@ -140,7 +152,8 @@ Deno.serve(async (req: Request) => {
 
         const slotSupps = supps.filter(
           (s) => Array.isArray(s.slots) && s.slots.includes(slotId) &&
-                 Array.isArray(s.days)  && s.days.includes(dayOfWeek),
+                 Array.isArray(s.days)  && s.days.includes(dayOfWeek) &&
+                 isSupplementActiveOn(s, dateStr),
         );
         if (!slotSupps.length) continue;
 
@@ -176,7 +189,8 @@ Deno.serve(async (req: Request) => {
     // rx slot — fires at anchor time, mode-specific title
     const rxSupps = supps.filter(
       (s) => Array.isArray(s.slots) && s.slots.includes("rx") &&
-             Array.isArray(s.days)  && s.days.includes(dayOfWeek),
+             Array.isArray(s.days)  && s.days.includes(dayOfWeek) &&
+             isSupplementActiveOn(s, dateStr),
     );
     if (rxSupps.length > 0 && anchorDate > now) {
       rows.push({
@@ -206,7 +220,8 @@ Deno.serve(async (req: Request) => {
 
       const slotSupps = supps.filter(
         (s) => Array.isArray(s.slots) && s.slots.includes(slotId) &&
-               Array.isArray(s.days)  && s.days.includes(dayOfWeek),
+               Array.isArray(s.days)  && s.days.includes(dayOfWeek) &&
+               isSupplementActiveOn(s, dateStr),
       );
       if (!slotSupps.length) continue;
 
@@ -221,6 +236,23 @@ Deno.serve(async (req: Request) => {
         fired:   false,
       });
     }
+  }
+
+  // ── End-of-treatment notifications (fires morning of last active day) ─────────
+  for (const supp of supps) {
+    if (supp.ends_at !== localTomorrow) continue; // ends_at is tomorrow → today is last active day
+    const fireAt = parseLocalHHMM(localToday, "08:00", tz);
+    if (fireAt <= now) continue;
+    rows.push({
+      user_id:            userId,
+      fire_at:            fireAt.toISOString(),
+      scheduled_for_date: localToday,
+      title:              "Course ending today",
+      body:               `Your ${supp.name} course is ending today. Continue or stop?`,
+      slot_id:            "course_end",
+      tag:                `${localToday}_course_end_${supp.id}`,
+      fired:              false,
+    });
   }
 
   // ── Delete stale pending rows in the 48-hour window ───────────────────────────

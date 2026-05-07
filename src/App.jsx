@@ -35,7 +35,7 @@ import {
   dbGetProfile, dbCreateProfile,
   recomputeNotifications,
 } from './lib/api';
-import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY } from './lib/time';
+import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn } from './lib/time';
 import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
 import NotificationPrompt from "./components/NotificationPrompt";
 
@@ -122,7 +122,7 @@ function ProtocolApp({ user, token, onSignOut }) {
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
   const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
-  const homeSupps     = visibleSupps.filter(s => !s.paused);
+  const homeSupps     = visibleSupps.filter(s => !s.paused && isSupplementActiveOn(s, viewDate));
 
   const dk         = dateKey(viewDate);
   const isToday    = dateKey(viewDate) === dateKey(TODAY);
