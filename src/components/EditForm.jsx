@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { spacing, typography } from '../design-system';
+import { spacing, typography, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { SLOTS } from '../lib/notifications';
 import { dateKey } from '../lib/time';
@@ -44,6 +44,7 @@ export default function EditForm({ form, setForm, editingId }) {
           next.cycle_off_value = null; next.cycle_off_unit = null;
         }
         if (newMode === "cycled") {
+          next.ends_at = null;
           if (!next.cycle_on_unit)  next.cycle_on_unit  = "days";
           if (!next.cycle_off_unit) next.cycle_off_unit = "days";
         }
@@ -159,7 +160,7 @@ export default function EditForm({ form, setForm, editingId }) {
               <div style={{ flex: 1 }}>
                 <Label style={{ marginBottom: spacing.xxs }}>Starts</Label>
                 <Input
-                  type="date"
+                  type="date" style={{ minHeight: touch.min }}
                   value={form.starts_at || ""}
                   onChange={e => setForm(f => ({ ...f, starts_at: e.target.value || null }))}
                   onBlur={() => touch("starts_at")}
@@ -169,7 +170,7 @@ export default function EditForm({ form, setForm, editingId }) {
               <div style={{ flex: 1 }}>
                 <Label style={{ marginBottom: spacing.xxs }}>Ends</Label>
                 <Input
-                  type="date"
+                  type="date" style={{ minHeight: touch.min }}
                   value={form.ends_at || ""}
                   onChange={e => setForm(f => ({ ...f, ends_at: e.target.value || null }))}
                   onBlur={() => touch("ends_at")}
@@ -188,7 +189,7 @@ export default function EditForm({ form, setForm, editingId }) {
             <div style={{ marginBottom: spacing.sm }}>
               <Label style={{ marginBottom: spacing.xxs }}>Starts</Label>
               <Input
-                type="date"
+                type="date" style={{ minHeight: touch.min }}
                 value={form.starts_at || ""}
                 onChange={e => setForm(f => ({ ...f, starts_at: e.target.value || null }))}
                 onBlur={() => touch("starts_at")}
@@ -243,7 +244,7 @@ export default function EditForm({ form, setForm, editingId }) {
             <div>
               <Label style={{ marginBottom: spacing.xxs }}>Ends (optional)</Label>
               <Input
-                type="date"
+                type="date" style={{ minHeight: touch.min }}
                 value={form.ends_at || ""}
                 onChange={e => setForm(f => ({ ...f, ends_at: e.target.value || null }))}
               />
