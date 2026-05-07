@@ -160,7 +160,7 @@ export default function EditForm({ form, setForm, editingId }) {
               <div style={{ flex: 1 }}>
                 <Label style={{ marginBottom: spacing.xxs }}>Starts</Label>
                 <Input
-                  type="date" style={{ minHeight: touch.min }}
+                  type="date" style={{ height: touch.min, boxSizing: "border-box" }}
                   value={form.starts_at || ""}
                   onChange={e => setForm(f => ({ ...f, starts_at: e.target.value || null }))}
                   onBlur={() => touch("starts_at")}
@@ -170,7 +170,7 @@ export default function EditForm({ form, setForm, editingId }) {
               <div style={{ flex: 1 }}>
                 <Label style={{ marginBottom: spacing.xxs }}>Ends</Label>
                 <Input
-                  type="date" style={{ minHeight: touch.min }}
+                  type="date" style={{ height: touch.min, boxSizing: "border-box" }}
                   value={form.ends_at || ""}
                   onChange={e => setForm(f => ({ ...f, ends_at: e.target.value || null }))}
                   onBlur={() => touch("ends_at")}
@@ -189,7 +189,7 @@ export default function EditForm({ form, setForm, editingId }) {
             <div style={{ marginBottom: spacing.sm }}>
               <Label style={{ marginBottom: spacing.xxs }}>Starts</Label>
               <Input
-                type="date" style={{ minHeight: touch.min }}
+                type="date" style={{ height: touch.min, boxSizing: "border-box" }}
                 value={form.starts_at || ""}
                 onChange={e => setForm(f => ({ ...f, starts_at: e.target.value || null }))}
                 onBlur={() => touch("starts_at")}
@@ -244,7 +244,7 @@ export default function EditForm({ form, setForm, editingId }) {
             <div>
               <Label style={{ marginBottom: spacing.xxs }}>Ends (optional)</Label>
               <Input
-                type="date" style={{ minHeight: touch.min }}
+                type="date" style={{ height: touch.min, boxSizing: "border-box" }}
                 value={form.ends_at || ""}
                 onChange={e => setForm(f => ({ ...f, ends_at: e.target.value || null }))}
               />
