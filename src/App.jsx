@@ -320,8 +320,8 @@ function ProtocolApp({ user, token, onSignOut }) {
     }
   }
 
-  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false, treatment_mode: "indefinite", starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null }); setSubmitError(null); setFormOpen(true); };
-  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false, treatment_mode: supp.treatment_mode || "indefinite", starts_at: supp.starts_at || null, ends_at: supp.ends_at || null, cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null, cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null }); setSubmitError(null); setFormOpen(true); };
+  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", timePreference: "Anytime", paused: false, status: 'active', treatment_mode: "indefinite", starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null }); setSubmitError(null); setFormOpen(true); };
+  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...supp.slots], days: [...supp.days], category: supp.category || "Oral", timePreference: supp.timePreference || "Anytime", paused: supp.paused ?? false, status: supp.status ?? 'active', treatment_mode: supp.treatment_mode || "indefinite", starts_at: supp.starts_at || null, ends_at: supp.ends_at || null, cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null, cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null }); setSubmitError(null); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
 
   const submitForm = async () => {
@@ -381,6 +381,22 @@ function ProtocolApp({ user, token, onSignOut }) {
       showToast(`Deleted ${supp.name}`);
     } catch (err) {
       showToast("Couldn't delete — try again");
+      console.error(err);
+    }
+  };
+
+  const stopSupp = async () => {
+    if (!editingId) return;
+    const supp = supps.find(s => s.id === editingId);
+    if (!supp) return;
+    const today = dateKey(new Date());
+    try {
+      await dbUpdateSupp({ ...supp, status: 'stopped', stopped_at: today }, token);
+      setSupps(s => s.map(x => x.id === editingId ? { ...x, status: 'stopped', stopped_at: today } : x));
+      closeForm();
+      showToast(`${supp.name} stopped`);
+    } catch (err) {
+      showToast(`Couldn't stop ${supp.name}. Try again.`);
       console.error(err);
     }
   };
@@ -636,15 +652,17 @@ function ProtocolApp({ user, token, onSignOut }) {
         onClose={closeForm}
         title={editingId ? "Edit item" : "New item"}
         footer={
-          <>
-            {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
-            <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
-              {submitting ? <InlineLoader size="sm" /> : (editingId ? "Save changes" : "Add to protocol")}
-            </Button>
-          </>
+          form.status !== 'stopped' ? (
+            <>
+              {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
+              <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
+                {submitting ? <InlineLoader size="sm" /> : (editingId ? "Save changes" : "Add to protocol")}
+              </Button>
+            </>
+          ) : null
         }
       >
-        <EditForm form={form} setForm={setForm} editingId={editingId} />
+        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onDelete={deleteSupp} />
       </Modal>
       <Modal
         open={showSchedule}

@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { spacing, typography, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { SLOTS } from '../lib/notifications';
-import { dateKey } from '../lib/time';
+import { dateKey, isPausedSupp } from '../lib/time';
 import Button from './Button';
 import Input from './Input';
 import Label from './Label';
 import Badge from './Badge';
 import HelperText from './HelperText';
+import Modal from './Modal';
 
 const CATEGORIES = ["Oral", "Rx", "Injectable", "Topical"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -18,10 +19,11 @@ const TREATMENT_MODES = [
 ];
 const UNITS = ["days", "weeks", "months"];
 
-export default function EditForm({ form, setForm, editingId }) {
+export default function EditForm({ form, setForm, editingId, onStop, onDelete }) {
   const { theme } = useTheme();
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
 
   const today = dateKey(new Date());
   const touch = (field) => setTouched(t => ({ ...t, [field]: true }));
@@ -55,12 +57,34 @@ export default function EditForm({ form, setForm, editingId }) {
 
   const mode = form.treatment_mode || "indefinite";
   const dateOrderError = mode !== "indefinite" && form.starts_at && form.ends_at && form.ends_at <= form.starts_at;
-
   const errStyle = { fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs };
+
+  // Archive view — supplement has been stopped
+  if (form.status === 'stopped') {
+    return (
+      <div>
+        <div style={{
+          background: theme.surface.cardSubtle,
+          border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+          borderRadius: theme.radius.input,
+          padding: `${spacing.sm}px ${spacing.md}px`,
+          marginBottom: spacing.md,
+          fontSize: typography.body,
+          color: theme.text.secondary,
+          lineHeight: 1.5,
+        }}>
+          This supplement is in your archive. Restart it to make changes.
+        </div>
+        {onDelete && (
+          <Button variant="destructive" fullWidth onClick={onDelete}>Delete</Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
-      {editingId && form.paused && (
+      {editingId && isPausedSupp(form) && (
         <div style={{ marginBottom: spacing.md }}>
           <Badge variant="neutral">Currently paused</Badge>
         </div>
@@ -255,6 +279,35 @@ export default function EditForm({ form, setForm, editingId }) {
           </div>
         </div>
       )}
+
+      {editingId && (onStop || onDelete) && (
+        <div style={{ marginTop: spacing.lg, display: "flex", flexDirection: "column", gap: spacing.xs }}>
+          {onStop && (
+            <Button variant="secondary" fullWidth onClick={() => setShowStopConfirm(true)}>
+              Stop taking
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="destructive" fullWidth onClick={onDelete}>Delete</Button>
+          )}
+        </div>
+      )}
+
+      <Modal
+        open={showStopConfirm}
+        onClose={() => setShowStopConfirm(false)}
+        title={`Stop ${form.name || "this supplement"}?`}
+        footer={
+          <div style={{ display: "flex", gap: spacing.xs }}>
+            <Button variant="secondary" fullWidth onClick={() => setShowStopConfirm(false)}>Cancel</Button>
+            <Button variant="primary" fullWidth onClick={() => { setShowStopConfirm(false); onStop?.(); }}>Stop</Button>
+          </div>
+        }
+      >
+        <div style={{ fontSize: typography.body, color: theme.text.secondary, lineHeight: 1.5 }}>
+          This moves it to your archive. You can restart anytime.
+        </div>
+      </Modal>
     </div>
   );
 }
