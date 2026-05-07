@@ -103,45 +103,6 @@ export default function EditForm({ form, setForm, editingId }) {
         </div>
       </div>
 
-      {(form.category === "Injectable" || form.category === "Topical") ? (
-        <div style={{ marginBottom: spacing.md }}>
-          <Label>When to take it</Label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
-            {["Morning", "Midday", "Evening", "Before Bed", "Anytime"].map(pref => {
-              const on = form.timePreference === pref;
-              return (
-                <Button key={pref} variant="pill" active={on} onClick={() => setForm(f => ({ ...f, timePreference: pref }))}>
-                  {pref}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div style={{ marginBottom: spacing.md }}>
-          <Label>When to take it</Label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
-            {SLOTS.filter(s => s.id !== "injectable" && s.id !== "topical").map(slot => {
-              const on = form.slots.includes(slot.id);
-              return (
-                <Button key={slot.id} variant="pill" active={on} onClick={() => toggleSlot(slot.id)}>
-                  {slot.label}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: spacing.md }}>
-        <Label>Which days</Label>
-        <div style={{ display: "flex", gap: spacing.xs }}>
-          {DAYS.map((d, i) => (
-            <Button key={i} variant="circle" active={form.days.includes(i)} onClick={() => toggleDay(i)}>{d[0]}</Button>
-          ))}
-        </div>
-      </div>
-
       {/* Treatment */}
       <div style={{ marginBottom: spacing.md }}>
         <Label>Treatment</Label>
@@ -253,6 +214,47 @@ export default function EditForm({ form, setForm, editingId }) {
           </div>
         )}
       </div>
+
+      {(form.category === "Injectable" || form.category === "Topical") ? (
+        <div style={{ marginBottom: spacing.md }}>
+          <Label>When to take it</Label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
+            {["Morning", "Midday", "Evening", "Before Bed", "Anytime"].map(pref => {
+              const on = form.timePreference === pref;
+              return (
+                <Button key={pref} variant="pill" active={on} onClick={() => setForm(f => ({ ...f, timePreference: pref }))}>
+                  {pref}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: spacing.md }}>
+          <Label>When to take it</Label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
+            {SLOTS.filter(s => s.id !== "injectable" && s.id !== "topical").map(slot => {
+              const on = form.slots.includes(slot.id);
+              return (
+                <Button key={slot.id} variant="pill" active={on} onClick={() => toggleSlot(slot.id)}>
+                  {slot.label}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {mode !== "cycled" && (
+        <div style={{ marginBottom: spacing.md }}>
+          <Label>Which days</Label>
+          <div style={{ display: "flex", gap: spacing.xs }}>
+            {DAYS.map((d, i) => (
+              <Button key={i} variant="circle" active={form.days.includes(i)} onClick={() => toggleDay(i)}>{d[0]}</Button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
