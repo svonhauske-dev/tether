@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
-import { spacing, typography, shadows, effects, zIndex as zIndexTokens } from "../design-system";
+import { spacing, typography, radius, shadows, effects, zIndex as zIndexTokens } from "../design-system";
 import { useTheme } from "../lib/theme";
 import Button from "./Button";
 
@@ -49,7 +49,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
           bottom: 0,
           maxHeight: "90dvh",
           background: theme.surface.modal,
-          borderRadius: `${theme.radius.surface}px ${theme.radius.surface}px 0 0`,
+          borderRadius: `${radius.xl}px ${radius.xl}px 0 0`,
           boxShadow: shadows.modal,
           transform: open ? "translateY(0)" : "translateY(100%)",
           transition: "transform 0.3s ease-out",
