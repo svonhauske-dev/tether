@@ -211,34 +211,36 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
         <>
           <div style={{ marginBottom: spacing.md }}>
             <Label>Meal schedule</Label>
-            <HelperText>Times relative to your anchor</HelperText>
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
               {[
-                { key_h: 'first_meal_offset_hours', key_m: 'first_meal_offset_minutes', label: 'First meal' },
-                { key_h: 'meal_interval_hours',     key_m: 'meal_interval_minutes',     label: 'Meal interval' },
-              ].map(({ key_h, key_m, label }) => {
+                { key_h: 'first_meal_offset_hours', key_m: 'first_meal_offset_minutes', label: 'First meal',    caption: 'hours after your anchor' },
+                { key_h: 'meal_interval_hours',     key_m: 'meal_interval_minutes',     label: 'Meal interval', caption: 'hours between meals' },
+              ].map(({ key_h, key_m, label, caption }) => {
                 const h = localConfig[key_h] ?? 0;
                 const m = localConfig[key_m] ?? 0;
                 return (
-                  <Card key={key_h} style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-                    <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>{label}</span>
-                    <Input
-                      variant="number" width={52} min="0" max="23"
-                      inputMode="numeric" pattern="[0-9]*"
-                      value={h === 0 ? '' : h}
-                      onChange={e => updateCascade(key_h, parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                    <span style={{ fontSize: typography.caption, color: theme.text.muted }}>hr</span>
-                    <Input
-                      variant="number" width={52} min="0" max="59"
-                      inputMode="numeric" pattern="[0-9]*"
-                      value={m === 0 ? '' : m}
-                      onChange={e => updateCascade(key_m, parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                    />
-                    <span style={{ fontSize: typography.caption, color: theme.text.muted }}>min</span>
-                  </Card>
+                  <div key={key_h}>
+                    <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                      <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>{label}</span>
+                      <Input
+                        variant="number" width={52} min="0" max="23"
+                        inputMode="numeric" pattern="[0-9]*"
+                        value={h === 0 ? '' : h}
+                        onChange={e => updateCascade(key_h, parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                      <span style={{ fontSize: typography.caption, color: theme.text.muted }}>hr</span>
+                      <Input
+                        variant="number" width={52} min="0" max="59"
+                        inputMode="numeric" pattern="[0-9]*"
+                        value={m === 0 ? '' : m}
+                        onChange={e => updateCascade(key_m, parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                      <span style={{ fontSize: typography.caption, color: theme.text.muted }}>min</span>
+                    </Card>
+                    <HelperText style={{ marginTop: spacing.xxxs }}>{caption}</HelperText>
+                  </div>
                 );
               })}
             </div>
