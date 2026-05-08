@@ -276,6 +276,13 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const getSlotTime = (sid) => {
     if (sid === "injectable" || sid === "topical") return null;
     if (scheduleMode === "fixed") {
+      // Pre-meal slots derive from their meal time minus the global window.
+      if (sid === "pre_breakfast" || sid === "pre_lunch" || sid === "pre_dinner") {
+        const mealId = sid.replace("pre_", "");
+        const mealTime = scheduleConfig.fixed_times?.[mealId];
+        if (!mealTime) return null;
+        return addMins(parseHHMM(mealTime), -(scheduleConfig.pre_meal_window ?? 0));
+      }
       const ft = scheduleConfig.fixed_times?.[sid];
       return ft ? parseHHMM(ft) : null;
     }

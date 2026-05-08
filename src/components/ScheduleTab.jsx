@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { spacing, typography, layout, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { parseHHMM, fmtTime, addMins } from '../lib/time';
-import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, MODES, deriveOffsets } from '../config';
+import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, deriveOffsets } from '../config';
 import { SLOTS } from '../lib/notifications';
 import Button from './Button';
 import Card from './Card';
@@ -34,7 +34,9 @@ const migrateConfig = (merged) => {
 
 export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSave }) {
   const { theme } = useTheme();
-  const needsMigration = useRef(scheduleConfig.first_meal_offset_hours === undefined);
+  // Cascade migration only applies to anchor/fasting modes, not fixed.
+  const needsMigration     = useRef(scheduleMode !== 'fixed' && scheduleConfig.first_meal_offset_hours === undefined);
+  const fixedNeedsMigration = useRef(scheduleMode === 'fixed' && !scheduleConfig._fixed_premeal_migrated);
   const debounceRef = useRef(null);
 
   const [localMode,     setLocalMode]     = useState(scheduleMode);
@@ -44,7 +46,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       ...scheduleConfig,
       fixed_times: { ...DEFAULT_CONFIG.fixed_times, ...(scheduleConfig.fixed_times || {}) },
     };
-    return migrateConfig(merged);
+    // Skip cascade field migration for fixed mode users.
+    return scheduleMode === 'fixed' ? merged : migrateConfig(merged);
   });
   const [localBehavior, setLocalBehavior] = useState(anchorBehavior);
   const [localTime,     setLocalTime]     = useState(consistentTime);
@@ -59,12 +62,39 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
     }, delay);
   };
 
-  // Persist migrated config on first mount for legacy users
+  // Persist cascade-migrated config on first mount for anchor/fasting users.
   useEffect(() => {
     if (needsMigration.current) {
       scheduleSave(localMode, localConfig, localBehavior, localTime, 0);
       needsMigration.current = false;
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // One-time migration for Fixed Times users: infer global pre_meal_window from
+  // existing per-slot pre-meal times, then drop those keys from fixed_times.
+  useEffect(() => {
+    if (!fixedNeedsMigration.current) return;
+    fixedNeedsMigration.current = false;
+
+    const ft = localConfig.fixed_times || {};
+    const diffs = [];
+    for (const [preKey, mealKey] of [['pre_breakfast','breakfast'],['pre_lunch','lunch'],['pre_dinner','dinner']]) {
+      if (ft[preKey] && ft[mealKey]) {
+        diffs.push((parseHHMM(ft[mealKey]).getTime() - parseHHMM(ft[preKey]).getTime()) / 60000);
+      }
+    }
+    const inferredWindow = diffs.length > 0
+      ? Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length)
+      : (localConfig.pre_meal_window ?? 30);
+
+    const newFixedTimes = { ...ft };
+    delete newFixedTimes.pre_breakfast;
+    delete newFixedTimes.pre_lunch;
+    delete newFixedTimes.pre_dinner;
+
+    const next = { ...localConfig, pre_meal_window: inferredWindow, fixed_times: newFixedTimes, _fixed_premeal_migrated: true };
+    setLocalConfig(next);
+    scheduleSave(localMode, next, localBehavior, localTime, 0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateConfig = (key, value) => {
@@ -127,10 +157,18 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
 
   const previewRows = (() => {
     if (localMode === 'fixed') {
-      return FIXED_SLOTS
-        .filter(fs => localConfig.fixed_times?.[fs.key])
-        .map(fs => ({ label: fs.label, timeStr: localConfig.fixed_times[fs.key] }))
-        .sort((a, b) => a.timeStr.localeCompare(b.timeStr));
+      const ft  = localConfig.fixed_times ?? {};
+      const pmw = localConfig.pre_meal_window ?? 0;
+      const rows = [];
+      for (const [key, label] of [['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['after_dinner','Evening']]) {
+        if (ft[key]) { const d = parseHHMM(ft[key]); rows.push({ label, timeStr: fmtTime(d), sortKey: d.getTime() }); }
+      }
+      if (pmw > 0) {
+        for (const [mealKey, label] of [['breakfast','Before Breakfast'],['lunch','Before Lunch'],['dinner','Before Dinner']]) {
+          if (ft[mealKey]) { const d = addMins(parseHHMM(ft[mealKey]), -pmw); rows.push({ label, timeStr: fmtTime(d), sortKey: d.getTime() }); }
+        }
+      }
+      return rows.sort((a, b) => a.sortKey - b.sortKey);
     }
     const isOffset = localMode === 'medication' || localMode === 'wakeup';
     const rows = [
@@ -357,24 +395,43 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
         </div>
       )}
 
-      {/* Fixed: time pickers */}
+      {/* Fixed: meal time pickers + global pre-meal window */}
       {localMode === 'fixed' && (
-        <div style={{ marginBottom: spacing.lg }}>
-          <Label>Fixed times</Label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-            {FIXED_SLOTS.map(({ key, label }) => (
-              <Card key={key} style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-                <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>{label}</span>
-                <Input
-                  variant="time"
-                  value={localConfig.fixed_times?.[key] || ''}
-                  onChange={e => updateFixed(key, e.target.value)}
-                  style={{ width: 'auto' }}
-                />
-              </Card>
-            ))}
+        <>
+          <div style={{ marginBottom: spacing.md }}>
+            <Label>Fixed times</Label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+              {([['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['after_dinner','Evening']]).map(([key, label]) => (
+                <Card key={key} style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                  <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>{label}</span>
+                  <Input
+                    variant="time"
+                    value={localConfig.fixed_times?.[key] || ''}
+                    onChange={e => updateFixed(key, e.target.value)}
+                    style={{ width: 'auto' }}
+                  />
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+
+          <div style={{ marginBottom: spacing.lg }}>
+            <Label>Pre-meal window</Label>
+            <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+              <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
+              <Input
+                variant="number" width={52} min="0" max="120"
+                inputMode="numeric" pattern="[0-9]*"
+                value={localConfig.pre_meal_window ?? 30}
+                onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)}
+              />
+              <span style={{ fontSize: typography.caption, color: theme.text.muted }}>min</span>
+            </Card>
+            <HelperText style={{ marginTop: spacing.xxxs }}>
+              Pre-Breakfast, Pre-Lunch, and Pre-Dinner slots are scheduled this many minutes before their meal.
+            </HelperText>
+          </div>
+        </>
       )}
 
       {/* Live preview */}

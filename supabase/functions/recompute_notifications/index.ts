@@ -140,14 +140,24 @@ Deno.serve(async (req: Request) => {
     // ── Fixed mode ──────────────────────────────────────────────────────────────
     if (mode === "fixed") {
       const fixedTimes: Record<string, string | null> = cfg.fixed_times ?? {};
+      const preMealWindow: number = (cfg.pre_meal_window as number) ?? 0;
 
       for (const slotId of TIMED_SLOT_IDS) {
         if (slotId === "rx") continue; // no single anchor in fixed mode
 
-        const fixedTime = fixedTimes[slotId];
-        if (!fixedTime) continue;
+        let fireAt: Date;
+        // Pre-meal slots derive from their meal time minus the global window.
+        if (slotId === "pre_breakfast" || slotId === "pre_lunch" || slotId === "pre_dinner") {
+          const mealId = slotId.replace("pre_", "");
+          const mealTime = fixedTimes[mealId];
+          if (!mealTime) continue;
+          fireAt = addMins(parseLocalHHMM(dateStr, mealTime, tz), -preMealWindow);
+        } else {
+          const fixedTime = fixedTimes[slotId];
+          if (!fixedTime) continue;
+          fireAt = parseLocalHHMM(dateStr, fixedTime, tz);
+        }
 
-        const fireAt = parseLocalHHMM(dateStr, fixedTime, tz);
         if (fireAt <= now) continue;
 
         const slotSupps = supps.filter(
