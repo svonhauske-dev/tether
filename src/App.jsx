@@ -321,6 +321,23 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     }).catch(e => console.error('Week logs fetch failed:', e));
   }, [viewedWeekEnd, loading, isDesktop]);
 
+  // Keep weekLogs in sync with checked state so rings update immediately after toggling
+  useEffect(() => {
+    if (!isDesktop) return;
+    const dayChecked = Object.fromEntries(Object.entries(checked).filter(([k]) => k.startsWith(dk + '_')));
+    setWeekLogs(prev => {
+      const idx = prev.findIndex(l => l.log_date === dk);
+      if (idx < 0) {
+        return Object.keys(dayChecked).length > 0
+          ? [...prev, { log_date: dk, checked: dayChecked }]
+          : prev;
+      }
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], checked: dayChecked };
+      return updated;
+    });
+  }, [checked, dk, isDesktop]);
+
   // Auto-save
   useEffect(() => {
     if (loading) return;

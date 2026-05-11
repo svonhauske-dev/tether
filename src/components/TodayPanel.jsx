@@ -42,22 +42,23 @@ export default function TodayPanel({
     });
 
   const getDefaultExpanded = () => {
-    if (activeSlots.length === 0) return null;
+    if (activeSlots.length === 0) return new Set();
+    if (isPast) return new Set(activeSlots.map(s => s.id));
     if (isToday) {
       for (const slot of activeSlots) {
-        if (slotStatus(slot.id) === 'now') return slot.id;
+        if (slotStatus(slot.id) === 'now') return new Set([slot.id]);
       }
       for (const slot of activeSlots) {
-        if (slotStatus(slot.id) === 'missed') return slot.id;
+        if (slotStatus(slot.id) === 'missed') return new Set([slot.id]);
       }
     }
-    return activeSlots[0]?.id ?? null;
+    return new Set(activeSlots[0] ? [activeSlots[0].id] : []);
   };
 
-  const [expandedSlotId, setExpandedSlotId] = useState(() => getDefaultExpanded());
+  const [expandedSlotIds, setExpandedSlotIds] = useState(() => getDefaultExpanded());
 
   useEffect(() => {
-    setExpandedSlotId(getDefaultExpanded());
+    setExpandedSlotIds(getDefaultExpanded());
   }, [viewDate]);
 
   return (
@@ -103,7 +104,6 @@ export default function TodayPanel({
           flexDirection: 'column',
           gap: spacing.sm,
           opacity: isReadOnly ? 0.6 : 1,
-          pointerEvents: isReadOnly ? 'none' : 'auto',
           transition: 'opacity 200ms ease',
         }}>
           {activeSlots.map(slot => {
@@ -117,8 +117,13 @@ export default function TodayPanel({
                 slotTime={slotTimeStr(slot.id)}
                 supplements={slotSupps}
                 loggedSupps={loggedSupps}
-                isExpanded={expandedSlotId === slot.id}
-                onToggleExpand={() => setExpandedSlotId(prev => prev === slot.id ? null : slot.id)}
+                isExpanded={expandedSlotIds.has(slot.id)}
+                onToggleExpand={() => setExpandedSlotIds(prev => {
+                  const next = new Set(prev);
+                  if (next.has(slot.id)) next.delete(slot.id);
+                  else next.add(slot.id);
+                  return next;
+                })}
                 isReadOnly={isReadOnly}
                 onToggleSupplement={(suppId) => toggleCheck(slot.id, suppId)}
                 onEditSupplement={(suppId) => {

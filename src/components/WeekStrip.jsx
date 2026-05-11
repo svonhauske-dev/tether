@@ -29,7 +29,7 @@ function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClic
         flexDirection: 'column',
         alignItems: 'center',
         padding: spacing.md,
-        background: isSelected ? theme.status.nowBg : theme.surface.card,
+        background: isSelected ? theme.status.nowHover : theme.surface.card,
         border: isSelected
           ? `${theme.borderWidth.accent}px solid ${theme.status.nowBorder}`
           : `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
@@ -38,7 +38,11 @@ function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClic
         WebkitTapHighlightColor: 'transparent',
         width: '100%',
         boxSizing: 'border-box',
-        transition: 'background 150ms ease, border-color 150ms ease',
+        position: 'relative',
+        zIndex: isSelected ? 1 : 'auto',
+        transform: isSelected ? 'scale(1.02)' : 'none',
+        boxShadow: isSelected ? '0 2px 8px rgba(26,26,26,0.08)' : 'none',
+        transition: 'background 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease',
       }}
     >
       {/* TODAY badge — always on today's cell, independent of selection */}
