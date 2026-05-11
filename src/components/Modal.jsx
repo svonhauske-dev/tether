@@ -16,6 +16,11 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const touchStartY = useRef(0);
+  const bodyRef = useRef(null);
+
+  useEffect(() => {
+    if (open && bodyRef.current) bodyRef.current.scrollTo(0, 0);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -173,7 +178,7 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
         </div>
 
         {/* Scrollable body */}
-        <div style={{
+        <div ref={bodyRef} style={{
           overflowY: "auto",
           padding: `${spacing.sm}px ${spacing.md}px`,
           flex: 1,
