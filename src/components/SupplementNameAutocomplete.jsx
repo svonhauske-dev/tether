@@ -89,12 +89,10 @@ export default function SupplementNameAutocomplete({ value, onChange, history = 
           borderRadius: theme.radius.surface,
           boxShadow: shadows.popover,
           zIndex: 10,
-          overflowX: 'hidden',
-          overflowY: 'auto',
+          overflow: 'hidden',
           maxHeight: 300,
+          overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
-          overscrollBehavior: 'contain',
         }}>
           {suggestions.map((name, i) => (
             <div
