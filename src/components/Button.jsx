@@ -105,7 +105,7 @@ export default function Button({
     v = {
       width: touch.min,
       height: touch.min,
-      borderRadius: theme.radius.iconButton,
+      borderRadius: theme.radius.button,
       background: "transparent",
       border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
       color: theme.text.secondary,

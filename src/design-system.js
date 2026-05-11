@@ -537,7 +537,7 @@ export const themes = {
     },
   },
 
-  terminalAchromatic: {
+  achromatic: {
     surface: {
       canvas:        '#0D0D0D',
       gradientMid:   '#0D0D0D',

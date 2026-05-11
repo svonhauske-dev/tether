@@ -6,7 +6,7 @@ const SWATCHES = {
   terminalAmber:        ["#0D0D0D", "#E8E2D6", "#FFB000"],
   terminalCyan:         ["#0D0D0D", "#E0E8F0", "#00D4FF"],
   terminalPhosphor:     ["#0D0D0D", "#A0E0B0", "#33FF66"],
-  terminalAchromatic:   ["#0D0D0D", "#FFFFFF", "#FFFFFF"],
+  achromatic:           ["#0D0D0D", "#FFFFFF", "#FFFFFF"],
   terminalMagenta:      ["#0D0D0D", "#F0E8E8", "#FF3D9A"],
 };
 
@@ -16,7 +16,7 @@ const LABELS = {
   terminalAmber:        "Amber",
   terminalCyan:         "Cyan",
   terminalPhosphor:     "Phosphor",
-  terminalAchromatic:   "Achromatic",
+  achromatic:           "Achromatic",
   terminalMagenta:      "Magenta",
 };
 

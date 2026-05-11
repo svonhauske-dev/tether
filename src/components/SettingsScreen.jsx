@@ -14,12 +14,6 @@ import {
 } from '../lib/notifications';
 import { dbUpdateScheduleField, dbUpdateProfile, updateEmail, updatePassword } from '../lib/api';
 
-const THEME_OPTIONS = [
-  { value: 'light',  label: 'Light'  },
-  { value: 'dark',   label: 'Dark'   },
-  { value: 'system', label: 'System' },
-];
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PASSWORD_RULES = [
@@ -50,7 +44,7 @@ function PasswordRule({ met, label }) {
 }
 
 export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled }) {
-  const { theme, themePreference, setThemePreference } = useTheme();
+  const { theme } = useTheme();
   const { show: showToast } = useToast();
 
   // Notification state
@@ -177,21 +171,6 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
       setToggling(false);
     }
   };
-
-  const themeBtnStyle = (active) => ({
-    flex: 1,
-    padding: `${spacing.sm}px`,
-    borderRadius: theme.radius.pill,
-    cursor: 'pointer',
-    fontSize: typography.caption,
-    fontFamily: typography.fontBody,
-    background: active ? theme.accent.subtle : 'transparent',
-    color: active ? theme.accent.onSubtle : theme.text.secondary,
-    border: `${theme.borderWidth.default}px solid ${active ? theme.accent.default : theme.border.subtle}`,
-    fontWeight: active ? typography.semibold : typography.regular,
-    minHeight: layout.segHeight,
-    WebkitTapHighlightColor: 'transparent',
-  });
 
   const divider = (
     <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, margin: `${spacing.lg}px 0` }} />
@@ -348,19 +327,6 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
               >
                 {pwSaving ? <InlineLoader size="sm" /> : 'Update password'}
               </Button>
-            </div>
-
-            {divider}
-
-            {/* ── Theme ── */}
-            <Label style={{ marginBottom: spacing.xxs }}>Theme</Label>
-            <HelperText style={{ marginBottom: spacing.xs }}>Choose how Origin appears.</HelperText>
-            <div style={{ display: 'flex', gap: spacing.xs }}>
-              {THEME_OPTIONS.map(({ value, label }) => (
-                <button key={value} onClick={() => setThemePreference(value)} style={themeBtnStyle(themePreference === value)}>
-                  {label}
-                </button>
-              ))}
             </div>
 
             {divider}

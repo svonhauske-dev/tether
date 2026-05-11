@@ -7,28 +7,19 @@ import {
 
 export const THEME_NAMES = Object.keys(themes);
 const PREF_KEY = "origin_theme_preference";
-const VALID_PREFS = ["light", "dark", "system"];
-
-function getSystemTheme() {
-  try {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  } catch {
-    return "light";
-  }
-}
+const VALID_PREFS = ["achromatic"];
 
 function resolveTheme(pref) {
-  if (pref === "system") return getSystemTheme();
   if (THEME_NAMES.includes(pref)) return pref;
-  return "light";
+  return "achromatic";
 }
 
 function getStoredPref() {
   try {
     const v = localStorage.getItem(PREF_KEY);
-    return VALID_PREFS.includes(v) ? v : "system";
+    return VALID_PREFS.includes(v) ? v : "achromatic";
   } catch {
-    return "system";
+    return "achromatic";
   }
 }
 
@@ -44,9 +35,9 @@ function getInitial() {
 }
 
 const ThemeContext = createContext({
-  theme: themes.light,
-  themeName: "light",
-  themePreference: "system",
+  theme: themes.achromatic,
+  themeName: "achromatic",
+  themePreference: "achromatic",
   setTheme: () => {},
   setThemePreference: () => {},
   syncFromDB: async () => {},
@@ -104,7 +95,7 @@ export function ThemeProvider({ children }) {
     setState(s => ({ ...s, name: newName }));
   };
 
-  const theme = themes[name] ?? themes.light;
+  const theme = themes[name] ?? themes.achromatic;
 
   useEffect(() => {
     document.body.style.background = theme.surface.canvas;
