@@ -196,23 +196,55 @@ Deno.serve(async (req: Request) => {
 
     const anchorDate = parseLocalHHMM(dateStr, anchorHHMM, tz);
 
-    // rx slot — fires at anchor time, mode-specific title
-    const rxSupps = supps.filter(
-      (s) => Array.isArray(s.slots) && s.slots.includes("rx") &&
-             Array.isArray(s.days)  && s.days.includes(dayOfWeek) &&
-             isSupplementActiveOn(s, dateStr),
-    );
-    if (rxSupps.length > 0 && anchorDate > now) {
-      rows.push({
-        user_id:             userId,
-        fire_at:             anchorDate.toISOString(),
-        scheduled_for_date:  anchorDate.toLocaleDateString("sv-SE", { timeZone: tz }),
-        title:               getAnchorTitle(mode),
-        body:                rxSupps.map((s) => s.name).join(", "),
-        slot_id:             "rx",
-        tag:                 `${dateStr}_rx`,
-        fired:               false,
-      });
+    if (mode === "fasting") {
+      // IF mode: window_open and window_closing fire unconditionally — they are
+      // state transitions for the eating window, not supplement reminders.
+      // rx slot has no meaning in IF mode.
+      if (anchorDate > now) {
+        rows.push({
+          user_id:             userId,
+          fire_at:             anchorDate.toISOString(),
+          scheduled_for_date:  anchorDate.toLocaleDateString("sv-SE", { timeZone: tz }),
+          title:               "Your eating window is open",
+          body:                "",
+          slot_id:             "window_open",
+          tag:                 `${dateStr}_window_open`,
+          fired:               false,
+        });
+      }
+      const windowLength: number = ((cfg.window_length as number) ?? 480);
+      const closingAt = addMins(anchorDate, windowLength - 30);
+      if (closingAt > now) {
+        rows.push({
+          user_id:             userId,
+          fire_at:             closingAt.toISOString(),
+          scheduled_for_date:  closingAt.toLocaleDateString("sv-SE", { timeZone: tz }),
+          title:               "Your eating window closes in 30 minutes",
+          body:                "",
+          slot_id:             "window_closing",
+          tag:                 `${dateStr}_window_closing`,
+          fired:               false,
+        });
+      }
+    } else {
+      // medication / wakeup: rx fires at anchor time, gated on supplements
+      const rxSupps = supps.filter(
+        (s) => Array.isArray(s.slots) && s.slots.includes("rx") &&
+               Array.isArray(s.days)  && s.days.includes(dayOfWeek) &&
+               isSupplementActiveOn(s, dateStr),
+      );
+      if (rxSupps.length > 0 && anchorDate > now) {
+        rows.push({
+          user_id:             userId,
+          fire_at:             anchorDate.toISOString(),
+          scheduled_for_date:  anchorDate.toLocaleDateString("sv-SE", { timeZone: tz }),
+          title:               getAnchorTitle(mode),
+          body:                rxSupps.map((s) => s.name).join(", "),
+          slot_id:             "rx",
+          tag:                 `${dateStr}_rx`,
+          fired:               false,
+        });
+      }
     }
 
     // All other timed slots (anchor + offset)

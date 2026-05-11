@@ -186,6 +186,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           if (out.slots?.some(sl => sl === "injectable" || sl === "topical")) {
             out = { ...out, slots: out.slots.filter(sl => sl !== "injectable" && sl !== "topical") };
           }
+          if (sched?.schedule_type === "fasting" && out.slots?.includes("rx")) {
+            out = { ...out, slots: out.slots.filter(sl => sl !== "rx") };
+          }
           migrated.push(out);
           if (out !== supp) toWrite.push(out);
         }
