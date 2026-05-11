@@ -26,6 +26,7 @@ import PromptName from "./components/PromptName";
 import SlotCard from "./components/SlotCard";
 import EditForm from "./components/EditForm";
 import Hero from "./components/Hero";
+import Sidebar, { AccountAvatar } from "./components/Sidebar";
 import {
   supa, getSession, signInPassword, signUp, signOut, refreshSession,
   dbGetSupps, dbAddSupp, dbUpdateSupp, dbDeleteSupp,
@@ -52,6 +53,31 @@ const CORE_SLOTS = ["rx", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "p
 
 
 
+
+// ── Shared desktop UI helpers ─────────────────────────────────────────────────
+
+function PlaceholderSection({ title, style }) {
+  const { theme } = useTheme();
+  return (
+    <div style={{
+      ...style,
+      minHeight: 200,
+      background: theme.surface.cardSubtle,
+      border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+      borderRadius: theme.radius.surface,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: typography.label,
+      letterSpacing: typography.labelSpacingWide,
+      textTransform: 'uppercase',
+      color: theme.text.muted,
+      fontFamily: typography.fontBody,
+    }}>
+      {title}
+    </div>
+  );
+}
 
 // ── App root ──────────────────────────────────────────────────────────────────
 
@@ -664,76 +690,24 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   if (isDesktop) {
     return (
-      <div style={{ fontFamily: typography.fontBody, color: theme.text.primary, background: BG_GRADIENT, minHeight: "100dvh", WebkitFontSmoothing: "antialiased" }}>
-        <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: spacing.xl, maxWidth: 1200, margin: "0 auto", padding: spacing.lg }}>
-
-          {/* Left column — sticky context */}
-          <div style={{ width: 400, position: "sticky", top: spacing.lg, flexShrink: 0, display: "flex", flexDirection: "column", gap: spacing.md }}>
-
-            {/* Greeting */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading }}>
-                {profile?.display_name ? `Hello, ${profile.display_name.trim().split(" ")[0]}` : "Hello"}
-              </span>
-              <Button variant="icon" aria-label="Settings" onClick={() => pushScreen('settings')}>
-                <Settings size={18} />
-              </Button>
-            </div>
-
-            {/* Date nav */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <Button variant="icon" aria-label="Previous day" onClick={() => goDay(-1)}><ChevronLeft size={24} color={theme.text.secondary} style={{ marginRight: spacing.xxxs }} /></Button>
-              <div style={{ flex: 1, textAlign: "center", padding: `0 ${spacing.xs}px` }}>
-                <div style={{ fontSize: typography.label, color: theme.text.muted, fontWeight: typography.semibold, letterSpacing: typography.labelSpacingWide, textTransform: "uppercase", marginBottom: spacing.xxxs, fontFamily: typography.fontHeading }}>MY PROTOCOL</div>
-                <button onClick={() => { if (!isToday) { setViewDate(TODAY); setPastDayEditing(false); } }} style={{ fontSize: typography.title, fontWeight: typography.bold, letterSpacing: typography.headingLetterSpacing, background: "none", border: "none", cursor: isToday ? "default" : "pointer", color: isToday ? theme.text.primary : theme.accent.default, padding: 0, display: "block", width: "100%", textAlign: "center", fontFamily: typography.fontHeading }}>{dayLabel}</button>
-                <div style={{ fontSize: typography.caption2, color: theme.text.faint, marginTop: spacing.xxxs, minHeight: 14, letterSpacing: typography.labelSpacingTight }}>{isToday ? shortDate : "tap to return to today"}</div>
-              </div>
-              <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)}><ChevronRight size={24} color={theme.text.secondary} style={{ marginLeft: spacing.xxxs }} /></Button>
-            </div>
-
-            {/* Hero */}
-            <div style={{ opacity: isReadOnly ? 0.6 : 1, transition: "opacity 200ms ease-out" }}>
-              <Hero
-                scheduleMode={scheduleMode} isToday={isToday} viewDate={viewDate} shortDate={shortDate}
-                pct={pct} coreTotal={coreTotal} coreDone={coreDone}
-                pillTime={pillTime} anchorBehavior={anchorBehavior} consistentTime={consistentTime}
-                editPillTime={editPillTime} setEditPillTime={setEditPillTime}
-                tmpTime={tmpTime} setTmpTime={setTmpTime} setPillForDay={setPillForDay}
-                isFuture={isFuture} flashGreen={flashGreen} startDay={startDay} viewDay={viewDay}
-                isPast={isPast} isReadOnly={isReadOnly}
-                pastDayEditing={pastDayEditing} setPastDayEditing={setPastDayEditing}
-                nextFixedSlot={nextFixedSlot}
-              />
-            </div>
-
-            {/* Add/Manage */}
-            {!isPast && (
-              <div style={{ display: "flex", gap: spacing.xs }}>
-                <Button variant="primary" onClick={openAdd} style={{ flex: 1 }}>+ Add item</Button>
-                <Button variant="secondary" onClick={() => pushScreen('manage_protocol')} style={{ flex: 1, background: theme.surface.modal }}>Manage</Button>
-              </div>
-            )}
+      <div style={{ display: "flex", flexDirection: "row", height: "100dvh", overflow: "hidden", background: theme.surface.canvas, fontFamily: typography.fontBody, color: theme.text.primary, WebkitFontSmoothing: "antialiased" }}>
+        <Sidebar pushScreen={pushScreen} displayName={profile?.display_name?.trim().split(" ")[0] || null} />
+        <main style={{ flex: 1, overflowY: "auto", padding: spacing.xl, minWidth: 0 }}>
+          {/* Header: greeting left, avatar right */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xl }}>
+            <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading }}>
+              Hello, {profile?.display_name?.trim().split(" ")[0] || 'there'}
+            </span>
+            <AccountAvatar displayName={profile?.display_name?.trim().split(" ")[0] || null} />
           </div>
-
-          {/* Right column — scrollable slot cards */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: spacing.md }}>
-            <div style={{ maxWidth: 600 }}>
-              <div style={{ opacity: isReadOnly ? 0.6 : 1, transition: "opacity 200ms ease-out" }}>
-                {homeSupps.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px`, color: theme.text.muted }}>
-                    <div style={{ fontSize: typography.body, marginBottom: spacing.xs }}>No supplements yet.</div>
-                    <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.5 }}>Tap "+ Add item" on the left to get started.</div>
-                  </div>
-                ) : (
-                  <div style={{ borderRadius: theme.radius.surface, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md }}>
-                    {slotCardsContent}
-                  </div>
-                )}
-              </div>
-            </div>
+          {/* Week strip placeholder */}
+          <PlaceholderSection title="WEEK STRIP" />
+          {/* Today + Insights two-column */}
+          <div style={{ display: "flex", flexDirection: "row", gap: spacing.xl, marginTop: spacing.xl }}>
+            <PlaceholderSection title="TODAY PANEL" style={{ flex: 1 }} />
+            <PlaceholderSection title="INSIGHTS PANEL" style={{ flex: 1 }} />
           </div>
-
-        </div>
+        </main>
 
         <SettingsScreen
           isOpen={screenStack.some(s => s.name === 'settings')}
