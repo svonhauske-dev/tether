@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Trash2, Pause, Play, Pill, Syringe, Droplet } from "lucide-react";
 import { spacing, typography, touch, layout } from "../design-system";
 import { useTheme } from "../lib/theme";
@@ -34,6 +34,15 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
   const [viewMode, setViewMode]             = useState("active");
   const [confirmStopId, setConfirmStopId]   = useState(null);
   const [adherenceCounts, setAdherenceCounts] = useState({});
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTo(0, 0);
+  }, [viewMode]);
 
   const activeSupps  = supplements.filter(s => !isStoppedSupp(s));
   const stoppedSupps = [...supplements.filter(s => isStoppedSupp(s))].sort((a, b) => a.name.localeCompare(b.name));
@@ -66,6 +75,7 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
 
   return (
     <div
+      ref={scrollRef}
       style={{
         position: "fixed",
         top: 0, left: 0, right: 0, bottom: 0,
