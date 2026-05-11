@@ -139,6 +139,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const [submitting, setSubmitting]           = useState(false);
   const [submitError, setSubmitError]         = useState(null);
   const saveTimer = useRef(null);
+  const lastTzRef = useRef(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const { show: showToast } = useToast();
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
@@ -162,6 +163,20 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   // Register service worker early so it's ready to receive pushes
   useEffect(() => { registerServiceWorker().catch(() => {}); }, []);
+
+  // Recompute notifications when the user returns to the app in a different timezone
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      const currentTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (currentTz !== lastTzRef.current) {
+        lastTzRef.current = currentTz;
+        recomputeNotifications(token);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [token]);
 
   // Initial load
   useEffect(() => {
