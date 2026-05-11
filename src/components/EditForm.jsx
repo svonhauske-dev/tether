@@ -261,6 +261,11 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
             );
           })}
         </div>
+        <div style={{ marginTop: spacing.sm }}>
+          <Button variant="pill" active={form.slots.length === 0} onClick={() => setForm(f => ({ ...f, slots: [] }))}>
+            Anytime
+          </Button>
+        </div>
       </div>
 
       {mode !== "cycled" && (

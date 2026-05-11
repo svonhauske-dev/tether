@@ -346,9 +346,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     if (diff > 15) return "missed"; if (diff > -5) return "now"; return "future";
   };
 
-  const anytimeSupps = scheduleMode === "none"
-    ? homeSupps.filter(s => s.slots.length === 0 && s.days.includes(viewDay))
-    : [];
+  const anytimeSupps = homeSupps.filter(s => s.slots.length === 0 && s.days.includes(viewDay));
   let coreTotal = anytimeSupps.length, coreDone = 0;
   anytimeSupps.forEach(s => { if (isChecked("anytime", s.id)) coreDone++; });
   CORE_SLOTS.forEach(sid => {
@@ -682,10 +680,6 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs2 }}>
-              {/* Anytime block — only in no-schedule mode, for unsorted supplements */}
-              {scheduleMode === "none" && anytimeSupps.length > 0 && (
-                <SlotCard slot={ANYTIME_SLOT} slotSupps={anytimeSupps} status="future" timeLabel="" hasOffset={false} pillTime={null} isFuture={isFuture} isChecked={isChecked} toggleCheck={toggleCheck} openEdit={openEdit} noSchedule isReadOnly={isReadOnly} isPast={isPast} />
-              )}
               {SLOTS.map(slot => {
                 const slotSupps = getSuppsForSlot(slot.id);
                 if (!slotSupps.length) return null;
@@ -701,6 +695,10 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
                 const displaySlot = overrideLabel ? { ...slot, label: overrideLabel } : slot;
                 return <SlotCard key={slot.id} slot={displaySlot} slotSupps={slotSupps} status={status} timeLabel={timeLabel} hasOffset={hasOffset} pillTime={noSched ? null : effectivePillTime} isFuture={isFuture} isChecked={isChecked} toggleCheck={toggleCheck} openEdit={openEdit} noSchedule={noSched} isReadOnly={isReadOnly} isPast={isPast} />;
               })}
+              {/* Anytime block — supplements with no slots, all schedule modes */}
+              {anytimeSupps.length > 0 && (
+                <SlotCard slot={ANYTIME_SLOT} slotSupps={anytimeSupps} status="future" timeLabel="" hasOffset={false} pillTime={null} isFuture={isFuture} isChecked={isChecked} toggleCheck={toggleCheck} openEdit={openEdit} noSchedule isReadOnly={isReadOnly} isPast={isPast} />
+              )}
             </div>
           )}
         </div>
