@@ -25,12 +25,12 @@ export default function SupplementNameAutocomplete({ value, onChange, history = 
       if (name.toLowerCase().includes(lower) && !seen.has(name.toLowerCase())) {
         seen.add(name.toLowerCase());
         results.push(name);
-        if (results.length >= 8) break;
+        if (results.length >= 5) break;
       }
     }
 
     for (const name of SUPPLEMENTS_DATABASE) {
-      if (results.length >= 8) break;
+      if (results.length >= 5) break;
       if (name.toLowerCase().includes(lower) && !seen.has(name.toLowerCase())) {
         seen.add(name.toLowerCase());
         results.push(name);
