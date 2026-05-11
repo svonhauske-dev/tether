@@ -29,55 +29,50 @@ function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClic
         flexDirection: 'column',
         alignItems: 'center',
         padding: spacing.md,
-        background: isToday ? theme.surface.cardSubtle : theme.surface.card,
-        border: isToday
-          ? `${theme.borderWidth.accent}px solid ${theme.accent.default}`
+        background: isSelected ? theme.status.nowBg : theme.surface.card,
+        border: isSelected
+          ? `${theme.borderWidth.accent}px solid ${theme.status.nowBorder}`
           : `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
         borderRadius: theme.radius.surface,
         cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
         width: '100%',
         boxSizing: 'border-box',
-        transition: 'background 150ms ease',
+        transition: 'background 150ms ease, border-color 150ms ease',
       }}
     >
-      {/* Day label section */}
+      {/* TODAY badge — always on today's cell, independent of selection */}
       {isToday ? (
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: spacing.xxxs,
+          background: theme.status.nowBadgeBg,
+          color: theme.status.nowBadgeText,
+          fontSize: typography.label,
+          fontWeight: typography.semibold,
+          fontFamily: typography.fontBody,
+          letterSpacing: typography.labelSpacing,
+          textTransform: 'uppercase',
+          padding: `${spacing.xxxs}px ${spacing.xs}px`,
+          borderRadius: theme.radius.pill,
           marginBottom: spacing.xxs,
+          lineHeight: 1.4,
+          whiteSpace: 'nowrap',
         }}>
-          <span style={{
-            fontSize: typography.label,
-            fontWeight: typography.semibold,
-            color: theme.text.primary,
-            fontFamily: typography.fontBody,
-            letterSpacing: typography.labelSpacing,
-            textTransform: 'uppercase',
-          }}>
-            TODAY
-          </span>
-          <span style={{
-            fontSize: typography.caption,
-            color: theme.text.secondary,
-            fontFamily: typography.fontBody,
-          }}>
-            {dayName}
-          </span>
+          TODAY
         </div>
       ) : (
-        <span style={{
-          fontSize: typography.label,
-          color: theme.text.muted,
-          fontFamily: typography.fontBody,
-          marginBottom: spacing.xxs,
-        }}>
-          {dayName}
-        </span>
+        // Non-today cells have a spacer to keep consistent height
+        <div style={{ height: 20, marginBottom: spacing.xxs }} />
       )}
+
+      {/* Day abbreviation — consistent across all cells */}
+      <span style={{
+        fontSize: typography.label,
+        color: theme.text.muted,
+        fontFamily: typography.fontBody,
+        marginBottom: spacing.xxs,
+      }}>
+        {dayName}
+      </span>
 
       {/* Date number */}
       <span style={{
@@ -169,7 +164,7 @@ export default function WeekStrip({
         </button>
       </div>
 
-      {/* 7-cell grid — each cell is its own card */}
+      {/* 7-cell grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(7, 1fr)',

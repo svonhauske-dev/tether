@@ -20,7 +20,7 @@ export default function AdherenceRing({ percentage, size = 56 }) {
       <circle
         cx={cx} cy={cx} r={r}
         fill="none"
-        stroke={theme.accent.default}
+        stroke={percentage === 100 ? theme.status.success : theme.accent.default}
         strokeWidth="5"
         strokeDasharray={circ}
         strokeDashoffset={circ - dash}
