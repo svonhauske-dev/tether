@@ -1,6 +1,6 @@
 # Origin — Project Handoff Document
 
-*Last updated: May 12, 2026 (schedule modes condensed to 4 with Anchor sub-selector, Button pill variant renamed to selector across codebase + docs)*
+*Last updated: May 12, 2026 (schedule mode condensation + pill→selector rename + cascade parity fix + four follow-up bug fixes)*
 *Owner: Sofia von Hauske (sofiavonhauske@gmail.com)*
 *Purpose: Hand this document to a fresh AI chat to pick up Origin work without losing context.*
 
@@ -124,7 +124,7 @@ The design system uses a token-based theme architecture. All components consume 
 
 **4 schedule modes UI, 5 underlying values** (default for new users = No Schedule):
 - No Schedule — pure checklist, no times, no notifications
-- Anchor (groups Medication + Wake Up) — onboarding and Manage Protocol show 4 cards; tapping Anchor reveals a sub-selector for Medication or Wake Up; DB still stores `medication` or `wakeup` directly (no migration)
+- Anchor (groups Medication + Wake Up) — onboarding and Manage Protocol show 4 cards in a 2×2 grid; tapping Anchor reveals a sub-selector below the grid (Medication / Wake Up); DB stores `medication` or `wakeup` directly (never `anchor`; no migration needed)
 - Intermittent Fasting — built around eating window
 - Fixed Times — same schedule every day
 
@@ -361,6 +361,10 @@ Locked direction: responsive (same content, broader layout on desktop). Hard bre
 - **Week strip adherence ring stale after past-day edit** — week strip read from snapshot `weekLogs` not updated by checkbox toggle. Fixed by updating `weekLogs` state alongside `loggedSupps` on toggle.
 - **`/design-system` 404 in production** — Vite SPA outputs static files; Vercel returned 404 for any path without a matching file. `/design-system` is the only URL-based route in the app (all other screens use in-app state, no URL changes). Fixed by adding `vercel.json` with `/(.*) → /index.html` rewrite rule. Commit `361007c`.
 - **Modal residue in full-page screenshots** — Modal.jsx always portaled to `document.body` regardless of `open` state. When closed, the sheet sat at `transform: translateY(100%)` — off-screen but still in the DOM. Arc's full-page screenshot tool (and similar) captured it at the bottom of the document. Fixed: added `mounted` state with 300ms delayed unmount after `open → false`, matching the CSS exit animation duration. Portal is removed from DOM after animation completes. Commit `5d177fc`.
+- **Onboarding card grid layout** — Onboarding Step 1 card container was a vertical flex list after the 4-card condensation landed. ScheduleTab used a 2-column CSS grid. Fixed by wrapping the DISPLAY_MODES map in a grid container (`gridTemplateColumns: 1fr 1fr`), `none` card spanning both columns, `minHeight: layout.modeButtonHeight` for equal-height cells. Commit `fb5a9ce`.
+- **Onboarding cascade parity** — Onboarding Step 2 wrote per-meal absolute offsets (`breakfast: 60`, `lunch: 300`, etc.) but not cascade fields (`first_meal_offset_hours`, `meal_interval_hours`, `evening_mode`). New users hit `migrateConfig` on every Schedule tab mount — the function inferred cascade fields from absolute offsets and re-saved to DB each time. Fixed: Onboarding Step 2 now uses the same cascade rule editor as ScheduleTab (First meal offset + Meal interval + Evening mode picker). Initial config has cascade defaults (`first_meal_offset_hours: 1`, `meal_interval_hours: 4`). MEAL_ROWS constant removed. Commit `71b62d0`.
+- **migrateConfig firing on every Schedule tab mount for new users** — side effect of the cascade parity bug above. Now that Onboarding writes cascade fields on first save, `migrateConfig` sees `first_meal_offset_hours !== undefined` and skips. No extra DB write on mount for any user. Resolved by `71b62d0`.
+- **Anchor helper text rendering before selection** — `ANCHOR_NOTES` HelperText in ScheduleTab rendered immediately above the card grid for any user already on `medication` or `wakeup` mode, before any interaction. Moved to inside the Anchor sub-selector block, below the two buttons, conditional on `localMode` having a value. Commit `71b62d0`.
 
 ---
 
@@ -429,6 +433,13 @@ Onboarding and Manage Protocol → Schedule tab now show 4 mode cards (No Schedu
 **Refactor — Button variant "pill" renamed to "selector"**
 `variant="pill"` → `variant="selector"` across the codebase. CSS class `.pill-label` → `.selector-label` (definition in index.html inline style, usage in Button.jsx). Internal variable `pillBase` → `selectorBase`. All 7 usages in EditForm.jsx updated. Design system page registry Button entries updated. `theme.radius.pill` token kept as-is — it names a visual shape (fully rounded, 999px) used for drag handles, progress dots, status indicators, not the UI component. ORIGIN-DESIGN-RULES.md and ORIGIN-HANDOFF.md updated.
 
+**Fix — Onboarding cascade parity + grid layout + helper text (4 bugs, May 12 morning)**
+Follow-up bug fixes after the schedule mode condensation work:
+1. Grid layout: Onboarding Step 1 card container changed to 2×2 grid to match ScheduleTab. Commit `fb5a9ce`.
+2. Cascade parity: Onboarding Step 2 replaced per-meal absolute-offset inputs (MEAL_ROWS) with the same First meal / Meal interval / Evening mode editor used by ScheduleTab. Initial config now writes `first_meal_offset_hours: 1`, `meal_interval_hours: 4`. Commit `71b62d0`.
+3. migrateConfig side effect resolved: new users no longer trigger a DB re-save on every Schedule tab mount. Commit `71b62d0`.
+4. Anchor helper text moved: `ANCHOR_NOTES` HelperText in ScheduleTab relocated from above the card grid to below the sub-selector buttons. Commit `71b62d0`.
+
 ---
 
 ## Codebase Health
@@ -488,6 +499,8 @@ Onboarding and Manage Protocol → Schedule tab now show 4 mode cards (No Schedu
 
 **Design system: clean.** Achromatic locked as production. All non-Achromatic themes accessible only via dev theme switcher. CSS variable font system handles typography per theme. Radius system clarified (`radius.md` for UI shapes, `radius.full` for genuinely circular).
 
+**Onboarding and ScheduleTab share cascade logic.** Both use the same `applyCascade()` function (defined locally in each file — not a shared import, intentional — same logic, separate contexts). MEAL_ROWS constant removed from Onboarding. Both write `first_meal_offset_hours`, `meal_interval_hours`, `evening_mode` to `offsets` JSONB. `migrateConfig` in ScheduleTab exists only for legacy users who saved before the cascade system; new users never hit it.
+
 **Known cleanup candidates (low priority):**
 - Hero component has 19 props — works, but smell. Future pass could group related state into objects.
 - `handleEditFormTogglePause` is dead code (no UI calls it from the Edit form anymore — Pause/Delete moved to Manage)
@@ -527,6 +540,11 @@ None of these are blocking. All are real debt.
 ---
 
 ## Pending Queue for Next Session
+
+### Immediate
+
+**0. Portfolio link update at vonhauske.design/origin-app.**
+Update the portfolio entry to reflect the current `/design-system` URL and any copy changes needed after this morning's work. Low effort, high visibility.
 
 ### Highest priority
 
@@ -635,7 +653,9 @@ Optional consent toggle at import time. Per-user drill-down for creators with 7-
 - `src/config.js`:
   - `DEFAULT_CONFIG` — `{ pre_meal_window: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660, window_start: 0, window_length: 480, meals_per_day: 2, fixed_times: {...} }`
   - `FIXED_SLOTS` (9): pre_breakfast, breakfast, pre_lunch, lunch, pre_dinner, dinner, after_dinner, injectable, topical (legacy keep)
-  - `MODES` (5): none, medication, wakeup, fasting, fixed
+  - `MODES` (5): none, medication, wakeup, fasting, fixed — used for internal lookups
+  - `DISPLAY_MODES` (4): none, anchor, fasting, fixed — UI-only grouping; never stored in DB
+  - `ANCHOR_SUB_MODES` (2): medication, wakeup — sub-selector within Anchor card
   - `ANCHOR_NOTES`, `getSlotLabelForMode()`, `deriveOffsets()`
 - `src/data/supplements-database.js` (autocomplete static list ~300 entries)
 - `src/components/` (33 files, primitives + composed)
