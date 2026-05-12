@@ -147,15 +147,7 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
   let notifContent;
   if (!pushSupported) {
     notifContent = (
-      <div style={{ fontSize: typography.caption, color: theme.text.muted }}>
-        Notifications aren't supported in this browser.
-      </div>
-    );
-  } else if (permission === "denied") {
-    notifContent = (
-      <div style={{ fontSize: typography.caption, color: theme.status.danger }}>
-        Permission blocked. Enable Origin in your device settings.
-      </div>
+      <HelperText>Notifications aren't supported in this browser.</HelperText>
     );
   } else if (needsInstall) {
     notifContent = (
@@ -175,40 +167,42 @@ export default function SettingsModal({ open, onClose, onOpenManage, onSignOut, 
     );
   } else {
     notifContent = (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: touch.min }}>
-        <span style={{ fontSize: typography.body, color: theme.text.primary }}>Reminders</span>
-        {toggling ? (
-          <div style={{ width: 44, height: 26, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <InlineLoader size="sm" />
-          </div>
-        ) : (
-          <button
-            onClick={handleToggleNotifications}
-            aria-label={hasSubscription ? "Turn off reminders" : "Turn on reminders"}
-            style={{
-              width: 44, height: 26, borderRadius: theme.radius.toggle,
-              background: hasSubscription ? theme.accent.default : theme.surface.toggleOff,
-              border: "none",
-              cursor: "pointer",
-              transition: "background 200ms",
-              position: "relative",
-              flexShrink: 0,
-              WebkitTapHighlightColor: "transparent",
-            }}
+      <>
+        <div style={{ display: "flex", gap: spacing.xs }}>
+          <Button
+            variant="selector"
+            active={hasSubscription}
+            disabled={toggling || permission === "denied"}
+            style={{ flex: 1 }}
+            onClick={() => { if (!hasSubscription) handleToggleNotifications(); }}
           >
-            <span style={{
-              position: "absolute",
-              top: 3,
-              left: hasSubscription ? 21 : 3,
-              width: 20, height: 20,
-              borderRadius: theme.radius.pill,
-              background: hasSubscription ? theme.text.onAccent : theme.surface.knob,
-              transition: "left 200ms",
-              display: "block",
-            }} />
-          </button>
+            On
+          </Button>
+          <Button
+            variant="selector"
+            active={!hasSubscription}
+            disabled={toggling}
+            style={{ flex: 1 }}
+            onClick={() => { if (hasSubscription) handleToggleNotifications(); }}
+          >
+            Off
+          </Button>
+        </div>
+        {toggling && (
+          <HelperText style={{ marginTop: spacing.xxs }}>Updating…</HelperText>
         )}
-      </div>
+        {permission === "denied" && (
+          <div style={{ fontSize: typography.caption, color: theme.status.danger, marginTop: spacing.xxs }}>
+            Notifications blocked. Enable Origin in your device settings.
+          </div>
+        )}
+        {!hasSubscription && !toggling && permission === "default" && (
+          <HelperText style={{ marginTop: spacing.xxs }}>You'll be asked to allow notifications.</HelperText>
+        )}
+        {!hasSubscription && !toggling && permission === "granted" && (
+          <HelperText style={{ marginTop: spacing.xxs }}>Tap On to resume notifications.</HelperText>
+        )}
+      </>
     );
   }
 
