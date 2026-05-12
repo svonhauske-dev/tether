@@ -8,6 +8,8 @@ import Button from "./Button";
 // Tracks nesting depth so each nested modal gets a higher z-index tier.
 const ModalDepthCtx = createContext(0);
 
+const ANIM_MS = 300; // matches CSS transition duration
+
 export default function Modal({ open, onClose, title, children, footer, leftAction }) {
   const { theme } = useTheme();
   const depth = useContext(ModalDepthCtx);
@@ -17,6 +19,18 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
   const [isDragging, setIsDragging] = useState(false);
   const touchStartY = useRef(0);
   const bodyRef = useRef(null);
+
+  // Stay mounted long enough for the exit animation to finish, then unmount.
+  // This prevents the off-screen modal from appearing in full-page screenshots.
+  const [mounted, setMounted] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+    } else {
+      const t = setTimeout(() => setMounted(false), ANIM_MS);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open && bodyRef.current) bodyRef.current.scrollTo(0, 0);
@@ -65,6 +79,8 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
     : open ? "translateY(0)" : "translateY(100%)";
 
   const sheetTransition = isDragging ? "none" : "transform 0.3s ease-out";
+
+  if (!mounted) return null;
 
   // Portal to document.body so position:fixed is never constrained by a
   // transformed ancestor (e.g. the outer sheet's translateY animation).
