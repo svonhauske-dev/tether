@@ -1,6 +1,6 @@
 # Origin — Project Handoff Document
 
-*Last updated: May 12, 2026 (HIG accessibility pass + prefers-reduced-motion exceptions + notifications selector refactor + nav stack reset bug fix)*
+*Last updated: May 15, 2026 (WCAG text.muted → text.secondary migration completed across all functional text)*
 *Owner: Sofia von Hauske (sofiavonhauske@gmail.com)*
 *Purpose: Hand this document to a fresh AI chat to pick up Origin work without losing context.*
 
@@ -235,6 +235,7 @@ Insights panel (desktop) shows "Upcoming" section with supplements ending in nex
 - New slot IDs: `window_open` and `window_closing` (distinct from `rx` for semantic clarity)
 - rx slot hidden from IF mode in EditForm
 - Migration removed rx tag from any IF user supplements
+- **Note — client SLOTS vs. edge function slot IDs:** `src/lib/notifications.js` exports a client-side `SLOTS` object with 8 entries (`rx`, `pre_breakfast`, `breakfast`, `pre_lunch`, `lunch`, `pre_dinner`, `dinner`, `after_dinner`) used for UI display. `window_open`, `window_closing`, and `course_end` exist only inside the `recompute_notifications` edge function and `notifications_queue` table — they are not in client SLOTS and never will be.
 
 **OVH timezone fix:**
 - visibilitychange listener compares `Intl.DateTimeFormat().resolvedOptions().timeZone` to last known
@@ -251,6 +252,9 @@ Insights panel (desktop) shows "Upcoming" section with supplements ending in nex
 - Slot IDs in queue: `rx`, `pre_breakfast`, `breakfast`, `pre_lunch`, `lunch`, `pre_dinner`, `dinner`, `after_dinner`, `window_open`, `window_closing`, `course_end`
 - Travel timezone auto-fix: `visibilitychange` listener triggers recompute when timezone changes
 - 2 of 4 users currently subscribed, 68 notifications in queue as of May 11
+
+**Notification opt-in prompt (NotificationPrompt.jsx):**
+Full-screen prompt shown to new users immediately after first sign-in when they have no existing push subscription. "Want reminders?" heading with body copy ("Origin can ping you when it's time to take your medication and supplements. You can change this any time in Settings."), a primary "Enable reminders" button, and a tertiary "Maybe later" button. Triggered in App.jsx via `needsNotificationPrompt` state (set when subscription check returns null on first load). Entirely skippable — both paths dismiss the prompt. Settings toggle remains the persistent control.
 
 **Notifications toggle refactored to On/Off selector:**
 - Settings (SettingsScreen.jsx) and dead-code SettingsModal.jsx — replaced iOS-style circular switch with two `Button variant="selector"` buttons (On / Off), consistent with Treatment, Category, and Anchor sub-mode selectors. Disabled state on On when permission = denied; helper text covers all permission states. Design system registry updated with three binary selector examples. Commit `f897a42`.
@@ -366,6 +370,7 @@ Locked direction: responsive (same content, broader layout on desktop). Hard bre
 - **Modal scroll-to-top on every open** — same pattern, fixed via Modal primitive's bodyRef + isOpen useEffect.
 - **Radius leak round 1 under Terminal themes** — UI selectors + chevron buttons + settings gear used `radius.full` (9999) directly. Fixed by referencing `radius.button` token instead, leaving `radius.full` for genuinely circular shapes.
 - **Radius leak round 2** — Round 1 fix didn't catch selector variants and day-of-week picker. Category, Treatment, When-to-take selectors and Which-days circles all still rendered circular under Achromatic. Fixed in commit a14f8e3.
+- **WCAG contrast audit (May 12)** — full inventory of `text.muted` (#666666, ~3.5:1 contrast) usages across all components. Audit-only doc committed as `1fcff08`. Migration pass (→ `text.secondary`, #A0A0A0, ~7.7:1) shipped May 15 across 7 files (Onboarding, ScheduleTab, ManageProtocolScreen, ManageSupplementsSheet, SlotCard, SlotRow, TodayPanelHeader). Two intentional `text.muted` exceptions retained: ANYTIME_SLOT decorative bullet (App.jsx) and disabled nav arrow in WeekStrip (WCAG exempts inactive controls).
 - **Selected day visual hierarchy inverted** — slate blue tint was too subtle against white-elevated cells, making selected cell look recessed. Fixed by strengthening opacity values.
 - **Past day expansion locked in read-only mode** — chevron click toggle was gated on `!isReadOnly`. Fixed by removing that gate (only checkbox/edit are gated, expansion is always available).
 - **Week strip adherence ring stale after past-day edit** — week strip read from snapshot `weekLogs` not updated by checkbox toggle. Fixed by updating `weekLogs` state alongside `loggedSupps` on toggle.
@@ -437,6 +442,13 @@ Built `src/components/design-system-page/DesignSystemPage.jsx` and `registry.js`
 **Fix — Modal unmount after exit animation (May 11 evening)**
 Modal.jsx kept its portal mounted at `translateY(100%)` when closed, making it visible in full-page screenshot tools. Added `mounted` state with 300ms delayed unmount (matching `transform 0.3s ease-out`). Entry animation unaffected; exit animation plays in full before DOM removal. Audit confirmed all other overlays (Toast, SupplementNameAutocomplete) already unmount cleanly. Commit `5d177fc`.
 
+### Session of May 15
+
+**Pass — WCAG text.muted → text.secondary migration (completed)**
+All functional `text.muted` (#666666, ~3.5:1 contrast) usages migrated to `text.secondary` (#A0A0A0, ~7.7:1 contrast) across: Onboarding, ScheduleTab, ManageProtocolScreen, ManageSupplementsSheet, SlotCard, SlotRow, TodayPanelHeader. Two intentional `text.muted` exceptions retained: ANYTIME_SLOT decorative `◦` bullet (App.jsx) and disabled nav arrow state in WeekStrip (WCAG exempts disabled controls). Color contrast gap in Pending Queue marked complete.
+
+---
+
 ### Session of May 12
 
 **Pass — Schedule modes condensed to 4 (Anchor sub-selector)**
@@ -476,11 +488,14 @@ Four HIG-compliant animations re-enabled under reduced-motion as functional feed
 **Fix — Navigation stack stale on sign-in (May 12)**
 `NavigationProvider` survives sign-out (mounted above `ProtocolApp`), so stale screen stack caused Settings to reopen after sign-out/sign-in. Fixed: `resetStack()` added to `NavigationProvider`, called in `ProtocolApp` mount effect. Commit `f7b8bb8`.
 
+**Pass — HIG-compliant form patterns (May 12, commit `3bdedb3`)**
+SettingsScreen: email section wrapped in `<form onSubmit>` with `autoComplete="email"`, `inputMode="email"`, `autoCapitalize/autoCorrect/spellCheck` off, submit button changed to `type="submit"`. Password section wrapped in `<form onSubmit>` with `autoComplete="new-password"` on both password inputs, submit button `type="submit"`. Display name input gained `autoComplete="name"`. EditForm: `autoComplete="off"` on Dose and Notes; `inputMode="numeric"` + `pattern="[0-9]*"` on cycle on/off value fields. Auth already had a real `<form>` element prior to this commit — not touched.
+
 ---
 
 ## Codebase Health
 
-**App.jsx is ~554 lines** (down from 1,295 after previous refactoring). Pure orchestration — state, effects, handlers, home screen layout container. Every major rendering concern is in its own focused file.
+**App.jsx is ~998 lines** (was ~554 when last measured; grew with desktop layout, NotificationPrompt wiring, and accessibility handlers). Pure orchestration — state, effects, handlers, home screen layout container. Every major rendering concern is in its own focused file.
 
 **Module structure:**
 - `src/lib/api.js` — Supabase data layer + auth (22 exported functions, see API Helpers reference below)
@@ -493,12 +508,13 @@ Four HIG-compliant animations re-enabled under reduced-motion as functional feed
 - `src/data/supplements-database.js` — autocomplete static list (~300 entries)
 - `src/components/`:
   - Primitives: Button, Card, Input, Label, Badge, Modal, Toast, Loader, InlineLoader
-  - Auth & onboarding: Auth, PromptName, Onboarding
+  - Auth & onboarding: Auth, PromptName, Onboarding, NotificationPrompt
   - Home (mobile): Hero, SlotCard, WeekStrip (mobile date picker)
-  - Home (desktop): Sidebar, WeekStrip, DayCell, AdherenceRing, TodayPanel, SlotRow, SupplementRow, InsightsPanel
-  - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ManageProtocolScreen, ManageAccount
+  - Home (desktop): Sidebar, WeekStrip, AdherenceRing, TodayPanel (+ TodayPanelHeader sub-component), SlotRow, SupplementRow, InsightsPanel; DayCell is a named export from WeekStrip.jsx (no standalone file)
+  - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ManageProtocolScreen
   - Shared: HelperText, SupplementNameAutocomplete, DevThemePicker, ToastContext
   - Design system page (dev + portfolio): `design-system-page/DesignSystemPage.jsx`, `design-system-page/registry.js`
+  - Dead code / candidates for deletion: `SettingsModal.jsx` (superseded by SettingsScreen — not imported anywhere), `ManageSupplementsSheet.jsx` (superseded by ManageProtocolScreen — not imported anywhere)
 
 **API Helpers Reference (`src/lib/api.js`, 22 functions):**
 
@@ -542,7 +558,7 @@ Four HIG-compliant animations re-enabled under reduced-motion as functional feed
 - `prefers-reduced-motion`: global kill rule in index.html. Four exceptions re-enabled via CSS classes (`.toast-item`, `.supp-checkbox`, `.supp-row`, `.sidebar-nav-item`, `.day-cell`). Loader in its own `<style>` block.
 - `:focus-visible`: white 1px outline, 2px offset, global in index.html.
 - Modal keyboard: Escape closes, Tab focus trap, auto-focus on open.
-- Remaining gaps: `aria-live` regions for toast/loading states, keyboard skip links, form `autoComplete` attributes, color contrast audit for `text.muted` pairs.
+- Remaining gaps: `aria-live` regions for toast/loading states, keyboard skip links.
 
 **Known cleanup candidates (low priority):**
 - Hero component has 19 props — works, but smell. Future pass could group related state into objects.
@@ -591,14 +607,13 @@ Update the portfolio entry to reflect the current `/design-system` URL and any c
 
 ### Highest priority
 
-**1. Apple HIG remaining gaps (foundational pass shipped May 12).**
-The foundational pass shipped touch targets, reduced-motion, focus states, and Modal keyboard. Remaining:
-- **Color contrast:** verify `text.muted` (#666666) on `surface.canvas` (#0D0D0D) meets WCAG AA for non-decorative text. Adjust token if needed.
-- **Form patterns:** Auth form and EditForm should use real `<form>` elements with `autoComplete` attributes and Enter-to-submit. Currently all use `<div>` containers and manual onClick.
+**1. Apple HIG remaining gaps (foundational pass shipped May 12, color contrast shipped May 15).**
+The foundational pass shipped touch targets, reduced-motion, focus states, and Modal keyboard. Color contrast (text.muted → text.secondary) shipped May 15. Remaining:
 - **Empty states:** several views show blank space when empty (no supplements, no logs). Add minimal copy per ORIGIN-DESIGN-RULES.md Category 14.
 - **`aria-live` regions:** Toast announcements and loading state changes not announced to screen readers.
 - **Keyboard skip links:** no skip-to-content link for keyboard-only desktop navigation.
-Estimated: 1 session for color + forms; empty states + aria-live is a second session.
+- **Form patterns:** Auth ✓ (had `<form>` before May 12), SettingsScreen ✓ (email + password sections wrapped in `<form onSubmit>` with full `autoComplete` / `inputMode` attributes, commit `3bdedb3`). EditForm has no `<form>` wrapper — no credential fields, autofill payoff is low, validation is already in JS. Likely closeable as intentionally not a form rather than outstanding work. Needs explicit decision before being struck.
+Estimated: 1 session for empty states + aria-live.
 
 ### Medium priority
 
