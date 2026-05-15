@@ -514,7 +514,6 @@ SettingsScreen: email section wrapped in `<form onSubmit>` with `autoComplete="e
   - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ManageProtocolScreen
   - Shared: HelperText, SupplementNameAutocomplete, DevThemePicker, ToastContext
   - Design system page (dev + portfolio): `design-system-page/DesignSystemPage.jsx`, `design-system-page/registry.js`
-  - Dead code / candidates for deletion: `SettingsModal.jsx` (superseded by SettingsScreen — not imported anywhere), `ManageSupplementsSheet.jsx` (superseded by ManageProtocolScreen — not imported anywhere)
 
 **API Helpers Reference (`src/lib/api.js`, 22 functions):**
 
@@ -612,7 +611,7 @@ The foundational pass shipped touch targets, reduced-motion, focus states, and M
 - **Empty states:** several views show blank space when empty (no supplements, no logs). Add minimal copy per ORIGIN-DESIGN-RULES.md Category 14.
 - **`aria-live` regions:** Toast announcements and loading state changes not announced to screen readers.
 - **Keyboard skip links:** no skip-to-content link for keyboard-only desktop navigation.
-- **Form patterns:** Auth ✓ (had `<form>` before May 12), SettingsScreen ✓ (email + password sections wrapped in `<form onSubmit>` with full `autoComplete` / `inputMode` attributes, commit `3bdedb3`). EditForm has no `<form>` wrapper — no credential fields, autofill payoff is low, validation is already in JS. Likely closeable as intentionally not a form rather than outstanding work. Needs explicit decision before being struck.
+- **Form patterns:** Auth ✓, SettingsScreen ✓ (commit `3bdedb3`). EditForm — closed, intentionally not a form: no credentials so no autofill payoff, validation is already in JS, Enter inside Notes should produce a newline not a submit, and save is a deliberate footer-button action.
 Estimated: 1 session for empty states + aria-live.
 
 ### Medium priority
