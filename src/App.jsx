@@ -41,7 +41,7 @@ import {
   dbGetSupplementHistory, dbAddSupplementHistory,
   dbGetDailyLogsRange,
 } from './lib/api';
-import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp } from './lib/time';
+import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp, isPausedSupp } from './lib/time';
 import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
 import NotificationPrompt from "./components/NotificationPrompt";
 import DesignSystemPage from "./components/design-system-page/DesignSystemPage";
@@ -648,11 +648,12 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   };
 
   const togglePause = async (supp) => {
-    const updated = { ...supp, paused: !supp.paused };
+    const wasPaused = isPausedSupp(supp);
+    const updated = { ...supp, status: wasPaused ? 'active' : 'paused', paused: !wasPaused };
     try {
       await dbUpdateSupp(updated, token);
       setSupps(s => s.map(x => x.id === supp.id ? updated : x));
-      showToast(updated.paused ? `Paused ${supp.name}` : `Resumed ${supp.name}`);
+      showToast(wasPaused ? `Resumed ${supp.name}` : `Paused ${supp.name}`);
       recomputeNotifications(token);
     } catch (err) {
       showToast("Couldn't update — try again");
