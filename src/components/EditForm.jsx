@@ -20,7 +20,7 @@ const TREATMENT_MODES = [
 ];
 const UNITS = ["days", "weeks", "months"];
 
-export default function EditForm({ form, setForm, editingId, onStop, onResume, onDelete, scheduleMode, supplementHistory = [] }) {
+export default function EditForm({ form, setForm, editingId, onStop, onResume, onDelete, scheduleMode, supplementHistory = [], activeProtocols = [] }) {
   const { theme } = useTheme();
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
@@ -89,6 +89,33 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
       {editingId && isPausedSupp(form) && (
         <div style={{ marginBottom: spacing.md }}>
           <Badge variant="neutral">Currently paused</Badge>
+        </div>
+      )}
+
+      {activeProtocols.length > 1 && (
+        <div style={{ marginBottom: spacing.md }}>
+          <Label>Protocol</Label>
+          <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+            {activeProtocols.map(p => (
+              <Button
+                key={p.id}
+                variant="selector"
+                active={form.protocol_id === p.id}
+                fullWidth
+                onClick={() => setForm(f => ({ ...f, protocol_id: p.id }))}
+              >
+                {p.name}
+              </Button>
+            ))}
+            <Button
+              variant="selector"
+              active={!form.protocol_id}
+              fullWidth
+              onClick={() => setForm(f => ({ ...f, protocol_id: null }))}
+            >
+              None
+            </Button>
+          </div>
         </div>
       )}
 

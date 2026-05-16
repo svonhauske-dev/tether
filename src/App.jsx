@@ -17,7 +17,8 @@ import SettingsScreen from "./components/SettingsScreen";
 import { NavigationProvider, useNavigation } from "./lib/navigation";
 import { ToastProvider, useToast } from "./components/ToastContext";
 import Toast from "./components/Toast";
-import ManageProtocolScreen from "./components/ManageProtocolScreen";
+import ProtocolLibrary from "./components/ProtocolLibrary";
+import ProtocolDetailScreen from "./components/ProtocolDetailScreen";
 import Onboarding from "./components/Onboarding";
 import Loader from "./components/Loader";
 import InlineLoader from "./components/InlineLoader";
@@ -199,7 +200,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   );
   const [weekLogs, setWeekLogs] = useState([]);
   const [viewedWeekEnd, setViewedWeekEnd] = useState(() => startOfDay(TODAY));
-  const [manageProtocolDefaultTab, setManageProtocolDefaultTab] = useState('active');
+  const [selectedProtocol, setSelectedProtocol]   = useState(null);
   const { show: showToast } = useToast();
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
@@ -501,12 +502,27 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     }
   }
 
-  const openManageSchedule = () => { setManageProtocolDefaultTab('schedule'); pushScreen('manage_protocol'); };
-  const openManageProtocol = () => { setManageProtocolDefaultTab('active');   pushScreen('manage_protocol'); };
+  const openManageSchedule = () => pushScreen('settings');
+  const openManageProtocol = () => pushScreen('manage_protocol');
 
-  const openAdd   = () => { setEditingId(null); setForm({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", paused: false, status: 'active', treatment_mode: "indefinite", starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null }); setSubmitError(null); setFormOpen(true); };
-  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...(supp.slots || [])], days: [...(supp.days || [])], category: supp.category || "Oral", paused: supp.paused ?? false, status: supp.status ?? 'active', treatment_mode: supp.treatment_mode || "indefinite", starts_at: supp.starts_at || null, ends_at: supp.ends_at || null, cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null, cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null }); setSubmitError(null); setFormOpen(true); };
+  const blankForm = (protocol_id = null) => ({ name: "", dose: "", notes: "", slots: [], days: [], category: "Oral", paused: false, status: 'active', protocol_id, treatment_mode: "indefinite", starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null });
+
+  const openAdd   = () => {
+    const active = protocols.filter(p => p.status === 'active');
+    setEditingId(null);
+    setForm(blankForm(active.length === 1 ? active[0].id : null));
+    setSubmitError(null);
+    setFormOpen(true);
+  };
+  const openEdit  = (supp) => { setEditingId(supp.id); setForm({ name: supp.name, dose: supp.dose, notes: supp.notes || "", slots: [...(supp.slots || [])], days: [...(supp.days || [])], category: supp.category || "Oral", paused: supp.paused ?? false, status: supp.status ?? 'active', protocol_id: supp.protocol_id || null, treatment_mode: supp.treatment_mode || "indefinite", starts_at: supp.starts_at || null, ends_at: supp.ends_at || null, cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null, cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null }); setSubmitError(null); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
+
+  const openAddToProtocol = (protocol) => {
+    setEditingId(null);
+    setForm(blankForm(protocol.id));
+    setSubmitError(null);
+    setFormOpen(true);
+  };
 
   const submitForm = async () => {
     if (!form.name.trim() || submitting) return;
@@ -540,7 +556,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         setSupps(s => s.map(x => x.id === editingId ? { ...form, days: finalDays, category: cat, id: editingId, ...txFields } : x));
         showToast(`Updated ${form.name}`);
       } else {
-        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, paused: false, status: 'active', stopped_at: null, user_id: user.id, ...txFields }, token);
+        const rows = await dbAddSupp({ name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, paused: false, status: 'active', stopped_at: null, user_id: user.id, protocol_id: form.protocol_id || null, ...txFields }, token);
         if (rows?.[0]) setSupps(s => [...s, rows[0]]);
         showToast(`Added ${form.name}`);
         const savedName = form.name.trim();
@@ -670,10 +686,22 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   };
 
   // ── Protocol actions ─────────────────────────────────────────────────────
-  const addProtocol = async (data) => {
+  const addProtocol = async (data, intent = 'stack') => {
     try {
-      const rows = await dbAddProtocol({ ...data, user_id: user.id }, token);
+      const status = intent === 'save_later' ? 'archived' : 'active';
+      let archivedNames = '';
+      if (intent === 'replace') {
+        const activeProtos = protocols.filter(p => p.status === 'active');
+        archivedNames = activeProtos.map(p => p.name).join(', ');
+        await Promise.all(activeProtos.map(p => dbArchiveProtocol(p.id, token)));
+        setProtocols(prev => prev.map(p => p.status === 'active' ? { ...p, status: 'archived' } : p));
+        const archivedIds = new Set(activeProtos.map(p => p.id));
+        setSupps(s => s.map(x => archivedIds.has(x.protocol_id) ? { ...x, status: 'active', paused: false } : x));
+      }
+      const rows = await dbAddProtocol({ ...data, status, user_id: user.id }, token);
       if (rows?.[0]) setProtocols(p => [...p, rows[0]]);
+      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} archived` : '';
+      showToast(`${data.name} created${suffix}`);
       return rows?.[0] ?? null;
     } catch (err) { showToast("Couldn't create protocol. Try again."); console.error(err); return null; }
   };
@@ -905,22 +933,34 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           profile={profile}
           onProfileUpdate={(updated) => setProfile(updated)}
           onNotificationsEnabled={() => recomputeNotifications(token)}
-        />
-        <ManageProtocolScreen
-          isOpen={screenStack.some(s => s.name === 'manage_protocol')}
-          onBack={popScreen}
-          supplements={visibleSupps}
-          token={token}
-          onEdit={openEdit}
-          onDelete={requestDelete}
-          onTogglePause={togglePause}
-          onResume={resumeSupp}
           scheduleMode={scheduleMode}
           scheduleConfig={scheduleConfig}
           anchorBehavior={anchorBehavior}
           consistentTime={consistentTime}
           onSaveSchedule={saveSchedule}
-          defaultTab={manageProtocolDefaultTab}
+        />
+        <ProtocolLibrary
+          isOpen={screenStack.some(s => s.name === 'manage_protocol')}
+          onBack={popScreen}
+          protocols={protocols}
+          supplements={visibleSupps}
+          onAddProtocol={addProtocol}
+          onOpenDetail={(protocol) => { setSelectedProtocol(protocol); pushScreen('protocol_detail'); }}
+        />
+        <ProtocolDetailScreen
+          isOpen={screenStack.some(s => s.name === 'protocol_detail')}
+          onBack={popScreen}
+          protocol={selectedProtocol}
+          supplements={visibleSupps}
+          onUpdateProtocol={updateProtocol}
+          onPauseProtocol={pauseProtocol}
+          onArchiveProtocol={archiveProtocol}
+          onActivateProtocol={activateProtocol}
+          onDeleteProtocol={deleteProtocol}
+          onAddSupp={() => openAddToProtocol(selectedProtocol)}
+          onEditSupp={openEdit}
+          onTogglePauseSupp={togglePause}
+          onResumeSupp={resumeSupp}
         />
         <Modal
           open={formOpen}
@@ -937,7 +977,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
             ) : null
           }
         >
-          <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} supplementHistory={supplementHistory} />
+          <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
         </Modal>
       </div>
     );
@@ -971,7 +1011,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       {!isPast && (
         <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
           <Button variant="primary" onClick={openAdd} style={{ flex: 1 }}>+ Add item</Button>
-          <Button variant="secondary" onClick={() => pushScreen('manage_protocol')} style={{ flex: 1, background: theme.surface.modal }}>Manage</Button>
+          <Button variant="secondary" onClick={() => pushScreen('manage_protocol')} style={{ flex: 1, background: theme.surface.modal }}>Protocols</Button>
         </div>
       )}
 
@@ -1015,21 +1055,34 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         profile={profile}
         onProfileUpdate={(updated) => setProfile(updated)}
         onNotificationsEnabled={() => recomputeNotifications(token)}
-      />
-      <ManageProtocolScreen
-        isOpen={screenStack.some(s => s.name === 'manage_protocol')}
-        onBack={popScreen}
-        supplements={visibleSupps}
-        token={token}
-        onEdit={openEdit}
-        onDelete={requestDelete}
-        onTogglePause={togglePause}
-        onResume={resumeSupp}
         scheduleMode={scheduleMode}
         scheduleConfig={scheduleConfig}
         anchorBehavior={anchorBehavior}
         consistentTime={consistentTime}
         onSaveSchedule={saveSchedule}
+      />
+      <ProtocolLibrary
+        isOpen={screenStack.some(s => s.name === 'manage_protocol')}
+        onBack={popScreen}
+        protocols={protocols}
+        supplements={visibleSupps}
+        onAddProtocol={addProtocol}
+        onOpenDetail={(protocol) => { setSelectedProtocol(protocol); pushScreen('protocol_detail'); }}
+      />
+      <ProtocolDetailScreen
+        isOpen={screenStack.some(s => s.name === 'protocol_detail')}
+        onBack={popScreen}
+        protocol={selectedProtocol}
+        supplements={visibleSupps}
+        onUpdateProtocol={updateProtocol}
+        onPauseProtocol={pauseProtocol}
+        onArchiveProtocol={archiveProtocol}
+        onActivateProtocol={activateProtocol}
+        onDeleteProtocol={deleteProtocol}
+        onAddSupp={() => openAddToProtocol(selectedProtocol)}
+        onEditSupp={openEdit}
+        onTogglePauseSupp={togglePause}
+        onResumeSupp={resumeSupp}
       />
       <Modal
         open={formOpen}
@@ -1046,7 +1099,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           ) : null
         }
       >
-        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} supplementHistory={supplementHistory} />
+        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
       </Modal>
     </div>
   );

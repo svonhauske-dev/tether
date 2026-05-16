@@ -7,6 +7,7 @@ import Input from '../Input';
 import Card from '../Card';
 import Badge from '../Badge';
 import Label from '../Label';
+import TabBar from '../TabBar';
 import AdherenceRing from '../AdherenceRing';
 import Hero from '../Hero';
 import SlotCard from '../SlotCard';
@@ -181,6 +182,16 @@ export const componentRegistry = {
       variants: [
         { name: 'default',  props: { children: 'When to take it' } },
         { name: 'compact',  props: { style: { marginBottom: 0 }, children: 'Category' } },
+      ],
+    },
+
+    TabBar: {
+      component: TabBar,
+      description: 'Horizontal tab strip. Active tab gets accent underline. Drives tabbed content switching in protocol and manage screens.',
+      variants: [
+        { name: 'two tabs — first active',  props: { tabs: [{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Archived' }], active: 'active',   onChange: noop } },
+        { name: 'two tabs — second active', props: { tabs: [{ value: 'active', label: 'Active' }, { value: 'stopped',  label: 'Stopped'  }], active: 'stopped',  onChange: noop } },
+        { name: 'three tabs',               props: { tabs: [{ value: 'active', label: 'Active' }, { value: 'stopped',  label: 'Stopped'  }, { value: 'schedule', label: 'Schedule' }], active: 'stopped', onChange: noop } },
       ],
     },
 

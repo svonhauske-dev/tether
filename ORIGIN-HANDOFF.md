@@ -1,6 +1,6 @@
 # Origin — Project Handoff Document
 
-*Last updated: May 16, 2026 (fixed pause/resume bug — togglePause now correctly syncs status field)*
+*Last updated: May 16, 2026 (afternoon) — Protocol Library Phase 1-3 complete: multi-protocol stacking, ProtocolDetailScreen, ProtocolLibrary, TabBar primitive, SettingsScreen sub-view navigation, EditForm protocol picker, two-step new-protocol modal with intent (replace/stack/save later)*
 *Owner: Sofia von Hauske (sofiavonhauske@gmail.com)*
 *Purpose: Hand this document to a fresh AI chat to pick up Origin work without losing context.*
 
@@ -140,15 +140,40 @@ The design system uses a token-based theme architecture. All components consume 
 
 **Recoverable late state** — slots that pass without check-ins get a small muted ochre "late" badge. Slot card stays standard. Frame is "you can still take this," not "you failed."
 
-**Manage Protocol** (3-tab screen, promoted from nested under Settings):
-- **Active tab** — current supplements (status = 'active'), Pause/Resume per supplement
-- **Stopped tab** — archive of stopped supplements (status = 'stopped'). Currently view-only; restart from UI not implemented. Delete available.
-- **Schedule tab** — schedule editor with silent auto-save, replacing old ScheduleModal
+**Protocol Library** (replaces ManageProtocolScreen, May 16):
+- Slide-in screen at zIndex 101 with Protocols nav button at top-right of home screen
+- Two tabs: Active / Archived, both always visible with empty states
+- Active tab lists protocols with supplement count and end date (if scheduled)
+- Archived tab lists all non-active protocols alphabetically
+- "+" button opens two-step new protocol modal:
+  - Step 1: Name + Duration (Indefinite / Scheduled with dates / For a set time: N weeks or months)
+  - Step 2 (skipped if no active protocols): Intent — Replace current / Stack on top / Save for later
+  - Intent "replace": archives all active protocols + resets their supplements, creates new as 'active', shows toast "[Name] created · [Old] archived"
+  - Intent "stack": creates new as 'active', existing protocols unchanged
+  - Intent "save_later": creates new as 'archived' (library entry, not active)
+- Tapping a protocol row pushes ProtocolDetailScreen
 
-**Settings panel** (slide-in screen):
-- Account section (Manage Account dissolved inline — display name, email, password change)
-- Notifications toggle
-- Sign-out
+**ProtocolDetailScreen** (new, May 16, zIndex 102):
+- Inline name editing in header (tap → input → blur saves)
+- Two lifecycle action buttons at top of content, above tabs: varies by protocol status
+  - Active: Pause + Archive (side by side)
+  - Paused: Activate + Archive (side by side)
+  - Archived: Activate + Delete (side by side)
+- Confirmation modals for each destructive action
+- Two tabs: Active supplements / Stopped supplements (both always visible with empty states)
+- "+" FAB-style button to add supplement directly into this protocol
+- Supplement rows show name + dose, tap to edit
+
+**Protocol lifecycle semantics:**
+- Active: shows on home screen. Pausing/archiving resets all supplements in that protocol to `status: 'active', paused: false` (template reset, not a user-state change)
+- Multiple active protocols stack: home screen shows supplements from all active protocols simultaneously
+- `homeSupps` filter: `(!s.protocol_id || activeProtocolIds.has(s.protocol_id))` — supplements without protocol always appear
+
+**Settings panel** (slide-in screen, view-based sub-navigation, May 16):
+- Main view: Schedule → "Edit schedule" row / Account → "Edit account" row / Notifications / Sign out
+- Schedule view: ScheduleTab inline (same component used in old ManageProtocol)
+- Account view: display name, email, password change
+- Back button returns to main view or exits Settings
 - (Theme picker removed in production — Achromatic is the only theme)
 
 **Onboarding flow** for new users:
@@ -370,7 +395,7 @@ Locked direction: responsive (same content, broader layout on desktop). Hard bre
 - **Modal scroll-to-top on every open** — same pattern, fixed via Modal primitive's bodyRef + isOpen useEffect.
 - **Radius leak round 1 under Terminal themes** — UI selectors + chevron buttons + settings gear used `radius.full` (9999) directly. Fixed by referencing `radius.button` token instead, leaving `radius.full` for genuinely circular shapes.
 - **Radius leak round 2** — Round 1 fix didn't catch selector variants and day-of-week picker. Category, Treatment, When-to-take selectors and Which-days circles all still rendered circular under Achromatic. Fixed in commit a14f8e3.
-- **Pause/resume broken (May 16)** — `togglePause` only flipped the `paused` boolean but `isPausedSupp` checks `status === 'paused'`. Since `status` was always `'active'`, pausing had no visible effect — toast fired but nothing changed. Fixed by having `togglePause` set `status: 'paused'` when pausing and `status: 'active'` when resuming, keeping both fields in sync. Also fixed `resumeSupp` (stop→resume flow) which was incorrectly calling `openEdit` after resume, causing unexpected edit form to open; and added null guards to `openEdit` for `slots`/`days` fields.
+- **Pause/resume broken (May 16 morning)** — `togglePause` only flipped the `paused` boolean but `isPausedSupp` checks `status === 'paused'`. Since `status` was always `'active'`, pausing had no visible effect — toast fired but nothing changed. Fixed by having `togglePause` set `status: 'paused'` when pausing and `status: 'active'` when resuming, keeping both fields in sync. Also fixed `resumeSupp` (stop→resume flow) which was incorrectly calling `openEdit` after resume, causing unexpected edit form to open; and added null guards to `openEdit` for `slots`/`days` fields.
 - **WCAG contrast audit (May 12)** — full inventory of `text.muted` (#666666, ~3.5:1 contrast) usages across all components. Audit-only doc committed as `1fcff08`. Migration pass (→ `text.secondary`, #A0A0A0, ~7.7:1) shipped May 15 across 7 files (Onboarding, ScheduleTab, ManageProtocolScreen, ManageSupplementsSheet, SlotCard, SlotRow, TodayPanelHeader). Two intentional `text.muted` exceptions retained: ANYTIME_SLOT decorative bullet (App.jsx) and disabled nav arrow in WeekStrip (WCAG exempts inactive controls).
 - **Selected day visual hierarchy inverted** — slate blue tint was too subtle against white-elevated cells, making selected cell look recessed. Fixed by strengthening opacity values.
 - **Past day expansion locked in read-only mode** — chevron click toggle was gated on `!isReadOnly`. Fixed by removing that gate (only checkbox/edit are gated, expansion is always available).
@@ -494,9 +519,33 @@ SettingsScreen: email section wrapped in `<form onSubmit>` with `autoComplete="e
 
 ---
 
+### Session of May 16 (morning)
+
+**Fix — pause/resume bugs**
+`togglePause` only flipped the `paused` boolean but `isPausedSupp` checks `status === 'paused'` — so pausing never visually worked. Fixed by syncing both `status` and `paused` fields. `resumeSupp` incorrectly called `openEdit()` after resuming, opening the edit form unexpectedly; removed that call. Added null guards to `openEdit` for `slots`/`days` fields to prevent crashes on malformed supplement records.
+
+### Session of May 16 (afternoon)
+
+**Feature — Protocol Library Phase 1-3 (complete)**
+Full multi-protocol system shipped across three phases:
+
+*Phase 1 — Data model + API:*
+Protocols table in Supabase (id, user_id, name, status, treatment_mode, starts_at, ends_at). API helpers: `dbGetProtocols`, `dbAddProtocol`, `dbUpdateProtocol`, `dbDeleteProtocol`, `dbPauseProtocol`, `dbArchiveProtocol`, `dbActivateProtocol`. `dbResetProtocolSupps` bulk-patches all supplements in a protocol back to `{status: 'active', paused: false}` when protocol is paused or archived (template reset). `dbUpdateSupp` updated to send `protocol_id`. `homeSupps` computed from `activeProtocolIds` Set — supplements with no protocol always show, supplements with a protocol show only if their protocol is active.
+
+*Phase 2 — ProtocolLibrary + ProtocolDetailScreen + SettingsScreen refactor:*
+`ProtocolLibrary.jsx`: slide-in full screen at zIndex 101. Active/Archived tabs via TabBar. New protocol two-step modal (form → intent). `ProtocolDetailScreen.jsx`: zIndex 102, inline header name editing, lifecycle buttons (Pause/Archive, Activate/Archive, Activate/Delete) at top above tabs, Active/Stopped supplement tabs. `SettingsScreen.jsx`: refactored from single long scroll to view-based sub-navigation (main → schedule / account / install). Schedule and Account each get their own slide-in view; main view shows label + action row pattern matching rest of app. `ManageProtocolScreen` removed. `TabBar.jsx` extracted as design system primitive, registered in `registry.js`.
+
+*Phase 3 — Protocol picker in EditForm:*
+When 2+ active protocols exist, EditForm shows a Protocol section above Name. Selector buttons for each active protocol + "None". Protocol assignment stored in `form.protocol_id`. `blankForm(protocol_id)` helper in App.jsx pre-selects single active protocol when opening add form. `openAddToProtocol(protocol)` opens add form pre-assigned to a specific protocol.
+
+*Intent handling in `addProtocol`:*
+Three intents: `replace` (archives all active protocols + client-side resets their supplements, creates new as 'active', shows archived names in toast), `stack` (creates new as 'active', existing unchanged), `save_later` (creates new as 'archived'). Intent step skipped entirely when no active protocols exist.
+
+---
+
 ## Codebase Health
 
-**App.jsx is ~998 lines** (was ~554 when last measured; grew with desktop layout, NotificationPrompt wiring, and accessibility handlers). Pure orchestration — state, effects, handlers, home screen layout container. Every major rendering concern is in its own focused file.
+**App.jsx is ~1050 lines** (was ~554 when last measured; grew with desktop layout, NotificationPrompt wiring, and accessibility handlers). Pure orchestration — state, effects, handlers, home screen layout container. Every major rendering concern is in its own focused file.
 
 **Module structure:**
 - `src/lib/api.js` — Supabase data layer + auth (22 exported functions, see API Helpers reference below)
@@ -508,11 +557,11 @@ SettingsScreen: email section wrapped in `<form onSubmit>` with `autoComplete="e
 - `src/design-system.js` — single source of truth for tokens (Achromatic + dev themes)
 - `src/data/supplements-database.js` — autocomplete static list (~300 entries)
 - `src/components/`:
-  - Primitives: Button, Card, Input, Label, Badge, Modal, Toast, Loader, InlineLoader
+  - Primitives: Button, Card, Input, Label, Badge, Modal, Toast, Loader, InlineLoader, TabBar
   - Auth & onboarding: Auth, PromptName, Onboarding, NotificationPrompt
   - Home (mobile): Hero, SlotCard, WeekStrip (mobile date picker)
   - Home (desktop): Sidebar, WeekStrip, AdherenceRing, TodayPanel (+ TodayPanelHeader sub-component), SlotRow, SupplementRow, InsightsPanel; DayCell is a named export from WeekStrip.jsx (no standalone file)
-  - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ManageProtocolScreen
+  - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ProtocolLibrary, ProtocolDetailScreen
   - Shared: HelperText, SupplementNameAutocomplete, DevThemePicker, ToastContext
   - Design system page (dev + portfolio): `design-system-page/DesignSystemPage.jsx`, `design-system-page/registry.js`
 
@@ -617,13 +666,7 @@ Estimated: 1 session for empty states + aria-live.
 
 ### Medium priority
 
-**2. Protocol library / sharing feature (Phase 1 of clinician roadmap).**
-Locked use cases from earlier conversations:
-- Save current setup as a template, restart later
-- Share protocol with friend / clinician
-- Layer additional protocols on top of foundation
-
-Multi-session work. Fresh design conversation needed at start. Real architectural question: unified system or three separate features. Real data model decisions ahead (protocols table, sharing table, layering semantics).
+**2. Protocol Library — Phase 1-3 SHIPPED (May 16).** See Features Shipped. Phase 2 (export/import via link) and Phase 3 (adherence sharing) are next clinician roadmap milestones — unstarted.
 
 **3. Web Push notifications — SHIPPED** (moved from pending — confirmed via DB diagnostic May 11)
 Service Worker, VAPID subscription flow, `recompute_notifications` + `process_notifications_queue` edge functions all live. `push_subscriptions` table exists, 2 users have `notifications_enabled = true`, 68 notifications currently queued. Commits: `1983728` (sub flow Pass 2), `a0ff155` (edge function + frontend), `4a25934` (process queue). Remaining work: verify notification delivery reliability for real users (OVH and Bego), any UX gaps discovered from real use.

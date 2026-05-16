@@ -13,6 +13,7 @@ import {
   getCurrentSubscription, subscribeToPush, unsubscribeFromPush,
 } from '../lib/notifications';
 import { dbUpdateScheduleField, dbUpdateProfile, updateEmail, updatePassword } from '../lib/api';
+import ScheduleTab from './ScheduleTab';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -43,9 +44,13 @@ function PasswordRule({ met, label }) {
   );
 }
 
-export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled }) {
+const TITLES = { main: 'Settings', schedule: 'Schedule', account: 'Account', install: 'Add to home screen' };
+
+export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule }) {
   const { theme } = useTheme();
   const { show: showToast } = useToast();
+
+  const [view, setView] = useState('main');
 
   // Notification state
   const [permission, setPermission]           = useState('default');
@@ -53,7 +58,6 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
   const [needsInstall, setNeedsInstall]       = useState(false);
   const [pushSupported, setPushSupported]     = useState(true);
   const [toggling, setToggling]               = useState(false);
-  const [showInstall, setShowInstall]         = useState(false);
 
   // Account — display name
   const [displayName, setDisplayName] = useState('');
@@ -70,21 +74,24 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
   const [confirmPw, setConfirmPw]     = useState('');
   const [pwSaving, setPwSaving]       = useState(false);
 
-  // Sync when screen opens
   useEffect(() => {
     if (!isOpen) return;
+    setView('main');
     setPermission(getNotificationPermission());
     setNeedsInstall(needsHomeScreenInstall());
     setPushSupported(isPushSupported());
     getCurrentSubscription().then(sub => setHasSubscription(!!sub));
     setDisplayName(profile?.display_name || '');
-    setShowInstall(false);
   }, [isOpen]);
 
-  // Keep displayName in sync if profile changes while screen is open
   useEffect(() => {
     setDisplayName(profile?.display_name || '');
   }, [profile?.display_name]);
+
+  const handleBack = () => {
+    if (view !== 'main') setView('main');
+    else onBack();
+  };
 
   const handleDisplayNameChange = (e) => {
     const val = e.target.value;
@@ -148,7 +155,7 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
         setHasSubscription(false);
         showToast('Reminders off');
       } else {
-        if (needsInstall) { setToggling(false); setShowInstall(true); return; }
+        if (needsInstall) { setToggling(false); setView('install'); return; }
         await subscribeToPush();
         await dbUpdateScheduleField('notifications_enabled', true, user.id, token);
         setPermission('granted');
@@ -161,7 +168,7 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
         showToast('Permission denied — enable in device settings');
         setPermission('denied');
       } else if (err.message?.includes('PWA install')) {
-        setShowInstall(true);
+        setView('install');
       } else if (err.message?.includes('VAPID')) {
         showToast('Reminders not configured yet');
       } else {
@@ -177,32 +184,26 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
   );
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.3s ease-out',
-        zIndex: 100,
-        background: theme.surface.canvas,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-      }}
-    >
-      {/* Sticky screen header */}
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+      transition: 'transform 0.3s ease-out',
+      zIndex: 100,
+      background: theme.surface.canvas,
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+    }}>
+      {/* Sticky header */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
         background: theme.surface.canvas,
         borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-        position: 'sticky',
-        top: 0,
-        zIndex: 1,
+        position: 'sticky', top: 0, zIndex: 1,
       }}>
         <button
-          onClick={showInstall ? () => setShowInstall(false) : onBack}
+          onClick={handleBack}
           aria-label="Back"
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
@@ -214,7 +215,7 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
           <ChevronLeft size={24} />
         </button>
         <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary }}>
-          {showInstall ? 'Add to home screen' : 'Settings'}
+          {TITLES[view]}
         </span>
         <div style={{ width: 40 }} />
       </div>
@@ -226,27 +227,96 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
         padding: `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
       }}>
 
-        {showInstall ? (
-          <div style={{ paddingTop: spacing.xs }}>
-            <p style={{ fontSize: typography.body, color: theme.text.secondary, marginBottom: spacing.md, lineHeight: 1.6 }}>
-              To enable reminders on iOS, Origin must be installed to your home screen.
-            </p>
-            <ol style={{ paddingLeft: spacing.lg, color: theme.text.secondary, lineHeight: 1.8, fontSize: typography.body }}>
-              <li>Tap the Share button in Safari</li>
-              <li>Scroll down and tap "Add to Home Screen"</li>
-              <li>Open Origin from your home screen</li>
-              <li>Return to Settings and enable reminders</li>
-            </ol>
-          </div>
-        ) : (
+        {/* ── Main view ── */}
+        {view === 'main' && (
           <>
-            {/* ── Account ── */}
-            <Label style={{ marginBottom: spacing.sm }}>Account</Label>
+            <Label style={{ marginBottom: spacing.xs }}>Schedule</Label>
+            <div
+              onClick={() => setView('schedule')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                minHeight: touch.min, cursor: 'pointer', userSelect: 'none',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <span style={{ fontSize: typography.body, color: theme.text.secondary }}>
+                Edit schedule
+              </span>
+              <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
+            </div>
 
+            {divider}
+
+            <Label style={{ marginBottom: spacing.xs }}>Account</Label>
+            <div
+              onClick={() => setView('account')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                minHeight: touch.min, cursor: 'pointer', userSelect: 'none',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <span style={{ fontSize: typography.body, color: theme.text.secondary }}>
+                Edit account
+              </span>
+              <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
+            </div>
+
+            {divider}
+
+            {/* Notifications */}
+            <Label style={{ marginBottom: spacing.xs }}>Notifications</Label>
+            {!pushSupported ? (
+              <HelperText>Notifications aren't supported in this browser.</HelperText>
+            ) : needsInstall ? (
+              <div
+                onClick={() => setView('install')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer', userSelect: 'none', WebkitTapHighlightColor: 'transparent',
+                  minHeight: touch.min,
+                }}
+              >
+                <span style={{ fontSize: typography.caption, color: theme.text.secondary, flex: 1, paddingRight: spacing.sm }}>
+                  Install Origin to your home screen to enable reminders.
+                </span>
+                <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: spacing.xs }}>
+                  <Button variant="selector" active={hasSubscription}  disabled={toggling || permission === 'denied'} style={{ flex: 1 }} onClick={() => { if (!hasSubscription) handleToggleNotifications(); }}>On</Button>
+                  <Button variant="selector" active={!hasSubscription} disabled={toggling} style={{ flex: 1 }} onClick={() => { if (hasSubscription) handleToggleNotifications(); }}>Off</Button>
+                </div>
+                {toggling && <HelperText style={{ marginTop: spacing.xxs }}>Updating…</HelperText>}
+                {permission === 'denied' && <div style={{ fontSize: typography.caption, color: theme.status.danger, marginTop: spacing.xxs }}>Notifications blocked. Enable Origin in your device settings.</div>}
+                {!hasSubscription && !toggling && permission === 'default' && <HelperText style={{ marginTop: spacing.xxs }}>You'll be asked to allow notifications.</HelperText>}
+                {!hasSubscription && !toggling && permission === 'granted'  && <HelperText style={{ marginTop: spacing.xxs }}>Tap On to resume notifications.</HelperText>}
+              </>
+            )}
+
+            {divider}
+
+            <Button variant="destructive" fullWidth onClick={onSignOut}>Sign out</Button>
+          </>
+        )}
+
+        {/* ── Schedule view ── */}
+        {view === 'schedule' && (
+          <ScheduleTab
+            scheduleMode={scheduleMode}
+            scheduleConfig={scheduleConfig}
+            anchorBehavior={anchorBehavior}
+            consistentTime={consistentTime}
+            onSave={onSaveSchedule}
+          />
+        )}
+
+        {/* ── Account view ── */}
+        {view === 'account' && (
+          <>
             <div style={{ marginBottom: spacing.md }}>
-              <Label style={{ marginBottom: spacing.xxs, fontSize: typography.caption, color: theme.text.secondary }}>
-                Full name
-              </Label>
+              <Label style={{ marginBottom: spacing.xxs, fontSize: typography.caption, color: theme.text.secondary }}>Full name</Label>
               <div style={{ position: 'relative' }}>
                 <Input
                   type="text"
@@ -264,12 +334,8 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
             </div>
 
             <form onSubmit={e => { e.preventDefault(); handleSaveEmail(); }} style={{ marginBottom: spacing.md }}>
-              <Label style={{ marginBottom: spacing.xxs, fontSize: typography.caption, color: theme.text.secondary }}>
-                Email
-              </Label>
-              <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginBottom: spacing.xs }}>
-                {user.email}
-              </div>
+              <Label style={{ marginBottom: spacing.xxs, fontSize: typography.caption, color: theme.text.secondary }}>Email</Label>
+              <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginBottom: spacing.xs }}>{user.email}</div>
               <Input
                 type="email"
                 value={newEmail}
@@ -282,126 +348,42 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
                 spellCheck={false}
                 style={{ marginBottom: spacing.xs }}
               />
-              {emailMsg && (
-                <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs }}>
-                  {emailMsg}
-                </div>
-              )}
-              <Button
-                variant="secondary"
-                fullWidth
-                type="submit"
-                disabled={emailSaving || !newEmail.trim()}
-              >
+              {emailMsg && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs }}>{emailMsg}</div>}
+              <Button variant="secondary" fullWidth type="submit" disabled={emailSaving || !newEmail.trim()}>
                 {emailSaving ? <InlineLoader size="sm" /> : 'Update email'}
               </Button>
             </form>
 
             <form onSubmit={e => { e.preventDefault(); handleSavePassword(); }}>
-              <Label style={{ marginBottom: spacing.xxs, fontSize: typography.caption, color: theme.text.secondary }}>
-                Password
-              </Label>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                placeholder="New password"
-                autoComplete="new-password"
-                style={{ marginBottom: spacing.xs }}
-              />
-              <Input
-                type="password"
-                value={confirmPw}
-                onChange={e => setConfirmPw(e.target.value)}
-                placeholder="Confirm new password"
-                autoComplete="new-password"
-                style={{ marginBottom: spacing.xs }}
-              />
-              {confirmPw && !pwMatch && (
-                <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs }}>
-                  Passwords don't match
-                </div>
-              )}
+              <Label style={{ marginBottom: spacing.xxs, fontSize: typography.caption, color: theme.text.secondary }}>Password</Label>
+              <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password" autoComplete="new-password" style={{ marginBottom: spacing.xs }} />
+              <Input type="password" value={confirmPw}   onChange={e => setConfirmPw(e.target.value)}   placeholder="Confirm new password" autoComplete="new-password" style={{ marginBottom: spacing.xs }} />
+              {confirmPw && !pwMatch && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs }}>Passwords don't match</div>}
               <div style={{ marginBottom: spacing.xs }}>
-                {PASSWORD_RULES.map(r => (
-                  <PasswordRule key={r.label} label={r.label} met={r.test(newPassword)} />
-                ))}
+                {PASSWORD_RULES.map(r => <PasswordRule key={r.label} label={r.label} met={r.test(newPassword)} />)}
               </div>
-              <Button
-                variant="secondary"
-                fullWidth
-                type="submit"
-                disabled={pwSaving || !pwRulesOk || !pwMatch}
-              >
+              <Button variant="secondary" fullWidth type="submit" disabled={pwSaving || !pwRulesOk || !pwMatch}>
                 {pwSaving ? <InlineLoader size="sm" /> : 'Update password'}
               </Button>
             </form>
-
-            {divider}
-
-            {/* ── Notifications ── */}
-            <Label style={{ marginBottom: spacing.xs }}>Notifications</Label>
-            {!pushSupported ? (
-              <HelperText>Notifications aren't supported in this browser.</HelperText>
-            ) : needsInstall ? (
-              <div
-                onClick={() => setShowInstall(true)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  cursor: 'pointer', userSelect: 'none', WebkitTapHighlightColor: 'transparent',
-                  minHeight: touch.min,
-                }}
-              >
-                <span style={{ fontSize: typography.caption, color: theme.text.secondary, flex: 1, paddingRight: spacing.sm }}>
-                  Install Origin to your home screen to enable reminders.
-                </span>
-                <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', gap: spacing.xs }}>
-                  <Button
-                    variant="selector"
-                    active={hasSubscription}
-                    disabled={toggling || permission === 'denied'}
-                    style={{ flex: 1 }}
-                    onClick={() => { if (!hasSubscription) handleToggleNotifications(); }}
-                  >
-                    On
-                  </Button>
-                  <Button
-                    variant="selector"
-                    active={!hasSubscription}
-                    disabled={toggling}
-                    style={{ flex: 1 }}
-                    onClick={() => { if (hasSubscription) handleToggleNotifications(); }}
-                  >
-                    Off
-                  </Button>
-                </div>
-                {toggling && (
-                  <HelperText style={{ marginTop: spacing.xxs }}>Updating…</HelperText>
-                )}
-                {permission === 'denied' && (
-                  <div style={{ fontSize: typography.caption, color: theme.status.danger, marginTop: spacing.xxs }}>
-                    Notifications blocked. Enable Origin in your device settings.
-                  </div>
-                )}
-                {!hasSubscription && !toggling && permission === 'default' && (
-                  <HelperText style={{ marginTop: spacing.xxs }}>You'll be asked to allow notifications.</HelperText>
-                )}
-                {!hasSubscription && !toggling && permission === 'granted' && (
-                  <HelperText style={{ marginTop: spacing.xxs }}>Tap On to resume notifications.</HelperText>
-                )}
-              </>
-            )}
-
-            {divider}
-
-            {/* ── Sign out ── */}
-            <Button variant="destructive" fullWidth onClick={onSignOut}>Sign out</Button>
           </>
         )}
+
+        {/* ── Install view ── */}
+        {view === 'install' && (
+          <div style={{ paddingTop: spacing.xs }}>
+            <p style={{ fontSize: typography.body, color: theme.text.secondary, marginBottom: spacing.md, lineHeight: 1.6 }}>
+              To enable reminders on iOS, Origin must be installed to your home screen.
+            </p>
+            <ol style={{ paddingLeft: spacing.lg, color: theme.text.secondary, lineHeight: 1.8, fontSize: typography.body }}>
+              <li>Tap the Share button in Safari</li>
+              <li>Scroll down and tap "Add to Home Screen"</li>
+              <li>Open Origin from your home screen</li>
+              <li>Return to Settings and enable reminders</li>
+            </ol>
+          </div>
+        )}
+
       </div>
     </div>
   );
