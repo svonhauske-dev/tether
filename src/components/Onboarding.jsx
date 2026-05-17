@@ -59,7 +59,15 @@ export default function Onboarding({ onComplete }) {
 
   const updateConfig   = (key, value) => setConfig(c => ({ ...c, [key]: value }));
   const updateCascade  = (key, value) => setConfig(c => applyCascade({ ...c, [key]: value }));
-  const updateEvening  = (updates)   => setConfig(c => ({ ...c, ...updates }));
+  const updateEvening  = (updates)   => setConfig(c => {
+    // Default bedtime to 22:00 the first time "Before sleep" is picked so the
+    // saved config has a usable time (mirrors ScheduleTab).
+    const next = { ...c, ...updates };
+    if (updates.evening_mode === "before_sleep" && !next.sleep_time) {
+      next.sleep_time = "22:00";
+    }
+    return next;
+  });
   const updateFixed    = (key, value) => setConfig(c => ({ ...c, fixed_times: { ...c.fixed_times, [key]: value || null } }));
 
   const em = config.evening_mode;

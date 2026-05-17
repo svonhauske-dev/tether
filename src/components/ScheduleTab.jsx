@@ -160,7 +160,14 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
   };
 
   const updateEvening = (updates) => {
+    // When a user first picks "Before sleep", default bedtime to 22:00 so the
+    // evening notification has a real time to fire at. Without this, save
+    // would write sleep_time:null and the edge function would skip evening
+    // notifications until the user noticed and filled in the field.
     const next = { ...localConfig, ...updates };
+    if (updates.evening_mode === 'before_sleep' && !next.sleep_time) {
+      next.sleep_time = '22:00';
+    }
     setLocalConfig(next);
     scheduleSave(localMode, next, localBehavior, localTime);
   };
