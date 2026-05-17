@@ -34,6 +34,44 @@ const migrateConfig = (merged) => {
   };
 };
 
+// Ensure the config has the fields the target mode's editor expects. Switching
+// IF → Anchor or Fixed → Anchor previously left cascade inputs blank because
+// no migration happened on the mode change.
+const seedConfigForMode = (cfg, mode) => {
+  if (mode === 'medication' || mode === 'wakeup') {
+    const withDefaults = {
+      ...cfg,
+      first_meal_offset_hours:   cfg.first_meal_offset_hours   ?? 1,
+      first_meal_offset_minutes: cfg.first_meal_offset_minutes ?? 0,
+      meal_interval_hours:       cfg.meal_interval_hours       ?? 4,
+      meal_interval_minutes:     cfg.meal_interval_minutes     ?? 0,
+      pre_meal_window:           cfg.pre_meal_window           ?? 30,
+      evening_mode:              cfg.evening_mode              ?? null,
+    };
+    return applyCascade(withDefaults);
+  }
+  if (mode === 'fasting') {
+    return {
+      ...cfg,
+      eating_window_start:          cfg.eating_window_start          ?? null,
+      eating_window_duration_hours: cfg.eating_window_duration_hours ?? 8,
+      meal_count:                   cfg.meal_count                   ?? 3,
+      pre_meal_window:              cfg.pre_meal_window              ?? 30,
+      evening_mode:                 cfg.evening_mode                 ?? null,
+      _if_v2_migrated:              true,
+    };
+  }
+  if (mode === 'fixed') {
+    return {
+      ...cfg,
+      fixed_times:                  { ...DEFAULT_CONFIG.fixed_times, ...(cfg.fixed_times || {}) },
+      pre_meal_window:              cfg.pre_meal_window ?? 30,
+      _fixed_premeal_migrated:      true,
+    };
+  }
+  return cfg;
+};
+
 export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSave, supplements = [] }) {
   const { theme } = useTheme();
   // Cascade migration only applies to anchor/fasting modes, not fixed.
@@ -148,8 +186,10 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
   };
 
   const handleModeChange = (mode) => {
+    const seeded = seedConfigForMode(localConfig, mode);
     setLocalMode(mode);
-    scheduleSave(mode, localConfig, localBehavior, localTime, 0);
+    setLocalConfig(seeded);
+    scheduleSave(mode, seeded, localBehavior, localTime, 0);
   };
 
   const handleBehaviorChange = (behavior) => {
