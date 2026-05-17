@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { spacing, typography, layout } from '../design-system';
 import { useTheme } from '../lib/theme';
 import Button from './Button';
+import Card from './Card';
 import Input from './Input';
 import Label from './Label';
 import HelperText from './HelperText';
 
-export default function IFMigrationScreen({ oldConfig = {}, consistentTime, onComplete }) {
+export default function IFMigrationScreen({ oldConfig = {}, consistentTime, hasLegacyEveningSupps = false, onComplete }) {
   const { theme } = useTheme();
 
   // Pre-fill from old config.
@@ -16,11 +17,20 @@ export default function IFMigrationScreen({ oldConfig = {}, consistentTime, onCo
   const inferredDuration = oldConfig.window_length ? oldConfig.window_length / 60 : 8;
   const inferredMealCount = oldConfig.meals_per_day ?? oldConfig.meal_count ?? 3;
   const inferredPreMeal = oldConfig.pre_meal_window ?? 30;
+  // v1 fasting had after_dinner as a default slot, but no evening_mode setting.
+  // If the user had any after_dinner supps, default to before_sleep so those
+  // supps stay visible on the home screen post-migration. Otherwise default off.
+  const inferredEveningMode = oldConfig.evening_mode ?? (hasLegacyEveningSupps ? 'before_sleep' : null);
 
   const [windowStart, setWindowStart] = useState(inferredStart);
   const [duration,    setDuration]    = useState(inferredDuration);
   const [mealCount,   setMealCount]   = useState(inferredMealCount);
   const [preMeal,     setPreMeal]     = useState(inferredPreMeal);
+  const [eveningMode,        setEveningMode]        = useState(inferredEveningMode);
+  const [eveningTime,        setEveningTime]        = useState(oldConfig.evening_time || '');
+  const [sleepTime,          setSleepTime]          = useState(oldConfig.sleep_time || '22:00');
+  const [eveningOffsetHours, setEveningOffsetHours] = useState(oldConfig.evening_offset_hours ?? 1);
+  const [eveningOffsetMins,  setEveningOffsetMins]  = useState(oldConfig.evening_offset_minutes ?? 0);
 
   const canConfirm = !!windowStart;
 
@@ -44,12 +54,11 @@ export default function IFMigrationScreen({ oldConfig = {}, consistentTime, onCo
       eating_window_duration_hours: duration,
       meal_count:                 mealCount,
       pre_meal_window:            preMeal,
-      // carry forward existing evening config if present
-      evening_mode:    oldConfig.evening_mode    ?? null,
-      evening_time:    oldConfig.evening_time    ?? null,
-      sleep_time:      oldConfig.sleep_time      ?? null,
-      evening_offset_hours:   oldConfig.evening_offset_hours   ?? 1,
-      evening_offset_minutes: oldConfig.evening_offset_minutes ?? 0,
+      evening_mode:               eveningMode,
+      evening_time:               eveningMode === 'fixed'        ? (eveningTime || null) : null,
+      sleep_time:                 eveningMode === 'before_sleep' ? (sleepTime  || null) : null,
+      evening_offset_hours:       eveningOffsetHours,
+      evening_offset_minutes:     eveningOffsetMins,
     });
   };
 
@@ -107,7 +116,7 @@ export default function IFMigrationScreen({ oldConfig = {}, consistentTime, onCo
           </div>
         </div>
 
-        <div style={{ marginBottom: spacing.xl }}>
+        <div style={{ marginBottom: spacing.lg }}>
           <Label>Pre-meal window</Label>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
             <Input
@@ -120,6 +129,47 @@ export default function IFMigrationScreen({ oldConfig = {}, consistentTime, onCo
             />
             <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min before each meal</span>
           </div>
+        </div>
+
+        <div style={{ marginBottom: spacing.xl }}>
+          <Label>Evening</Label>
+          <HelperText>
+            {hasLegacyEveningSupps
+              ? "You had end-of-day supplements before — pick when they should fire."
+              : "A fixed slot at the end of your day."}
+          </HelperText>
+          <div style={{ display: 'flex', gap: spacing.xs, marginBottom: spacing.sm }}>
+            {([
+              [null,           'Off'],
+              ['fixed',        'Fixed time'],
+              ['before_sleep', 'Before sleep'],
+            ]).map(([val, lbl]) => (
+              <button key={String(val)} onClick={() => setEveningMode(val)} style={segBtnStyle(eveningMode === val)}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+          {eveningMode === 'fixed' && (
+            <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+              <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Evening time</span>
+              <Input variant="time" value={eveningTime} onChange={e => setEveningTime(e.target.value || '')} style={{ width: 'auto' }} />
+            </Card>
+          )}
+          {eveningMode === 'before_sleep' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+              <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Bedtime</span>
+                <Input variant="time" value={sleepTime} onChange={e => setSleepTime(e.target.value || '')} style={{ width: 'auto' }} />
+              </Card>
+              <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Before bedtime</span>
+                <Input variant="number" width={52} min="0" max="23" inputMode="numeric" pattern="[0-9]*" value={eveningOffsetHours || ''} onChange={e => setEveningOffsetHours(parseInt(e.target.value) || 0)} placeholder="0" />
+                <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>hr</span>
+                <Input variant="number" width={52} min="0" max="59" inputMode="numeric" pattern="[0-9]*" value={eveningOffsetMins || ''} onChange={e => setEveningOffsetMins(parseInt(e.target.value) || 0)} placeholder="0" />
+                <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
+              </Card>
+            </div>
+          )}
         </div>
 
         <Button variant="primary" fullWidth disabled={!canConfirm} onClick={handleConfirm}>
