@@ -46,6 +46,8 @@ import {
   dbGetDailyLogsRange,
   dbGetMyPatients,
   dbSendProtocol,
+  dbGetReceivedProtocols,
+  dbUpdateProtocolSend,
 } from './lib/api';
 import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp, isPausedSupp } from './lib/time';
 import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
@@ -760,6 +762,22 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     } catch (err) { showToast("Couldn't delete. Try again."); console.error(err); }
   };
 
+  const activateReceived = async (send) => {
+    try {
+      const protoRows = await dbAddProtocol({ name: send.name, status: 'active', user_id: user.id, treatment_mode: 'indefinite' }, token);
+      const newProto = protoRows?.[0];
+      if (!newProto) throw new Error('Protocol creation failed');
+      const snapshot = send.supplements_snapshot || [];
+      const suppRows = await Promise.all(snapshot.map(s =>
+        dbAddSupp({ name: s.name, dose: s.dose || '', notes: s.notes || '', slots: s.slots || [], days: s.days?.length ? s.days : [0,1,2,3,4,5,6], category: s.category || 'Oral', paused: false, status: 'active', stopped_at: null, user_id: user.id, protocol_id: newProto.id, treatment_mode: 'indefinite', starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null }, token)
+      ));
+      setProtocols(p => [...p, newProto]);
+      setSupps(s => [...s, ...suppRows.flatMap(r => r || []).map(x => ({ ...x, paused: x.paused ?? false }))]);
+      await dbUpdateProtocolSend(send.id, { status: 'activated' }, token);
+      showToast(`${send.name} activated`);
+    } catch (err) { showToast("Couldn't activate. Try again."); console.error(err); }
+  };
+
   const sendProtocol = async (protocol, patientId) => {
     try {
       const snapshot = visibleSupps.filter(s => s.protocol_id === protocol.id).map(s => ({ name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category }));
@@ -981,6 +999,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           supplements={visibleSupps}
           onAddProtocol={addProtocol}
           onOpenDetail={(protocol) => { setSelectedProtocol(protocol); pushScreen('protocol_detail'); }}
+          token={token}
+          onActivateReceived={activateReceived}
         />
         <ProtocolDetailScreen
           isOpen={screenStack.some(s => s.name === 'protocol_detail')}

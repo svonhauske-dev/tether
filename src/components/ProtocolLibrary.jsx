@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { dbGetReceivedProtocols } from "../lib/api";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { spacing, typography, touch, layout } from "../design-system";
 import { useTheme } from "../lib/theme";
@@ -81,21 +82,29 @@ function IntentOption({ label, description, onClick, theme }) {
 
 const DURATION_UNITS = ["days", "weeks", "months"];
 
-export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail }) {
+export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, token, onActivateReceived }) {
   const { theme } = useTheme();
   const today = new Date().toISOString().split('T')[0];
 
-  const [tab, setTab]               = useState('active');
-  const [showNew, setShowNew]       = useState(false);
-  const [step, setStep]             = useState('form');
-  const [newName, setNewName]       = useState('');
-  const [txMode, setTxMode]         = useState('indefinite');
-  const [schedSub, setSchedSub]     = useState('duration');
-  const [startsAt, setStartsAt]     = useState('');
-  const [endsAt, setEndsAt]         = useState('');
-  const [durValue, setDurValue]     = useState('');
-  const [durUnit, setDurUnit]       = useState('weeks');
-  const [creating, setCreating]     = useState(false);
+  const [tab, setTab]                       = useState('active');
+  const [showNew, setShowNew]               = useState(false);
+  const [step, setStep]                     = useState('form');
+  const [newName, setNewName]               = useState('');
+  const [txMode, setTxMode]                 = useState('indefinite');
+  const [schedSub, setSchedSub]             = useState('duration');
+  const [startsAt, setStartsAt]             = useState('');
+  const [endsAt, setEndsAt]                 = useState('');
+  const [durValue, setDurValue]             = useState('');
+  const [durUnit, setDurUnit]               = useState('weeks');
+  const [creating, setCreating]             = useState(false);
+  const [received, setReceived]             = useState([]);
+  const [activateModalSend, setActivateModalSend] = useState(null);
+  const [activating, setActivating]         = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !token) return;
+    dbGetReceivedProtocols(token).then(rows => setReceived(rows || [])).catch(() => {});
+  }, [isOpen]);
 
   const activeProtocols   = protocols.filter(p => p.status === 'active');
   const archivedProtocols = protocols.filter(p => p.status !== 'active').sort((a, b) => a.name.localeCompare(b.name));
@@ -208,6 +217,38 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
         maxWidth: layout.maxContentWidth, margin: "0 auto",
         padding: `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
       }}>
+        {/* Received protocols */}
+        {received.length > 0 && (
+          <div style={{ marginBottom: spacing.xl }}>
+            <Label style={{ marginBottom: spacing.xs }}>From your clinician</Label>
+            <div style={{
+              border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+              borderRadius: theme.radius.surface, overflow: 'hidden',
+              background: theme.surface.card,
+            }}>
+              {received.map((send, i) => (
+                <div key={send.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  borderTop: i > 0 ? `${theme.borderWidth.default}px solid ${theme.border.subtle}` : 'none',
+                }}>
+                  <div>
+                    <div style={{ fontSize: typography.body, fontWeight: typography.medium, color: theme.text.primary }}>
+                      {send.name}
+                    </div>
+                    <div style={{ fontSize: typography.caption, color: theme.text.secondary }}>
+                      {(send.supplements_snapshot || []).length} supplement{(send.supplements_snapshot || []).length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                  <Button variant="primary" size="compact" onClick={() => setActivateModalSend(send)}>
+                    Activate
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <TabBar
           tabs={[{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Archived' }]}
           active={tab}
@@ -384,6 +425,36 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
             />
           </div>
         )}
+      </Modal>
+
+      {/* Activate received protocol modal */}
+      <Modal
+        open={!!activateModalSend}
+        onClose={() => { if (!activating) setActivateModalSend(null); }}
+        title={activateModalSend?.name || ''}
+        footer={
+          <div style={{ display: 'flex', gap: spacing.xs }}>
+            <Button variant="tertiary" fullWidth onClick={() => setActivateModalSend(null)} disabled={activating}>Cancel</Button>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={activating}
+              onClick={async () => {
+                setActivating(true);
+                await onActivateReceived(activateModalSend);
+                setReceived(r => r.filter(s => s.id !== activateModalSend.id));
+                setActivateModalSend(null);
+                setActivating(false);
+              }}
+            >
+              {activating ? 'Activating…' : 'Activate'}
+            </Button>
+          </div>
+        }
+      >
+        <p style={{ fontSize: typography.body, color: theme.text.secondary, lineHeight: 1.6, margin: 0 }}>
+          This will add <strong style={{ color: theme.text.primary }}>{activateModalSend?.name}</strong> with {(activateModalSend?.supplements_snapshot || []).length} supplement{(activateModalSend?.supplements_snapshot || []).length !== 1 ? 's' : ''} to your active protocols.
+        </p>
       </Modal>
     </div>
   );
