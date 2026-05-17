@@ -201,6 +201,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const [submitError, setSubmitError]         = useState(null);
   const [supplementHistory, setSupplementHistory] = useState([]);
   const saveTimer = useRef(null);
+  const lastDkRef = useRef(null);
+  const pendingSaveRef = useRef(false);
   const lastTzRef = useRef(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth >= breakpoints.desktop
@@ -392,15 +394,29 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     });
   }, [checked, dk, isDesktop]);
 
-  // Auto-save — skip on read-only past days to avoid overwriting history with empty state
+  // Auto-save — skip on read-only past days to avoid overwriting history with empty state.
+  // When the viewed day changes mid-debounce, flush the previous day's pending save
+  // immediately so rapid-toggle-then-navigate doesn't drop check edits.
   useEffect(() => {
     if (loading) return;
+    if (lastDkRef.current && lastDkRef.current !== dk && pendingSaveRef.current) {
+      const oldDk = lastDkRef.current;
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+      const pt = pillTimes[oldDk];
+      const dayChecked = Object.fromEntries(Object.entries(checked).filter(([k]) => k.startsWith(oldDk)));
+      dbUpsertLog({ user_id: user.id, log_date: oldDk, pill_time: pt || null, checked: dayChecked }, token).catch(() => showToast("Couldn't save check — try again"));
+      pendingSaveRef.current = false;
+    }
+    lastDkRef.current = dk;
     if (isPast && !pastDayEditing) return;
     clearTimeout(saveTimer.current);
+    pendingSaveRef.current = true;
     saveTimer.current = setTimeout(() => {
       const pt = pillTimes[dk];
       const dayChecked = Object.fromEntries(Object.entries(checked).filter(([k]) => k.startsWith(dk)));
       dbUpsertLog({ user_id: user.id, log_date: dk, pill_time: pt || null, checked: dayChecked }, token).catch(() => showToast("Couldn't save check — try again"));
+      pendingSaveRef.current = false;
     }, 200);
   }, [checked, pillTimes, dk, loading, isPast, pastDayEditing]);
 
@@ -817,8 +833,15 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   const deleteProtocol = async (protocol) => {
     try {
+      // Delete supplements that belonged to the protocol first so they don't
+      // become orphans (they'd stay in supps, still count toward adherence,
+      // but never render anywhere since their protocol_id no longer exists).
+      const orphans = supps.filter(s => s.protocol_id === protocol.id);
+      await Promise.all(orphans.map(s => dbDeleteSupp(s.id, token)));
       await dbDeleteProtocol(protocol.id, token);
+      setSupps(s => s.filter(x => x.protocol_id !== protocol.id));
       setProtocols(p => p.filter(x => x.id !== protocol.id));
+      showToast(`${protocol.name} deleted`);
     } catch (err) { showToast("Couldn't delete. Try again."); console.error(err); }
   };
 
