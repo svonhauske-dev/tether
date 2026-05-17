@@ -266,7 +266,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         const [protos, s, log, sched, prof, histRows] = await Promise.all([
           dbGetProtocols(user.id, token).catch(() => []),
           dbGetSupps(user.id, token),
-          dbGetLog(dk, token),
+          dbGetLog(user.id, dk, token),
           dbGetSchedule(token),
           dbGetProfile(user.id, token).catch(() => null),
           dbGetSupplementHistory(token).catch(() => []),
@@ -336,7 +336,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   // Load log when date changes
   useEffect(() => {
     if (loading) return;
-    dbGetLog(dk, token).then(log => {
+    dbGetLog(user.id, dk, token).then(log => {
       if (!log) return;
       if (log.pill_time) setPillTimes(pt => ({ ...pt, [dk]: log.pill_time.slice(0, 5) }));
       if (log.checked)   setChecked(c => ({ ...c, ...log.checked }));
@@ -348,7 +348,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     if (loading || !isDesktop) return;
     const start = dateKey(viewedWeekStart);
     const end = dateKey(viewedWeekEnd);
-    dbGetDailyLogsRange(start, end, token).then(rows => {
+    dbGetDailyLogsRange(user.id, start, end, token).then(rows => {
       setWeekLogs(rows || []);
       const mergedChecked = {};
       const mergedPillTimes = {};

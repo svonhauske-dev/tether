@@ -173,7 +173,7 @@ export const dbGetSupps     = (userId, t) => supa("GET",  `/rest/v1/supplements?
 export const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
 export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, status: s.status ?? 'active', stopped_at: s.stopped_at ?? null, protocol_id: s.protocol_id ?? null, treatment_mode: s.treatment_mode ?? "indefinite", starts_at: s.starts_at ?? null, ends_at: s.ends_at ?? null, cycle_on_value: s.cycle_on_value ?? null, cycle_on_unit: s.cycle_on_unit ?? null, cycle_off_value: s.cycle_off_value ?? null, cycle_off_unit: s.cycle_off_unit ?? null, updated_at: new Date().toISOString() }, t);
 export const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
-export const dbGetLog       = (date, t) => supa("GET",    `/rest/v1/daily_logs?select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
+export const dbGetLog       = (userId, date, t) => supa("GET",    `/rest/v1/daily_logs?user_id=eq.${userId}&select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 export const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
 export const dbGetSchedule  = (t)       => supa("GET",    "/rest/v1/user_schedule?select=*", null, t).then(r => r?.[0] || null);
 export const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedule?on_conflict=user_id", data, t);
@@ -213,7 +213,7 @@ export async function recomputeNotifications(token) {
   }
 }
 
-export const dbGetDailyLogsRange     = (start, end, t) => supa("GET", `/rest/v1/daily_logs?select=*&log_date=gte.${start}&log_date=lte.${end}`, null, t);
+export const dbGetDailyLogsRange     = (userId, start, end, t) => supa("GET", `/rest/v1/daily_logs?user_id=eq.${userId}&select=*&log_date=gte.${start}&log_date=lte.${end}`, null, t);
 
 export const dbGetSupplementHistory  = (t)         => supa("GET",  "/rest/v1/user_supplement_history?select=name&order=created_at.desc", null, t);
 export const dbAddSupplementHistory  = (name, t)   => supa("POST", "/rest/v1/user_supplement_history?on_conflict=user_id,name", { name }, t);
