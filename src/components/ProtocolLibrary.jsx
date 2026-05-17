@@ -144,8 +144,15 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
       starts_at: computedStartsAt,
       ends_at: computedEndsAt,
     }, intent);
-    resetNew();
-    if (created) onProtocolCreated?.(created);
+    // Only reset/close the modal on success. On failure (toast already shown by
+    // App.jsx's addProtocol catch block), keep the form populated so the user
+    // can retry without retyping.
+    if (created) {
+      resetNew();
+      onProtocolCreated?.(created);
+    } else {
+      setCreating(false);
+    }
   };
 
   const handleStep1Continue = () => {

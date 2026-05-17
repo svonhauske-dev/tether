@@ -1,9 +1,14 @@
 const SUPA_URL = "https://yahimlivfieuknagusxp.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhaGltbGl2ZmlldWtuYWd1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3ODYwNDIsImV4cCI6MjA5MzM2MjA0Mn0._5_t5k1NCAHAFHEz0clqD8fSxsNCMzlqBoRPSmD7wxs";
 
+// Dev-only logger. console.warn/console.error remain unguarded (they matter
+// for prod debugging); console.log was leaking 12+ "[auth] getSession boot"
+// lines per page load in production.
+const logDev = (...args) => { if (import.meta.env.DEV) console.log(...args); };
+
 export async function refreshSession() {
   const refreshToken = localStorage.getItem("sb_refresh_token");
-  console.log("[auth] refreshSession — refresh token present:", !!refreshToken);
+  logDev("[auth] refreshSession — refresh token present:", !!refreshToken);
   if (!refreshToken) return null;
   try {
     const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
@@ -11,13 +16,13 @@ export async function refreshSession() {
       headers: { "Content-Type": "application/json", "apikey": SUPA_KEY },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
-    console.log("[auth] refresh endpoint status:", res.status);
+    logDev("[auth] refresh endpoint status:", res.status);
     if (res.ok) {
       const d = await res.json();
       if (d.access_token) {
         localStorage.setItem("sb_token", d.access_token);
         if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
-        console.log("[auth] refresh succeeded — new_refresh_token present:", !!d.refresh_token);
+        logDev("[auth] refresh succeeded — new_refresh_token present:", !!d.refresh_token);
         return d.access_token;
       }
       console.warn("[auth] refresh ok but no access_token in body:", JSON.stringify(d));
@@ -65,10 +70,10 @@ export async function supa(method, path, body, token) {
 export async function getSession() {
   const token = localStorage.getItem("sb_token");
   const storedRefresh = localStorage.getItem("sb_refresh_token");
-  console.log("[auth] getSession boot — access_token:", !!token, "refresh_token:", !!storedRefresh);
+  logDev("[auth] getSession boot — access_token:", !!token, "refresh_token:", !!storedRefresh);
 
   if (!token && !storedRefresh) {
-    console.log("[auth] no credentials — showing sign-in");
+    logDev("[auth] no credentials — showing sign-in");
     return null;
   }
 
@@ -77,7 +82,7 @@ export async function getSession() {
       const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
         headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${token}` },
       });
-      console.log("[auth] /user with access_token →", res.status);
+      logDev("[auth] /user with access_token →", res.status);
       if (res.ok) { const d = await res.json(); return d.id ? d : null; }
       if (res.status !== 401 && res.status !== 403) {
         console.warn("[auth] unexpected /user status, not retrying:", res.status);
@@ -88,14 +93,14 @@ export async function getSession() {
     }
   }
 
-  console.log("[auth] access_token expired or missing — attempting refresh...");
+  logDev("[auth] access_token expired or missing — attempting refresh...");
   if (!storedRefresh) {
-    console.log("[auth] no refresh token — showing sign-in");
+    logDev("[auth] no refresh token — showing sign-in");
     return null;
   }
   const newToken = await refreshSession();
   if (!newToken) {
-    console.log("[auth] refresh returned null — showing sign-in");
+    logDev("[auth] refresh returned null — showing sign-in");
     return null;
   }
 
@@ -103,12 +108,12 @@ export async function getSession() {
     const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
       headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${newToken}` },
     });
-    console.log("[auth] /user after refresh →", res.status);
+    logDev("[auth] /user after refresh →", res.status);
     if (res.ok) { const d = await res.json(); return d.id ? d : null; }
   } catch (e) {
     console.error("[auth] /user retry threw:", e);
   }
-  console.log("[auth] all paths exhausted — showing sign-in");
+  logDev("[auth] all paths exhausted — showing sign-in");
   return null;
 }
 
@@ -139,7 +144,7 @@ export async function signInPassword(email, password) {
   if (!res.ok) throw new Error("INVALID_CREDENTIALS");
   localStorage.setItem("sb_token", d.access_token);
   if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
-  console.log("[auth] signIn — access_token stored:", !!d.access_token, "refresh_token stored:", !!d.refresh_token);
+  logDev("[auth] signIn — access_token stored:", !!d.access_token, "refresh_token stored:", !!d.refresh_token);
   return { user: d.user, session: d };
 }
 

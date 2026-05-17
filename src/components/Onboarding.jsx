@@ -56,6 +56,7 @@ export default function Onboarding({ onComplete }) {
   const [behavior, setBehavior] = useState("flexible");
   const [cTime, setCTime]       = useState("07:00");
   const [saving, setSaving]     = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const updateConfig   = (key, value) => setConfig(c => ({ ...c, [key]: value }));
   const updateCascade  = (key, value) => setConfig(c => applyCascade({ ...c, [key]: value }));
@@ -97,7 +98,9 @@ export default function Onboarding({ onComplete }) {
 
   const handleGetStarted = async () => {
     setSaving(true);
-    await onComplete(selectedMode, config, behavior, cTime);
+    setSaveError(null);
+    const ok = await onComplete(selectedMode, config, behavior, cTime);
+    if (ok === false) setSaveError("Couldn't save your schedule. Check your connection and try again.");
     setSaving(false);
   };
 
@@ -281,7 +284,7 @@ export default function Onboarding({ onComplete }) {
               <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
                 <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
                 <Input
-                  variant="number" width={52} min="0" max="120"
+                  variant="number" width={64} min="0" max="120"
                   inputMode="numeric" pattern="[0-9]*"
                   value={config.pre_meal_window ?? 30}
                   onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
@@ -390,7 +393,7 @@ export default function Onboarding({ onComplete }) {
               <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
                 <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
                 <Input
-                  variant="number" width={52} min="0" max="120"
+                  variant="number" width={64} min="0" max="120"
                   inputMode="numeric" pattern="[0-9]*"
                   value={config.pre_meal_window ?? 30}
                   onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
@@ -481,6 +484,11 @@ export default function Onboarding({ onComplete }) {
         )}
 
         {/* Footer: Back + Get started */}
+        {saveError && (
+          <div style={{ fontSize: typography.label, color: theme.status.danger, marginTop: spacing.sm, marginBottom: spacing.xxs, textAlign: "center" }}>
+            {saveError}
+          </div>
+        )}
         <div style={{ display: "flex", gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
           <Button variant="tertiary" style={{ flex: 1 }} onClick={() => setStep(1)} disabled={saving}>Back</Button>
           <Button variant="primary" style={{ flex: 2 }} onClick={handleGetStarted} disabled={saving || (selectedMode === "fasting" && !config.eating_window_start)}>

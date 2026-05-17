@@ -25,7 +25,7 @@ export default function Button({
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
     fontFamily: typography.fontBody,
-    ...(disabled ? { opacity: 0.5 } : {}),
+    ...(disabled ? { opacity: 0.4, pointerEvents: "none" } : {}),
     ...(fullWidth ? { width: "100%" } : {}),
   };
 

@@ -297,7 +297,7 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
 
             {divider}
 
-            <Button variant="destructive" fullWidth onClick={onSignOut}>Sign out</Button>
+            <Button variant="secondary" fullWidth onClick={onSignOut}>Sign out</Button>
           </>
         )}
 

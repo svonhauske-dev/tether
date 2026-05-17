@@ -297,9 +297,6 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {/* Schedule type picker */}
       <div style={{ marginBottom: spacing.lg }}>
         <Label>Schedule type</Label>
-        {localMode === 'none' && (
-          <HelperText>Add items without a time slot to use a simple checklist.</HelperText>
-        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.md }}>
           {DISPLAY_MODES.map(m => {
             const on = selectedCard === m.id;
@@ -329,6 +326,11 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             );
           })}
         </div>
+
+        {/* Per-mode hint — appears below the cards, attributed to the current selection. */}
+        {localMode === 'none' && (
+          <HelperText style={{ marginTop: spacing.sm }}>Add items without a time slot to use a simple checklist.</HelperText>
+        )}
 
         {/* Anchor sub-selector — appears below grid when Anchor card is selected */}
         {selectedCard === 'anchor' && (
@@ -421,7 +423,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
               <Input
-                variant="number" width={52} min="0" max="120"
+                variant="number" width={64} min="0" max="120"
                 inputMode="numeric" pattern="[0-9]*"
                 value={localConfig.pre_meal_window ?? 30}
                 onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)}
@@ -534,7 +536,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             <HelperText>How early before each meal to take pre-meal items</HelperText>
             <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
-              <Input variant="number" width={52} min="0" max="120" inputMode="numeric" pattern="[0-9]*" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)} />
+              <Input variant="number" width={64} min="0" max="120" inputMode="numeric" pattern="[0-9]*" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)} />
               <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
             </Card>
           </div>
@@ -601,7 +603,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
               <Input
-                variant="number" width={52} min="0" max="120"
+                variant="number" width={64} min="0" max="120"
                 inputMode="numeric" pattern="[0-9]*"
                 value={localConfig.pre_meal_window ?? 30}
                 onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)}

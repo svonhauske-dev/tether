@@ -941,6 +941,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           if (!sub) setNeedsNotificationPrompt(true);
         }
       }
+      return ok;
     }} />
   );
   if (needsNotificationPrompt) return (
@@ -1288,6 +1289,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         onTogglePauseSupp={togglePause}
         onResumeSupp={resumeSupp}
         onDeleteSupp={deleteSuppById}
+        isClinician={isClinician}
+        patients={patients}
+        onSendToPatient={sendProtocol}
       />
       <Modal
         open={formOpen}

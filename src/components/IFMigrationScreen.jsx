@@ -121,7 +121,7 @@ export default function IFMigrationScreen({ oldConfig = {}, consistentTime, hasL
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
             <Input
               variant="number"
-              width={52}
+              width={64}
               min="0" max="120"
               inputMode="numeric" pattern="[0-9]*"
               value={preMeal}
