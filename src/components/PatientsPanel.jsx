@@ -4,6 +4,7 @@ import { spacing, typography, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { dbGetMyPatients, dbGetProtocols, dbGetPatientLogs } from '../lib/api';
 import InlineLoader from './InlineLoader';
+import PatientDetailPanel from './PatientDetailPanel';
 
 function adherenceLabel(pct) {
   if (pct === null) return null;
@@ -73,8 +74,9 @@ function PatientRow({ patient, onClick, theme }) {
 
 export default function PatientsPanel({ userId, token }) {
   const { theme } = useTheme();
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [patients, setPatients]           = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   useEffect(() => {
     if (!userId || !token) return;
@@ -131,11 +133,18 @@ export default function PatientsPanel({ userId, token }) {
               key={p.id}
               patient={p}
               theme={theme}
-              onClick={() => {}}
+              onClick={() => setSelectedPatient(p)}
             />
           ))}
         </div>
       )}
+
+      <PatientDetailPanel
+        isOpen={!!selectedPatient}
+        onBack={() => setSelectedPatient(null)}
+        patient={selectedPatient}
+        token={token}
+      />
     </div>
   );
 }

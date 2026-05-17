@@ -230,6 +230,7 @@ export async function getThemePreference(userId, token) {
 
 // Clinician helpers
 export const dbGetMyPatients    = (clinicianId, t)              => supa("GET", `/rest/v1/user_profiles?clinician_user_id=eq.${clinicianId}&select=*`, null, t);
+export const dbGetPatientLog    = (patientId, date, t)          => supa("GET", `/rest/v1/daily_logs?user_id=eq.${patientId}&log_date=eq.${date}&select=*`, null, t).then(r => r?.[0] || null);
 export const dbGetPatientLogs   = (patientId, start, end, t)   => supa("GET", `/rest/v1/daily_logs?user_id=eq.${patientId}&log_date=gte.${start}&log_date=lte.${end}&select=*`, null, t);
 export const dbSendProtocol     = (send, t)                     => supa("POST", "/rest/v1/protocol_sends", send, t);
 export const dbGetReceivedProtocols = (t)                       => supa("GET", "/rest/v1/protocol_sends?status=eq.pending&select=*", null, t);
