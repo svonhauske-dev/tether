@@ -23,7 +23,7 @@ const START_SUBTITLES = {
 
 export default function Hero({
   scheduleMode, isToday, viewDate, shortDate, pct, coreTotal, coreDone,
-  pillTime, anchorBehavior, consistentTime,
+  pillTime, anchorBehavior, consistentTime, eatingWindowStart,
   editPillTime, setEditPillTime, tmpTime, setTmpTime, setPillForDay,
   isFuture, flashGreen, startDay, viewDay,
   isPast, isReadOnly, pastDayEditing, setPastDayEditing,
@@ -92,6 +92,16 @@ export default function Hero({
                   {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
                 </>
               )}
+            </div>
+          ) : scheduleMode === "fasting" ? (
+            // IF v2: eating window is fixed-schedule, no user-triggered CTA
+            <div>
+              {!isPast && <Label style={{ color: theme.text.secondary, marginBottom: spacing.xxs }}>Eating window</Label>}
+              <div style={{ fontSize: typography.display, fontWeight: typography.bold, letterSpacing: typography.displayLetterSpacing, color: theme.accent.default, fontFamily: typography.fontHeading }}>
+                {eatingWindowStart || "--:--"}
+              </div>
+              {pct === 100 && coreTotal > 0 && <div style={{ fontSize: typography.caption, color: theme.status.success, fontWeight: typography.semibold, marginTop: spacing.xs }}>Protocol complete ✓</div>}
+              {pct > 0 && pct < 100 && <div style={{ fontSize: typography.caption, color: theme.text.secondary, marginTop: spacing.xxs }}>{coreDone} of {coreTotal} done</div>}
             </div>
           ) : heroHasTime ? (
             <div>

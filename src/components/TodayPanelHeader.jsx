@@ -7,14 +7,15 @@ import Input from './Input';
 
 export default function TodayPanelHeader({
   viewDate, isToday, isPast,
-  scheduleMode, pillTime, anchorBehavior, consistentTime,
+  scheduleMode, pillTime, anchorBehavior, consistentTime, eatingWindowStart,
   isReadOnly, pastDayEditing, setPastDayEditing,
   startDay, editPillTime, setEditPillTime, tmpTime, setTmpTime, setPillForDay,
 }) {
   const { theme } = useTheme();
   const [anchorHovered, setAnchorHovered] = useState(false);
 
-  const hasAnchor = scheduleMode !== 'none' && scheduleMode !== 'fixed';
+  const isFasting = scheduleMode === 'fasting';
+  const hasAnchor = scheduleMode !== 'none' && scheduleMode !== 'fixed' && !isFasting;
   const isConsistent = anchorBehavior === 'consistent';
   const heroHasTime = pillTime != null || isConsistent;
   const heroDisplayTime = pillTime || (isConsistent ? consistentTime : null);
@@ -47,6 +48,12 @@ export default function TodayPanelHeader({
         }}>
           {dayLabel} • {dateStr}
         </div>
+
+        {isFasting && (
+          <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontBody }}>
+            Eating window: {eatingWindowStart || '--:--'}
+          </div>
+        )}
 
         {hasAnchor && heroHasTime && (
           <div

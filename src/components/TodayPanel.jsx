@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { spacing, typography } from '../design-system';
 import { useTheme } from '../lib/theme';
-import { SLOTS } from '../lib/notifications';
 import { getSlotLabelForMode } from '../config';
 import SlotRow from './SlotRow';
 import SupplementRow from './SupplementRow';
@@ -21,6 +20,8 @@ export default function TodayPanel({
   pillTime,
   anchorBehavior,
   consistentTime,
+  eatingWindowStart,
+  activeSlotList,
   isReadOnly,
   pastDayEditing,
   setPastDayEditing,
@@ -34,7 +35,7 @@ export default function TodayPanel({
 }) {
   const { theme } = useTheme();
 
-  const activeSlots = SLOTS
+  const activeSlots = activeSlotList
     .filter(slot => getSuppsForSlot(slot.id).length > 0)
     .map(slot => {
       const override = getSlotLabelForMode(slot.id, scheduleMode);
@@ -76,6 +77,7 @@ export default function TodayPanel({
         pillTime={pillTime}
         anchorBehavior={anchorBehavior}
         consistentTime={consistentTime}
+        eatingWindowStart={eatingWindowStart}
         isReadOnly={isReadOnly}
         pastDayEditing={pastDayEditing}
         setPastDayEditing={setPastDayEditing}

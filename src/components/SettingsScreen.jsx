@@ -46,7 +46,7 @@ function PasswordRule({ met, label }) {
 
 const TITLES = { main: 'Settings', schedule: 'Schedule', account: 'Account', install: 'Add to home screen' };
 
-export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule }) {
+export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule, supplements = [] }) {
   const { theme } = useTheme();
   const { show: showToast } = useToast();
 
@@ -309,6 +309,7 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
             anchorBehavior={anchorBehavior}
             consistentTime={consistentTime}
             onSave={onSaveSchedule}
+            supplements={supplements}
           />
         )}
 

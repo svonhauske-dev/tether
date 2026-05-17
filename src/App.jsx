@@ -5,7 +5,7 @@ import {
 } from "./design-system";
 import { ThemeProvider, useTheme } from './lib/theme';
 import DevThemePicker from "./components/DevThemePicker";
-import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin, MODES, deriveOffsets, getSlotLabelForMode } from "./config";
+import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin, MODES, deriveOffsets, getSlotLabelForMode, computeIFSlotTimes, IF_SLOT_IDS } from "./config";
 import { Settings, Trash2, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import Button from "./components/Button";
 import Input from "./components/Input";
@@ -50,14 +50,16 @@ import {
   dbUpdateProtocolSend,
 } from './lib/api';
 import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp, isPausedSupp } from './lib/time';
-import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
+import { SLOTS, IF_SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
 import NotificationPrompt from "./components/NotificationPrompt";
+import IFMigrationScreen from "./components/IFMigrationScreen";
 import DesignSystemPage from "./components/design-system-page/DesignSystemPage";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // BG_GRADIENT is derived from theme inside ProtocolApp
 
+// Non-IF core slot IDs. IF uses IF_SLOT_IDS from config.js (mode-aware, filtered by meal_count).
 const CORE_SLOTS = ["rx", "pre_breakfast", "breakfast", "pre_lunch", "lunch", "pre_dinner", "dinner", "after_dinner"];
 
 // ANYTIME_SLOT color is set inside ProtocolApp after theme is available
@@ -209,6 +211,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const [activeNavItem, setActiveNavItem]         = useState('home');
   const [patients, setPatients]                   = useState([]);
   const [selectedPatient, setSelectedPatient]     = useState(null);
+  const [needsIFMigration, setNeedsIFMigration]   = useState(false);
   const { show: showToast } = useToast();
 
   const isClinician = profile?.is_clinician === true;
@@ -218,7 +221,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     dbGetMyPatients(user.id, token).catch(() => []).then(rows => setPatients(rows || []));
   }, [isClinician, user?.id]);
 
-  const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
+  // IF is absolute-time (not anchor-relative) — handled by computeIFSlotTimes in getSlotTime.
+  const slotOffsets   = (scheduleMode === "fixed" || scheduleMode === "fasting") ? null : deriveOffsets(scheduleMode, scheduleConfig);
   const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
   const activeProtocolIds = new Set(protocols.filter(p => p.status === 'active').map(p => p.id));
   const homeSupps     = visibleSupps.filter(s => isActiveSupp(s) && isSupplementActiveOn(s, viewDate) && (!s.protocol_id || activeProtocolIds.has(s.protocol_id)));
@@ -278,17 +282,21 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         setSupplementHistory((histRows || []).map(r => r.name));
         setProfile(prof);
         if (prof === null) setNeedsNamePrompt(true);
+        // IF v2 users have already had `fasted` renamed to mean something else (pre-window slot).
+        // Guard the old fasted→pre_breakfast migration so it doesn't fire for v2 users.
+        const isIFv2 = sched?.schedule_type === "fasting" && !!sched?.offsets?._if_v2_migrated;
         const migrated = [];
         const toWrite  = [];
         for (const supp of (s || [])) {
           let out = supp;
-          if (out.slots?.includes("fasted")) {
+          // Only apply old fasted→pre_breakfast rename for pre-v2 IF users.
+          if (!isIFv2 && out.slots?.includes("fasted")) {
             out = { ...out, slots: out.slots.map(sl => sl === "fasted" ? "pre_breakfast" : sl) };
           }
           if (out.slots?.some(sl => sl === "injectable" || sl === "topical")) {
             out = { ...out, slots: out.slots.filter(sl => sl !== "injectable" && sl !== "topical") };
           }
-          if (sched?.schedule_type === "fasting" && out.slots?.includes("rx")) {
+          if (sched?.schedule_type === "fasting" && !isIFv2 && out.slots?.includes("rx")) {
             out = { ...out, slots: out.slots.filter(sl => sl !== "rx") };
           }
           migrated.push(out);
@@ -316,6 +324,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         }
 
         if (!sched) setNeedsOnboarding(true);
+
+        // Trigger IF v2 migration screen for existing IF users who haven't migrated yet.
+        if (sched?.schedule_type === "fasting" && !isIFv2) setNeedsIFMigration(true);
 
         // auto-set pill time for consistent mode if not already logged today
         if (behavior === "consistent" && !log?.pill_time) {
@@ -399,7 +410,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     for (let i = 0; i < 30; i++) {
       const ddk = dateKey(d);
       const pt  = pillTimes[ddk];
-      if (!pt && scheduleMode !== "fixed" && scheduleMode !== "none" && anchorBehavior !== "consistent") break;
+      if (!pt && scheduleMode !== "fixed" && scheduleMode !== "fasting" && scheduleMode !== "none" && anchorBehavior !== "consistent") break;
       const day     = d.getDay();
       const allDone = CORE_SLOTS.every(sid => supps.filter(x => isActiveSupp(x) && x.slots.includes(sid) && x.days.includes(day)).every(x => !!checked[`${ddk}_${sid}_${x.id}`]));
       if (!allDone) break;
@@ -437,7 +448,6 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   const getSlotTime = (sid) => {
     if (scheduleMode === "fixed") {
-      // Pre-meal slots derive from their meal time minus the global window.
       if (sid === "pre_breakfast" || sid === "pre_lunch" || sid === "pre_dinner") {
         const mealId = sid.replace("pre_", "");
         const mealTime = scheduleConfig.fixed_times?.[mealId];
@@ -446,6 +456,21 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       }
       const ft = scheduleConfig.fixed_times?.[sid];
       return ft ? parseHHMM(ft) : null;
+    }
+    // IF v2: absolute slot times derived from eating_window_start config.
+    if (scheduleMode === "fasting") {
+      if (sid === "evening") {
+        const em = scheduleConfig.evening_mode;
+        if (em === "fixed" && scheduleConfig.evening_time) return parseHHMM(scheduleConfig.evening_time);
+        if (em === "before_sleep" && scheduleConfig.sleep_time) {
+          const offsetMins = (scheduleConfig.evening_offset_hours ?? 1) * 60 + (scheduleConfig.evening_offset_minutes ?? 0);
+          return addMins(parseHHMM(scheduleConfig.sleep_time), -offsetMins);
+        }
+        return null;
+      }
+      const ifTimes = computeIFSlotTimes(scheduleConfig);
+      const t = ifTimes[sid];
+      return t ? parseHHMM(t) : null;
     }
     // Evening bucket — absolute time, independent of anchor (medication/wakeup only)
     if (sid === "after_dinner" && (scheduleMode === "medication" || scheduleMode === "wakeup") && scheduleConfig.evening_mode !== undefined) {
@@ -490,10 +515,21 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     if (diff > 15) return "missed"; if (diff > -5) return "now"; return "future";
   };
 
+  // For IF mode, core slots are the active IF slot IDs filtered by meal_count.
+  const mealCount = scheduleConfig.meal_count ?? 3;
+  const coreSlotIds = scheduleMode === "fasting"
+    ? [
+        "fasted", "meal_1",
+        ...(mealCount >= 2 ? ["pre_meal_2", "meal_2"] : []),
+        ...(mealCount >= 3 ? ["pre_meal_3", "meal_3"] : []),
+        ...(scheduleConfig.evening_mode ? ["evening"] : []),
+      ]
+    : CORE_SLOTS;
+
   const anytimeSupps = homeSupps.filter(s => s.slots.length === 0 && s.days.includes(viewDay));
   let coreTotal = anytimeSupps.length, coreDone = 0;
   anytimeSupps.forEach(s => { if (isChecked("anytime", s.id)) coreDone++; });
-  CORE_SLOTS.forEach(sid => {
+  coreSlotIds.forEach(sid => {
     const sl = getSuppsForSlot(sid);
     coreTotal += sl.length;
     sl.forEach(s => { if (isChecked(sid, s.id)) coreDone++; });
@@ -651,7 +687,10 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   };
 
   const saveSchedule = async (mode, config, behavior, cTime) => {
-    const offsets = { ...config, _anchor_behavior: behavior, _consistent_time: cTime };
+    // IF uses absolute-time scheduling — no anchor behavior or consistent time needed.
+    const offsets = mode === "fasting"
+      ? { ...config }
+      : { ...config, _anchor_behavior: behavior, _consistent_time: cTime };
     try {
       await dbSaveSchedule({ user_id: user.id, schedule_type: mode, offsets }, token);
       setScheduleMode(mode);
@@ -848,7 +887,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   );
   if (needsOnboarding) return (
     <Onboarding onComplete={async (mode, config, behavior, cTime) => {
-      const ok = await saveSchedule(mode, config, behavior, cTime);
+      // New fasting users go straight to v2 — flag so they skip the migration screen.
+      const finalConfig = mode === "fasting" ? { ...config, _if_v2_migrated: true } : config;
+      const ok = await saveSchedule(mode, finalConfig, behavior, cTime);
       if (ok) {
         setNeedsOnboarding(false);
         if (isPushSupported() && !needsHomeScreenInstall()) {
@@ -872,17 +913,67 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       onSkip={() => setNeedsNotificationPrompt(false)}
     />
   );
+  if (needsIFMigration) return (
+    <IFMigrationScreen
+      oldConfig={scheduleConfig}
+      consistentTime={consistentTime}
+      onComplete={async (newConfig) => {
+        // Persist new v2 config with migration flag
+        const configWithFlag = { ...newConfig, _if_v2_migrated: true };
+        const ok = await saveSchedule("fasting", configWithFlag, "flexible", consistentTime);
+        if (!ok) return;
+
+        // Remap supplement slots from v1 IF slot IDs to v2 IDs.
+        const slotMap = {
+          pre_breakfast: "fasted",
+          breakfast:     "meal_1",
+          pre_lunch:     "pre_meal_2",
+          lunch:         "meal_2",
+          pre_dinner:    "pre_meal_3",
+          dinner:        "meal_3",
+          after_dinner:  "evening",
+        };
+        const toUpdate = [];
+        const migratedSupps = supps.map(s => {
+          const remapped = s.slots?.map(sl => slotMap[sl] ?? sl);
+          const changed  = remapped?.some((sl, i) => sl !== s.slots[i]);
+          if (!changed) return s;
+          const updated = { ...s, slots: remapped };
+          toUpdate.push(updated);
+          return updated;
+        });
+        setSupps(migratedSupps);
+        for (const s of toUpdate) {
+          try { await dbUpdateSupp(s, token); } catch (e) { console.warn("IF slot migration write failed for", s.id, e); }
+        }
+        setNeedsIFMigration(false);
+        recomputeNotifications(token);
+      }}
+    />
+  );
+
+  // Active slot list for home screen — mode-aware.
+  const activeSlotList = scheduleMode === "fasting"
+    ? IF_SLOTS.filter(s => {
+        if (s.id === "pre_meal_2" || s.id === "meal_2") return mealCount >= 2;
+        if (s.id === "pre_meal_3" || s.id === "meal_3") return mealCount >= 3;
+        if (s.id === "evening") return !!scheduleConfig.evening_mode;
+        return true;
+      })
+    : SLOTS;
 
   const slotCardsContent = (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs2 }}>
-      {SLOTS.map(slot => {
+      {activeSlotList.map(slot => {
         const slotSupps = getSuppsForSlot(slot.id);
         if (!slotSupps.length) return null;
         const hasOffset = scheduleMode === "fixed"
           ? !!scheduleConfig.fixed_times?.[slot.id]
-          : slot.id === "rx"
-            ? !!pillTime
-            : slotOffsets?.[slot.id] !== null && slotOffsets?.[slot.id] !== undefined;
+          : scheduleMode === "fasting"
+            ? !!computeIFSlotTimes(scheduleConfig)[slot.id] || (slot.id === "evening" && !!scheduleConfig.evening_mode)
+            : slot.id === "rx"
+              ? !!pillTime
+              : slotOffsets?.[slot.id] !== null && slotOffsets?.[slot.id] !== undefined;
         const noSched = scheduleMode === "none";
         const timeLabel = noSched ? "" : (hasOffset ? slotTimeStr(slot.id) : "variable");
         const status = noSched ? "future" : slotStatus(slot.id);
@@ -948,6 +1039,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
                 pillTime={pillTime}
                 anchorBehavior={anchorBehavior}
                 consistentTime={consistentTime}
+                eatingWindowStart={scheduleConfig.eating_window_start}
+                activeSlotList={activeSlotList}
                 isReadOnly={isReadOnly}
                 pastDayEditing={pastDayEditing}
                 setPastDayEditing={setPastDayEditing}
@@ -991,6 +1084,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           anchorBehavior={anchorBehavior}
           consistentTime={consistentTime}
           onSaveSchedule={saveSchedule}
+          supplements={visibleSupps}
         />
         <ProtocolLibrary
           isOpen={screenStack.some(s => s.name === 'manage_protocol')}
@@ -1035,7 +1129,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
             ) : null
           }
         >
-          <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
+          <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
         </Modal>
       </div>
     );
@@ -1081,6 +1175,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           scheduleMode={scheduleMode} isToday={isToday} viewDate={viewDate} shortDate={shortDate}
           pct={pct} coreTotal={coreTotal} coreDone={coreDone}
           pillTime={pillTime} anchorBehavior={anchorBehavior} consistentTime={consistentTime}
+          eatingWindowStart={scheduleConfig.eating_window_start}
           editPillTime={editPillTime} setEditPillTime={setEditPillTime}
           tmpTime={tmpTime} setTmpTime={setTmpTime} setPillForDay={setPillForDay}
           isFuture={isFuture} flashGreen={flashGreen} startDay={startDay} viewDay={viewDay}
@@ -1118,6 +1213,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         anchorBehavior={anchorBehavior}
         consistentTime={consistentTime}
         onSaveSchedule={saveSchedule}
+        supplements={visibleSupps}
       />
       <ProtocolLibrary
         isOpen={screenStack.some(s => s.name === 'manage_protocol')}
@@ -1157,7 +1253,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           ) : null
         }
       >
-        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
+        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
       </Modal>
     </div>
   );
