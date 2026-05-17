@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { spacing, typography, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
-import { SLOTS } from '../lib/notifications';
+import { SLOTS, IF_SLOTS } from '../lib/notifications';
 import { dateKey, isPausedSupp } from '../lib/time';
 import Button from './Button';
 import Input from './Input';
@@ -20,7 +20,7 @@ const TREATMENT_MODES = [
 ];
 const UNITS = ["days", "weeks", "months"];
 
-export default function EditForm({ form, setForm, editingId, onStop, onResume, onDelete, scheduleMode, supplementHistory = [], activeProtocols = [] }) {
+export default function EditForm({ form, setForm, editingId, onStop, onResume, onDelete, scheduleMode, mealCount = 3, eveningMode = null, supplementHistory = [], activeProtocols = [] }) {
   const { theme } = useTheme();
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
@@ -280,29 +280,45 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
       <div style={{ marginBottom: spacing.md }}>
         <Label>When to take it</Label>
         <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}>
-          {SLOTS.filter(s => {
-            if (s.id === "rx") return scheduleMode === "medication" || form.slots.includes("rx");
-            return true;
-          }).map(slot => {
-            if (slot.id === "rx" && scheduleMode !== "medication" && form.slots.includes("rx")) {
+          {scheduleMode === "fasting" ? (
+            IF_SLOTS.filter(s => {
+              if (s.id === "pre_meal_2" || s.id === "meal_2") return mealCount >= 2;
+              if (s.id === "pre_meal_3" || s.id === "meal_3") return mealCount >= 3;
+              if (s.id === "evening") return !!eveningMode;
+              return true;
+            }).map(slot => {
+              const on = form.slots.includes(slot.id);
               return (
-                <div key="rx" style={{ width: "100%" }}>
-                  <Button variant="selector" active style={{ opacity: 0.45, pointerEvents: "none" }}>
-                    {slot.label}
-                  </Button>
-                  <HelperText style={{ marginTop: spacing.xxxs }}>
-                    Not available in your current schedule mode
-                  </HelperText>
-                </div>
+                <Button key={slot.id} variant="selector" active={on} onClick={() => toggleSlot(slot.id)}>
+                  {slot.label}
+                </Button>
               );
-            }
-            const on = form.slots.includes(slot.id);
-            return (
-              <Button key={slot.id} variant="selector" active={on} onClick={() => toggleSlot(slot.id)}>
-                {slot.label}
-              </Button>
-            );
-          })}
+            })
+          ) : (
+            SLOTS.filter(s => {
+              if (s.id === "rx") return scheduleMode === "medication" || form.slots.includes("rx");
+              return true;
+            }).map(slot => {
+              if (slot.id === "rx" && scheduleMode !== "medication" && form.slots.includes("rx")) {
+                return (
+                  <div key="rx" style={{ width: "100%" }}>
+                    <Button variant="selector" active style={{ opacity: 0.45, pointerEvents: "none" }}>
+                      {slot.label}
+                    </Button>
+                    <HelperText style={{ marginTop: spacing.xxxs }}>
+                      Not available in your current schedule mode
+                    </HelperText>
+                  </div>
+                );
+              }
+              const on = form.slots.includes(slot.id);
+              return (
+                <Button key={slot.id} variant="selector" active={on} onClick={() => toggleSlot(slot.id)}>
+                  {slot.label}
+                </Button>
+              );
+            })
+          )}
         </div>
         <div style={{ marginTop: spacing.sm }}>
           <Button variant="selector" active={form.slots.length === 0} onClick={() => setForm(f => ({ ...f, slots: [] }))}>

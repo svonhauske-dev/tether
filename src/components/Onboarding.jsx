@@ -203,8 +203,8 @@ export default function Onboarding({ onComplete }) {
           </div>
         </div>
 
-        {/* Flexible / Consistent toggle — not for fixed */}
-        {selectedMode !== "fixed" && (
+        {/* Flexible / Consistent toggle — not for fixed or fasting (both fixed-schedule) */}
+        {selectedMode !== "fixed" && selectedMode !== "fasting" && (
           <div style={{ marginBottom: spacing.md }}>
             <Label>Daily timing</Label>
             {behavior === "flexible" && (
@@ -345,29 +345,39 @@ export default function Onboarding({ onComplete }) {
           </>
         )}
 
-        {/* Intermittent fasting: window config */}
+        {/* Intermittent fasting: eating window config (v2 — fixed-schedule) */}
         {selectedMode === "fasting" && (
           <div style={{ marginBottom: spacing.lg }}>
             <div style={{ marginBottom: spacing.md }}>
-              <Label>Window length</Label>
+              <Label>Eating window start</Label>
+              <HelperText>When your eating window opens each day</HelperText>
+              <Input
+                variant="time"
+                value={config.eating_window_start || ""}
+                onChange={e => updateConfig("eating_window_start", e.target.value || null)}
+                style={{ width: "auto" }}
+              />
+            </div>
+            <div style={{ marginBottom: spacing.md }}>
+              <Label>Window duration</Label>
               <div style={{ display: "flex", gap: spacing.xs }}>
-                {[[240, "4 hr"], [360, "6 hr"], [480, "8 hr"]].map(([val, lbl]) => {
-                  const on = (config.window_length ?? 480) === val;
-                  return <button key={val} onClick={() => updateConfig("window_length", val)} style={segBtnStyle(on)}>{lbl}</button>;
+                {[[4, "4 hr"], [6, "6 hr"], [8, "8 hr"], [10, "10 hr"], [12, "12 hr"]].map(([val, lbl]) => {
+                  const on = (config.eating_window_duration_hours ?? 8) === val;
+                  return <button key={val} onClick={() => updateConfig("eating_window_duration_hours", val)} style={segBtnStyle(on)}>{lbl}</button>;
                 })}
               </div>
             </div>
             <div style={{ marginBottom: spacing.md }}>
-              <Label>Meals per day</Label>
+              <Label>Meals</Label>
               <div style={{ display: "flex", gap: spacing.xs }}>
                 {[[2, "2 meals"], [3, "3 meals"]].map(([val, lbl]) => {
-                  const on = (config.meals_per_day ?? 2) === val;
-                  return <button key={val} onClick={() => updateConfig("meals_per_day", val)} style={segBtnStyle(on)}>{lbl}</button>;
+                  const on = (config.meal_count ?? 3) === val;
+                  return <button key={val} onClick={() => updateConfig("meal_count", val)} style={segBtnStyle(on)}>{lbl}</button>;
                 })}
               </div>
             </div>
             <Label>Pre-meal window</Label>
-            <HelperText>How early before each meal to schedule pre-meal items</HelperText>
+            <HelperText>How early before each meal to take pre-meal items</HelperText>
             <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
               <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
               <Input
@@ -404,7 +414,7 @@ export default function Onboarding({ onComplete }) {
         {/* Footer: Back + Get started */}
         <div style={{ display: "flex", gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
           <Button variant="tertiary" style={{ flex: 1 }} onClick={() => setStep(1)} disabled={saving}>Back</Button>
-          <Button variant="primary" style={{ flex: 2 }} onClick={handleGetStarted} disabled={saving}>
+          <Button variant="primary" style={{ flex: 2 }} onClick={handleGetStarted} disabled={saving || (selectedMode === "fasting" && !config.eating_window_start)}>
             {saving ? "Saving…" : "Get started"}
           </Button>
         </div>

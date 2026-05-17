@@ -2,13 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { spacing, typography, layout, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { parseHHMM, fmtTime, addMins } from '../lib/time';
-import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, DISPLAY_MODES, ANCHOR_SUB_MODES, deriveOffsets } from '../config';
+import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, DISPLAY_MODES, ANCHOR_SUB_MODES, deriveOffsets, computeIFSlotTimes } from '../config';
+import { IF_SLOTS } from '../lib/notifications';
 import { SLOTS } from '../lib/notifications';
 import Button from './Button';
 import Card from './Card';
 import HelperText from './HelperText';
 import Input from './Input';
 import Label from './Label';
+import Modal from './Modal';
 
 // Recompute breakfast/lunch/dinner from cascade fields and merge back into config.
 const applyCascade = (cfg) => {
@@ -32,7 +34,7 @@ const migrateConfig = (merged) => {
   };
 };
 
-export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSave }) {
+export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSave, supplements = [] }) {
   const { theme } = useTheme();
   // Cascade migration only applies to anchor/fasting modes, not fixed.
   const needsMigration     = useRef(scheduleMode !== 'fixed' && scheduleConfig.first_meal_offset_hours === undefined);
@@ -56,6 +58,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
   const [localBehavior, setLocalBehavior] = useState(anchorBehavior);
   const [localTime,     setLocalTime]     = useState(consistentTime);
   const [saveError,     setSaveError]     = useState(null);
+  const [orphanConfirm, setOrphanConfirm] = useState(null); // pending meal_count to confirm
 
   const scheduleSave = (mode, config, behavior, time, delay = 500) => {
     setSaveError(null);
@@ -120,6 +123,24 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
     scheduleSave(localMode, next, localBehavior, localTime);
   };
 
+  // When meal_count decreases, check for supplements assigned to slots that would disappear.
+  const tryUpdateMealCount = (newCount) => {
+    const currentCount = localConfig.meal_count ?? 3;
+    if (newCount >= currentCount) {
+      updateConfig('meal_count', newCount);
+      return;
+    }
+    const orphanSlots = [];
+    if (newCount < 3) orphanSlots.push('meal_3', 'pre_meal_3');
+    if (newCount < 2) orphanSlots.push('meal_2', 'pre_meal_2');
+    const affected = supplements.filter(s => s.slots?.some(sl => orphanSlots.includes(sl)));
+    if (affected.length > 0) {
+      setOrphanConfirm(newCount);
+    } else {
+      updateConfig('meal_count', newCount);
+    }
+  };
+
   const updateFixed = (key, value) => {
     const next = { ...localConfig, fixed_times: { ...localConfig.fixed_times, [key]: value || null } };
     setLocalConfig(next);
@@ -157,7 +178,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
   });
 
   const previewBase = parseHHMM('07:00');
-  const derived     = localMode !== 'fixed' ? deriveOffsets(localMode, localConfig) : null;
+  const derived     = (localMode !== 'fixed' && localMode !== 'fasting') ? deriveOffsets(localMode, localConfig) : null;
 
   const previewRows = (() => {
     if (localMode === 'fixed') {
@@ -174,11 +195,28 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       }
       return rows.sort((a, b) => a.sortKey - b.sortKey);
     }
+    if (localMode === 'fasting') {
+      const ifTimes = computeIFSlotTimes(localConfig);
+      const rows = Object.entries(ifTimes)
+        .map(([sid, hhMM]) => {
+          const d = parseHHMM(hhMM);
+          return { label: IF_SLOTS.find(s => s.id === sid)?.label ?? sid, timeStr: fmtTime(d), sortKey: d.getTime() };
+        });
+      const em = localConfig.evening_mode;
+      if (em === 'fixed' && localConfig.evening_time) {
+        const d = parseHHMM(localConfig.evening_time);
+        rows.push({ label: 'Evening', timeStr: fmtTime(d), sortKey: d.getTime() });
+      } else if (em === 'before_sleep' && localConfig.sleep_time) {
+        const offsetMins = (localConfig.evening_offset_hours ?? 1) * 60 + (localConfig.evening_offset_minutes ?? 0);
+        const d = addMins(parseHHMM(localConfig.sleep_time), -offsetMins);
+        rows.push({ label: 'Evening', timeStr: fmtTime(d), sortKey: d.getTime() });
+      }
+      return rows.sort((a, b) => a.sortKey - b.sortKey);
+    }
     const isOffset = localMode === 'medication' || localMode === 'wakeup';
     const rows = [
       { label: MODES.find(m => m.id === localMode)?.title ?? 'Anchor', offset: 0 },
       ...Object.entries(derived || {})
-        // In offset modes, hide after_dinner — it's handled by the evening section below
         .filter(([sid, v]) => v !== null && v !== undefined && !(isOffset && sid === 'after_dinner'))
         .map(([sid, offset]) => ({ label: SLOTS.find(s => s.id === sid)?.label ?? sid, offset })),
     ].sort((a, b) => a.offset - b.offset);
@@ -255,8 +293,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
         )}
       </div>
 
-      {/* Flexible / Consistent toggle */}
-      {localMode !== 'fixed' && localMode !== 'none' && (
+      {/* Flexible / Consistent toggle — not applicable for IF (always fixed-schedule) */}
+      {localMode !== 'fixed' && localMode !== 'none' && localMode !== 'fasting' && (
         <div style={{ marginBottom: spacing.md }}>
           <Label>Daily timing</Label>
           {localBehavior === 'flexible' && (
@@ -398,32 +436,78 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
         </>
       )}
 
-      {/* Fasting: segmented controls */}
+      {/* Fasting: fixed-schedule eating window config */}
       {localMode === 'fasting' && (
         <div style={{ marginBottom: spacing.lg }}>
           <div style={{ marginBottom: spacing.md }}>
-            <Label>Window length</Label>
+            <Label>Eating window start</Label>
+            <HelperText>When your eating window opens each day</HelperText>
+            <Input
+              variant="time"
+              value={localConfig.eating_window_start || ''}
+              onChange={e => updateConfig('eating_window_start', e.target.value || null)}
+              style={{ width: 'auto' }}
+            />
+          </div>
+          <div style={{ marginBottom: spacing.md }}>
+            <Label>Window duration</Label>
             <div style={{ display: 'flex', gap: spacing.xs }}>
-              {[[240, '4 hr'], [360, '6 hr'], [480, '8 hr']].map(([val, lbl]) => (
-                <button key={val} onClick={() => updateConfig('window_length', val)} style={segBtnStyle((localConfig.window_length ?? 480) === val)}>{lbl}</button>
+              {[[4,'4 hr'],[6,'6 hr'],[8,'8 hr'],[10,'10 hr'],[12,'12 hr']].map(([val, lbl]) => (
+                <button key={val} onClick={() => updateConfig('eating_window_duration_hours', val)} style={segBtnStyle((localConfig.eating_window_duration_hours ?? 8) === val)}>{lbl}</button>
               ))}
             </div>
           </div>
           <div style={{ marginBottom: spacing.md }}>
-            <Label>Meals per day</Label>
+            <Label>Meals</Label>
             <div style={{ display: 'flex', gap: spacing.xs }}>
-              {[[2, '2 meals'], [3, '3 meals']].map(([val, lbl]) => (
-                <button key={val} onClick={() => updateConfig('meals_per_day', val)} style={segBtnStyle((localConfig.meals_per_day ?? 2) === val)}>{lbl}</button>
+              {[[2,'2 meals'],[3,'3 meals']].map(([val, lbl]) => (
+                <button key={val} onClick={() => tryUpdateMealCount(val)} style={segBtnStyle((localConfig.meal_count ?? 3) === val)}>{lbl}</button>
               ))}
             </div>
           </div>
-          <Label>Pre-meal window</Label>
-          <HelperText>How early before each meal to schedule pre-meal items</HelperText>
-          <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-            <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
-            <Input variant="number" width={52} min="0" max="120" inputMode="numeric" pattern="[0-9]*" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)} />
-            <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
-          </Card>
+          <div style={{ marginBottom: spacing.md }}>
+            <Label>Pre-meal window</Label>
+            <HelperText>How early before each meal to take pre-meal items</HelperText>
+            <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+              <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
+              <Input variant="number" width={52} min="0" max="120" inputMode="numeric" pattern="[0-9]*" value={localConfig.pre_meal_window ?? 30} onChange={e => updateConfig('pre_meal_window', parseInt(e.target.value) || 0)} />
+              <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
+            </Card>
+          </div>
+          <div style={{ marginBottom: spacing.lg }}>
+            <Label>Evening</Label>
+            <HelperText>A fixed slot at the end of your day</HelperText>
+            <div style={{ display: 'flex', gap: spacing.xs, marginBottom: spacing.sm }}>
+              {([
+                [null,           'Off'],
+                ['fixed',        'Fixed time'],
+                ['before_sleep', 'Before sleep'],
+              ]).map(([val, label]) => (
+                <button key={String(val)} onClick={() => updateEvening({ evening_mode: val })} style={segBtnStyle(em === val)}>{label}</button>
+              ))}
+            </div>
+            {em === 'fixed' && (
+              <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Evening time</span>
+                <Input variant="time" value={localConfig.evening_time || ''} onChange={e => updateEvening({ evening_mode: 'fixed', evening_time: e.target.value || null })} style={{ width: 'auto' }} />
+              </Card>
+            )}
+            {em === 'before_sleep' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                  <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Bedtime</span>
+                  <Input variant="time" value={localConfig.sleep_time || ''} onChange={e => updateEvening({ evening_mode: 'before_sleep', sleep_time: e.target.value || null })} style={{ width: 'auto' }} />
+                </Card>
+                <Card style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                  <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Before bedtime</span>
+                  <Input variant="number" width={52} min="0" max="23" inputMode="numeric" pattern="[0-9]*" value={(localConfig.evening_offset_hours ?? 1) || ''} onChange={e => updateEvening({ evening_mode: 'before_sleep', evening_offset_hours: parseInt(e.target.value) || 0 })} placeholder="0" />
+                  <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>hr</span>
+                  <Input variant="number" width={52} min="0" max="59" inputMode="numeric" pattern="[0-9]*" value={(localConfig.evening_offset_minutes ?? 0) || ''} onChange={e => updateEvening({ evening_mode: 'before_sleep', evening_offset_minutes: parseInt(e.target.value) || 0 })} placeholder="0" />
+                  <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
+                </Card>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -469,7 +553,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {/* Live preview */}
       {localMode !== 'none' && (
         <div style={{ marginBottom: spacing.lg }}>
-          <Label>{localMode === 'fixed' ? 'Schedule preview' : 'Preview — 7:00 am anchor'}</Label>
+          <Label>{(localMode === 'fixed' || localMode === 'fasting') ? 'Schedule preview' : 'Preview — 7:00 am anchor'}</Label>
           <div style={{ borderRadius: theme.radius.surface, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
             {previewRows.length === 0
               ? <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>No times configured yet</span>
@@ -486,6 +570,21 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </div>
         </div>
       )}
+      <Modal
+        open={orphanConfirm !== null}
+        onClose={() => setOrphanConfirm(null)}
+        title="Supplements will be hidden"
+        footer={
+          <div style={{ display: 'flex', gap: spacing.xs }}>
+            <Button variant="tertiary" fullWidth onClick={() => setOrphanConfirm(null)}>Cancel</Button>
+            <Button variant="primary" fullWidth onClick={() => { updateConfig('meal_count', orphanConfirm); setOrphanConfirm(null); }}>Continue</Button>
+          </div>
+        }
+      >
+        <p style={{ fontSize: typography.body, color: theme.text.secondary, lineHeight: 1.6, margin: 0 }}>
+          You have supplements assigned to slots that won't exist with fewer meals. They'll be hidden from your home screen until you reassign them.
+        </p>
+      </Modal>
     </div>
   );
 }
