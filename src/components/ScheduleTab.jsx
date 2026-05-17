@@ -51,9 +51,13 @@ const seedConfigForMode = (cfg, mode) => {
     return applyCascade(withDefaults);
   }
   if (mode === 'fasting') {
+    // Default eating_window_start to DEFAULT_CONFIG ("12:00") rather than null so a
+    // mode-switch into fasting produces a usable schedule immediately. User can still
+    // edit it inline; without this default the edge function would skip notifications
+    // until a window start is set.
     return {
       ...cfg,
-      eating_window_start:          cfg.eating_window_start          ?? null,
+      eating_window_start:          cfg.eating_window_start          ?? DEFAULT_CONFIG.eating_window_start,
       eating_window_duration_hours: cfg.eating_window_duration_hours ?? 8,
       meal_count:                   cfg.meal_count                   ?? 3,
       pre_meal_window:              cfg.pre_meal_window              ?? 30,

@@ -148,7 +148,6 @@ export function computeIFSlotTimesHHMM(cfg: Record<string, any>): Record<string,
 export function getModeSlotLabel(slotId: string, mode: string): string {
   if (slotId === "rx") {
     if (mode === "wakeup") return "Empty Stomach";
-    if (mode === "fasting") return "Anchor";
     return "Anchor Medication";
   }
   return SLOT_LABELS[slotId] ?? slotId;

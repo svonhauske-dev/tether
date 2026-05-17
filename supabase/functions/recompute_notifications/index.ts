@@ -263,7 +263,8 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // fasted, pre_meal_2, meal_2, pre_meal_3, meal_3 — conditional on supplements
+      // Meal slots conditional on supplements (pre_meal_2, meal_2, pre_meal_3, meal_3).
+      // `fasted` and `meal_1` already fired unconditionally above; `evening` is handled below.
       for (const slotId of IF_TIMED_SLOT_IDS) {
         if (slotId === "evening") continue; // handled separately below
         const hhmm = slotTimes[slotId as string];

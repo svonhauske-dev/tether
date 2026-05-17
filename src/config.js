@@ -64,7 +64,6 @@ export const ANCHOR_SUB_MODES = [
 export function getSlotLabelForMode(slotId, mode) {
   if (slotId === "rx") {
     if (mode === "wakeup")   return "Empty Stomach";
-    if (mode === "fasting")  return "Anchor";
     return "Anchor Medication";
   }
   return null;

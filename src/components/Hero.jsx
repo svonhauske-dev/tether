@@ -11,13 +11,11 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const START_LABELS = {
   medication: "I took my medication",
-  fasting:    "Start eating window",
   wakeup:     "I woke up",
 };
 
 const START_SUBTITLES = {
   medication: "sets your daily schedule",
-  fasting:    "activates your eating window",
   wakeup:     "sets your daily schedule",
 };
 
