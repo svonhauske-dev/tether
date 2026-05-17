@@ -276,9 +276,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           dbGetProtocols(user.id, token).catch(() => []),
           dbGetSupps(user.id, token),
           dbGetLog(user.id, dk, token),
-          dbGetSchedule(token),
+          dbGetSchedule(user.id, token),
           dbGetProfile(user.id, token).catch(() => null),
-          dbGetSupplementHistory(token).catch(() => []),
+          dbGetSupplementHistory(user.id, token).catch(() => []),
         ]);
         setProtocols(protos || []);
         setSupplementHistory((histRows || []).map(r => r.name));
@@ -1140,6 +1140,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           onAddProtocol={addProtocol}
           onOpenDetail={(protocol) => { setSelectedProtocol(protocol); pushScreen('protocol_detail'); }}
           onProtocolCreated={(p) => { setSelectedProtocol(p); pushScreen('protocol_detail'); openAddToProtocol(p); }}
+          userId={user.id}
           token={token}
           onActivateReceived={activateReceived}
         />

@@ -45,13 +45,20 @@ export async function supa(method, path, body, token) {
     "Prefer": "resolution=merge-duplicates,return=representation",
   };
 
-  let res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  // keepalive lets writes survive PWA force-close mid-fetch. The browser keeps
+  // the request alive after the page unloads (capped at 64KB body, which is
+  // well above what we send). GETs are read-only so it doesn't matter, but we
+  // pay the kept-alive overhead only for non-GETs to match intent.
+  const keepalive = method !== "GET";
+  const init = { method, headers, body: body ? JSON.stringify(body) : undefined, keepalive };
+
+  let res = await fetch(url, init);
 
   if (res.status === 401 && token) {
     const newToken = await refreshSession();
     if (newToken) {
       headers.Authorization = `Bearer ${newToken}`;
-      res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      res = await fetch(url, init);
     }
   }
 
@@ -180,15 +187,26 @@ export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?
 export const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
 export const dbGetLog       = (userId, date, t) => supa("GET",    `/rest/v1/daily_logs?user_id=eq.${userId}&select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 export const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
-export const dbGetSchedule  = (t)       => supa("GET",    "/rest/v1/user_schedule?select=*", null, t).then(r => r?.[0] || null);
-export const dbSaveSchedule = (data, t) => supa("POST",   "/rest/v1/user_schedule?on_conflict=user_id", data, t);
+// user_schedule needs an explicit user_id filter on the read — without it
+// PostgREST returns rows for every user (row-level security isn't blocking
+// the SELECT), and `[0]` then returns a random other user's schedule.
+// On save we also delete any older rows for the same user before inserting
+// the new one, in case duplicates leaked through prior buggy upserts.
+export const dbGetSchedule  = (userId, t) => supa("GET",    `/rest/v1/user_schedule?user_id=eq.${userId}&select=*&order=updated_at.desc.nullslast,created_at.desc`, null, t).then(r => r?.[0] || null);
+export const dbSaveSchedule = async (data, t) => {
+  await supa("DELETE", `/rest/v1/user_schedule?user_id=eq.${data.user_id}`, null, t).catch(() => {});
+  return supa("POST", "/rest/v1/user_schedule", { ...data, updated_at: new Date().toISOString() }, t);
+};
 
 export const dbUpdateScheduleField = (field, value, userId, token) =>
   supa("PATCH", `/rest/v1/user_schedule?user_id=eq.${userId}`, { [field]: value }, token);
 
-export async function dbGetAdherenceCounts(suppIds, token) {
+export async function dbGetAdherenceCounts(userId, suppIds, token) {
   if (!suppIds.length) return {};
-  const rows = await supa("GET", "/rest/v1/daily_logs?select=checked", null, token);
+  // Filter by user_id so we count only this user's check-marks (RLS isn't
+  // enforced at the DB level for daily_logs — without the explicit filter
+  // we'd be counting other users' checks too).
+  const rows = await supa("GET", `/rest/v1/daily_logs?user_id=eq.${userId}&select=checked`, null, token);
   const counts = Object.fromEntries(suppIds.map(id => [id, 0]));
   for (const row of (rows || [])) {
     for (const [key, val] of Object.entries(row.checked || {})) {
@@ -220,7 +238,9 @@ export async function recomputeNotifications(token) {
 
 export const dbGetDailyLogsRange     = (userId, start, end, t) => supa("GET", `/rest/v1/daily_logs?user_id=eq.${userId}&select=*&log_date=gte.${start}&log_date=lte.${end}`, null, t);
 
-export const dbGetSupplementHistory  = (t)         => supa("GET",  "/rest/v1/user_supplement_history?select=name&order=created_at.desc", null, t);
+// Filter by user so autocomplete only suggests this user's prior names (RLS
+// not enforced at DB; without the filter every user sees everyone's history).
+export const dbGetSupplementHistory  = (userId, t) => supa("GET",  `/rest/v1/user_supplement_history?user_id=eq.${userId}&select=name&order=created_at.desc`, null, t);
 export const dbAddSupplementHistory  = (name, t)   => supa("POST", "/rest/v1/user_supplement_history?on_conflict=user_id,name", { name }, t);
 
 export const dbGetProfile    = (userId, t)       => supa("GET",   `/rest/v1/user_profiles?id=eq.${userId}&select=*`, null, t).then(r => r?.[0] || null);
@@ -238,7 +258,9 @@ export const dbGetMyPatients    = (clinicianId, t)              => supa("GET", `
 export const dbGetPatientLog    = (patientId, date, t)          => supa("GET", `/rest/v1/daily_logs?user_id=eq.${patientId}&log_date=eq.${date}&select=*`, null, t).then(r => r?.[0] || null);
 export const dbGetPatientLogs   = (patientId, start, end, t)   => supa("GET", `/rest/v1/daily_logs?user_id=eq.${patientId}&log_date=gte.${start}&log_date=lte.${end}&select=*`, null, t);
 export const dbSendProtocol     = (send, t)                     => supa("POST", "/rest/v1/protocol_sends", send, t);
-export const dbGetReceivedProtocols = (t)                       => supa("GET", "/rest/v1/protocol_sends?status=eq.pending&select=*", null, t);
+// Patient-side view: protocols sent TO this user. Filter by patient_id so we
+// don't return sends meant for other patients (RLS not enforced at DB level).
+export const dbGetReceivedProtocols = (patientId, t)            => supa("GET", `/rest/v1/protocol_sends?patient_id=eq.${patientId}&status=eq.pending&select=*`, null, t);
 export const dbUpdateProtocolSend   = (id, data, t)             => supa("PATCH", `/rest/v1/protocol_sends?id=eq.${id}`, data, t);
 
 export async function setThemePreference(pref, userId, token) {

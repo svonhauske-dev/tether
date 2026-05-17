@@ -105,6 +105,16 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
   const scheduleSave = (mode, config, behavior, time, delay = 500) => {
     setSaveError(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Mode/behavior changes call with delay=0 — fire immediately rather than
+    // via setTimeout so the fetch starts on the same task as the user's click.
+    // Combined with keepalive on the fetch, this closes the window where a
+    // fast force-close could drop the save.
+    if (delay === 0) {
+      onSave(mode, config, behavior, time).then(ok => {
+        if (ok === false) setSaveError("Couldn't save. Try again.");
+      });
+      return;
+    }
     debounceRef.current = setTimeout(async () => {
       const ok = await onSave(mode, config, behavior, time);
       if (ok === false) setSaveError("Couldn't save. Try again.");
@@ -297,6 +307,9 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {/* Schedule type picker */}
       <div style={{ marginBottom: spacing.lg }}>
         <Label>Schedule type</Label>
+        {localMode === 'none' && (
+          <HelperText>Add items without a time slot to use a simple checklist.</HelperText>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.md }}>
           {DISPLAY_MODES.map(m => {
             const on = selectedCard === m.id;
@@ -326,11 +339,6 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             );
           })}
         </div>
-
-        {/* Per-mode hint — appears below the cards, attributed to the current selection. */}
-        {localMode === 'none' && (
-          <HelperText style={{ marginTop: spacing.sm }}>Add items without a time slot to use a simple checklist.</HelperText>
-        )}
 
         {/* Anchor sub-selector — appears below grid when Anchor card is selected */}
         {selectedCard === 'anchor' && (

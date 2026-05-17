@@ -59,7 +59,7 @@ export default function ManageProtocolScreen({ isOpen, onBack, supplements, toke
     if (!isOpen || viewMode !== "stopped" || !token) return;
     const ids = stoppedSupps.map(s => s.id);
     if (!ids.length) return;
-    dbGetAdherenceCounts(ids, token)
+    dbGetAdherenceCounts(userId, ids, token)
       .then(counts => setAdherenceCounts(counts))
       .catch(() => {});
   }, [isOpen, viewMode, token, stoppedSupps.length]);

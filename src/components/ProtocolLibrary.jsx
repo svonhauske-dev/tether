@@ -83,7 +83,7 @@ function IntentOption({ label, description, onClick, theme }) {
 
 const DURATION_UNITS = ["days", "weeks", "months"];
 
-export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, token, onActivateReceived }) {
+export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived }) {
   const { theme } = useTheme();
   const today = new Date().toISOString().split('T')[0];
 
@@ -104,7 +104,8 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
 
   useEffect(() => {
     if (!isOpen || !token) return;
-    dbGetReceivedProtocols(token).then(rows => setReceived(rows || [])).catch(() => {});
+    if (!userId) return;
+    dbGetReceivedProtocols(userId, token).then(rows => setReceived(rows || [])).catch(() => {});
   }, [isOpen]);
 
   const activeProtocols   = protocols.filter(p => p.status === 'active');
