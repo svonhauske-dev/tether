@@ -6,7 +6,7 @@ import {
 import { ThemeProvider, useTheme } from './lib/theme';
 import DevThemePicker from "./components/DevThemePicker";
 import { DEFAULT_CONFIG, FIXED_SLOTS, ANCHOR_NOTES, toHrMin, fromHrMin, MODES, deriveOffsets, getSlotLabelForMode, computeIFSlotTimes, IF_SLOT_IDS } from "./config";
-import { Settings, Trash2, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight, Pause, Play, Plus, Library } from "lucide-react";
 import Button from "./components/Button";
 import Input from "./components/Input";
 import Card from "./components/Card";
@@ -1082,7 +1082,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
             <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading }}>
               Hello, {profile?.display_name?.trim().split(" ")[0] || 'there'}
             </span>
-            <AccountAvatar displayName={profile?.display_name?.trim().split(" ")[0] || null} />
+            <AccountAvatar displayName={profile?.display_name?.trim().split(" ")[0] || null} onClick={() => pushScreen('settings')} />
           </div>
           <WeekStrip
             weekDates={weekDates}
@@ -1214,14 +1214,22 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   return (
     <div style={{ fontFamily: typography.fontBody, color: theme.text.primary, maxWidth: layout.maxContentWidth, margin: "0 auto", padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px max(80px, env(safe-area-inset-bottom))`, WebkitFontSmoothing: "antialiased", background: BG_GRADIENT, minHeight: "100vh" }}>
 
-      {/* Greeting */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
-        <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading }}>
-          {profile?.display_name ? `Hello, ${profile.display_name.trim().split(" ")[0]}` : "Hello"}
-        </span>
-        <Button variant="icon" aria-label="Settings" onClick={() => pushScreen('settings')}>
-          <Settings size={18} />
-        </Button>
+      {/* Header: [avatar] greeting · [+] [Library] */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, marginBottom: spacing.md }}>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.sm, minWidth: 0 }}>
+          <AccountAvatar size="touch" displayName={profile?.display_name?.trim().split(" ")[0] || null} onClick={() => pushScreen('settings')} />
+          <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {profile?.display_name ? `Hello, ${profile.display_name.trim().split(" ")[0]}` : "Hello"}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
+          <Button variant="icon" aria-label="Add item" onClick={openAdd}>
+            <Plus size={18} />
+          </Button>
+          <Button variant="icon" aria-label="Open Library" onClick={() => pushScreen('manage_protocol')}>
+            <Library size={18} />
+          </Button>
+        </div>
       </div>
 
       {/* Header */}
@@ -1235,13 +1243,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         <Button variant="icon" aria-label="Next day" onClick={() => goDay(1)}><ChevronRight size={24} color={theme.text.secondary} style={{ marginLeft: spacing.xxxs }} /></Button>
       </div>
 
-      {/* Add row — hidden on past days (not scope of past-day editing) */}
-      {!isPast && (
-        <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.md }}>
-          <Button variant="primary" onClick={openAdd} style={{ flex: 1 }}>+ Add item</Button>
-          <Button variant="secondary" onClick={() => pushScreen('manage_protocol')} style={{ flex: 1, background: theme.surface.modal }}>Protocols</Button>
-        </div>
-      )}
+      {/* CTA row removed — Add (+) and Library moved into the header (May 17). */}
 
       {/* Content area — visually muted on read-only past days */}
       <div style={{ opacity: isReadOnly ? 0.6 : 1, transition: "opacity 200ms ease-out" }}>

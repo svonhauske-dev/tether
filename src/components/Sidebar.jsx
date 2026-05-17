@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Home, List, Settings, Users, ChevronDown, ChevronRight } from 'lucide-react';
-import { spacing, typography } from '../design-system';
+import { Home, List, Users, ChevronDown, ChevronRight } from 'lucide-react';
+import { spacing, typography, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 
 function SidebarNavItem({ icon: Icon, label, active, onClick }) {
@@ -37,29 +37,42 @@ function SidebarNavItem({ icon: Icon, label, active, onClick }) {
   );
 }
 
-export function AccountAvatar({ displayName, small }) {
+// Circular avatar with the user's first initial. When onClick is provided it
+// renders as a button (used as the Settings entry point on mobile + desktop).
+// Sizes: `small` → 28pt (tight inline contexts), default → 36pt (desktop),
+// `size="touch"` → touch.min (44pt mobile target).
+export function AccountAvatar({ displayName, small, size: sizeProp, onClick }) {
   const { theme } = useTheme();
-  const size = small ? 28 : 36;
+  const size = sizeProp === 'touch' ? touch.min : small ? 28 : 36;
   const initial = ((displayName || '').charAt(0) || 'Y').toUpperCase();
-  return (
-    <div style={{
-      width: size,
-      height: size,
-      borderRadius: '50%',
-      background: theme.surface.cardSubtle,
-      border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: typography.fontBody,
-      fontSize: small ? typography.label : typography.body,
-      color: theme.text.primary,
-      fontWeight: typography.medium,
-      flexShrink: 0,
-    }}>
-      {initial}
-    </div>
-  );
+  const baseStyle = {
+    width: size,
+    height: size,
+    borderRadius: '50%',
+    background: theme.surface.cardSubtle,
+    border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: typography.fontData,
+    fontSize: small ? typography.label : typography.body,
+    color: theme.text.primary,
+    fontWeight: typography.medium,
+    flexShrink: 0,
+  };
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label="Settings"
+        style={{ ...baseStyle, cursor: 'pointer', padding: 0, WebkitTapHighlightColor: 'transparent' }}
+      >
+        {initial}
+      </button>
+    );
+  }
+  return <div style={baseStyle}>{initial}</div>;
 }
 
 export default function Sidebar({ pushScreen, displayName, isClinician, activeNavItem = 'home', onNavChange, patients = [], selectedPatient, onPatientSelect }) {
@@ -156,10 +169,8 @@ export default function Sidebar({ pushScreen, displayName, isClinician, activeNa
         </>)}
       </nav>
 
-      {/* Spacer pushes settings to bottom */}
-      <div style={{ flex: 1 }} />
-
-      <SidebarNavItem icon={Settings} label="Settings" onClick={() => pushScreen('settings')} />
+      {/* Settings was previously here; moved to the top-right AccountAvatar
+          which now opens Settings on click. */}
     </aside>
   );
 }
