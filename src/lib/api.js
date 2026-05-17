@@ -149,7 +149,7 @@ export function signOut() {
 }
 
 // Protocols
-export const dbGetProtocols    = (t)       => supa("GET",    "/rest/v1/protocols?select=*&order=created_at.asc", null, t);
+export const dbGetProtocols    = (userId, t) => supa("GET",  `/rest/v1/protocols?user_id=eq.${userId}&select=*&order=created_at.asc`, null, t);
 export const dbAddProtocol     = (p, t)    => supa("POST",   "/rest/v1/protocols", p, t);
 export const dbUpdateProtocol  = (p, t)    => supa("PATCH",  `/rest/v1/protocols?id=eq.${p.id}`, { name: p.name, status: p.status, treatment_mode: p.treatment_mode, starts_at: p.starts_at ?? null, ends_at: p.ends_at ?? null, updated_at: new Date().toISOString() }, t);
 export const dbDeleteProtocol  = (id, t)   => supa("DELETE", `/rest/v1/protocols?id=eq.${id}`, null, t);
@@ -169,7 +169,7 @@ export const dbActivateProtocol = (protocolId, t) =>
   supa("PATCH", `/rest/v1/protocols?id=eq.${protocolId}`, { status: 'active', updated_at: new Date().toISOString() }, t);
 
 // Supplements
-export const dbGetSupps     = (t)       => supa("GET",    "/rest/v1/supplements?select=*&order=created_at.asc", null, t);
+export const dbGetSupps     = (userId, t) => supa("GET",  `/rest/v1/supplements?user_id=eq.${userId}&select=*&order=created_at.asc`, null, t);
 export const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
 export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, status: s.status ?? 'active', stopped_at: s.stopped_at ?? null, protocol_id: s.protocol_id ?? null, treatment_mode: s.treatment_mode ?? "indefinite", starts_at: s.starts_at ?? null, ends_at: s.ends_at ?? null, cycle_on_value: s.cycle_on_value ?? null, cycle_on_unit: s.cycle_on_unit ?? null, cycle_off_value: s.cycle_off_value ?? null, cycle_off_unit: s.cycle_off_unit ?? null, updated_at: new Date().toISOString() }, t);
 export const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
@@ -227,6 +227,13 @@ export async function getThemePreference(userId, token) {
   const pref = rows?.[0]?.theme_preference;
   return (pref === "light" || pref === "dark" || pref === "system") ? pref : null;
 }
+
+// Clinician helpers
+export const dbGetMyPatients    = (clinicianId, t)              => supa("GET", `/rest/v1/user_profiles?clinician_user_id=eq.${clinicianId}&select=*`, null, t);
+export const dbGetPatientLogs   = (patientId, start, end, t)   => supa("GET", `/rest/v1/daily_logs?user_id=eq.${patientId}&log_date=gte.${start}&log_date=lte.${end}&select=*`, null, t);
+export const dbSendProtocol     = (send, t)                     => supa("POST", "/rest/v1/protocol_sends", send, t);
+export const dbGetReceivedProtocols = (t)                       => supa("GET", "/rest/v1/protocol_sends?status=eq.pending&select=*", null, t);
+export const dbUpdateProtocolSend   = (id, data, t)             => supa("PATCH", `/rest/v1/protocol_sends?id=eq.${id}`, data, t);
 
 export async function setThemePreference(pref, userId, token) {
   await supa("PATCH", `/rest/v1/user_profiles?id=eq.${userId}`, { theme_preference: pref }, token);

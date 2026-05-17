@@ -28,6 +28,7 @@ import SlotCard from "./components/SlotCard";
 import EditForm from "./components/EditForm";
 import Hero from "./components/Hero";
 import Sidebar, { AccountAvatar } from "./components/Sidebar";
+import PatientsPanel from "./components/PatientsPanel";
 import WeekStrip from "./components/WeekStrip";
 import TodayPanel from "./components/TodayPanel";
 import InsightsPanel from "./components/InsightsPanel";
@@ -43,6 +44,7 @@ import {
   recomputeNotifications,
   dbGetSupplementHistory, dbAddSupplementHistory,
   dbGetDailyLogsRange,
+  dbGetMyPatients,
 } from './lib/api';
 import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp, isPausedSupp } from './lib/time';
 import { SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
@@ -201,7 +203,10 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const [weekLogs, setWeekLogs] = useState([]);
   const [viewedWeekEnd, setViewedWeekEnd] = useState(() => startOfDay(TODAY));
   const [selectedProtocol, setSelectedProtocol]   = useState(null);
+  const [activeNavItem, setActiveNavItem]         = useState('home');
   const { show: showToast } = useToast();
+
+  const isClinician = profile?.is_clinician === true;
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
   const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
@@ -252,8 +257,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       setLoading(true);
       try {
         const [protos, s, log, sched, prof, histRows] = await Promise.all([
-          dbGetProtocols(token).catch(() => []),
-          dbGetSupps(token),
+          dbGetProtocols(user.id, token).catch(() => []),
+          dbGetSupps(user.id, token),
           dbGetLog(dk, token),
           dbGetSchedule(token),
           dbGetProfile(user.id, token).catch(() => null),
@@ -859,8 +864,17 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   if (isDesktop) {
     return (
       <div style={{ display: "flex", flexDirection: "row", height: "100dvh", overflow: "hidden", background: theme.surface.canvas, fontFamily: typography.fontBody, color: theme.text.primary, WebkitFontSmoothing: "antialiased" }}>
-        <Sidebar pushScreen={pushScreen} displayName={profile?.display_name?.trim().split(" ")[0] || null} />
+        <Sidebar
+          pushScreen={pushScreen}
+          displayName={profile?.display_name?.trim().split(" ")[0] || null}
+          isClinician={isClinician}
+          activeNavItem={activeNavItem}
+          onNavChange={setActiveNavItem}
+        />
         <main style={{ flex: 1, overflowY: "auto", padding: spacing.xl, minWidth: 0 }}>
+          {activeNavItem === 'patients' ? (
+            <PatientsPanel userId={user.id} token={token} />
+          ) : (<>
           {/* Header: greeting left, avatar right */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xl }}>
             <span style={{ fontSize: typography.heading, fontWeight: typography.semibold, color: theme.text.primary, fontFamily: typography.fontHeading }}>
@@ -922,6 +936,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
               />
             </div>
           </div>
+          </>)}
         </main>
 
         <SettingsScreen

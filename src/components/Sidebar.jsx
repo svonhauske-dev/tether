@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, List, Settings } from 'lucide-react';
+import { Home, List, Settings, Users } from 'lucide-react';
 import { spacing, typography } from '../design-system';
 import { useTheme } from '../lib/theme';
 
@@ -62,7 +62,7 @@ export function AccountAvatar({ displayName, small }) {
   );
 }
 
-export default function Sidebar({ pushScreen, displayName }) {
+export default function Sidebar({ pushScreen, displayName, isClinician, activeNavItem = 'home', onNavChange }) {
   const { theme } = useTheme();
   return (
     <aside style={{
@@ -93,8 +93,11 @@ export default function Sidebar({ pushScreen, displayName }) {
 
       {/* Nav items */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-        <SidebarNavItem icon={Home} label="Home" active onClick={() => {}} />
-        <SidebarNavItem icon={List} label="Protocol" onClick={() => pushScreen('manage_protocol')} />
+        <SidebarNavItem icon={Home}  label="Home"     active={activeNavItem === 'home'}     onClick={() => onNavChange?.('home')} />
+        <SidebarNavItem icon={List}  label="Protocols" active={false}                        onClick={() => { onNavChange?.('home'); pushScreen('manage_protocol'); }} />
+        {isClinician && (
+          <SidebarNavItem icon={Users} label="Patients" active={activeNavItem === 'patients'} onClick={() => onNavChange?.('patients')} />
+        )}
       </nav>
 
       {/* Spacer pushes settings + account to bottom */}
