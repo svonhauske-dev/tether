@@ -124,7 +124,7 @@ export default function PatientsPanel({ userId, token }) {
         </div>
       ) : patients.length === 0 ? (
         <div style={{ fontSize: typography.body, color: theme.text.secondary }}>
-          No patients assigned to your account yet.
+          No patients yet.
         </div>
       ) : (
         <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}` }}>

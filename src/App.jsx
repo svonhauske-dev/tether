@@ -1212,9 +1212,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         <div style={{ borderRadius: theme.radius.surface, border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, background: theme.surface.card, padding: spacing.md, marginBottom: spacing.md }}>
           {homeSupps.length === 0 ? (
             <div style={{ textAlign: "center", padding: `${spacing.xl}px ${spacing.md}px` }}>
-              <div style={{ fontSize: typography.display, marginBottom: spacing.md }}>💊</div>
-              <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>Your protocol is empty</div>
-              <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.5, marginBottom: spacing.lg }}>Add your first item to get started.</div>
+              <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
+              <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>No items yet</div>
+              <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.5, marginBottom: spacing.lg }}>Add your first to begin tracking.</div>
               {!isPast && <Button variant="primary" fullWidth onClick={openAdd}>Add to protocol</Button>}
             </div>
           ) : slotCardsContent}

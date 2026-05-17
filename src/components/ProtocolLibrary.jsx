@@ -275,7 +275,7 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
         {tab === 'archived' && (
           archivedProtocols.length === 0 ? (
             <div style={{ fontSize: typography.body, color: theme.text.secondary }}>
-              No archived protocols.
+              Nothing archived yet.
             </div>
           ) : (
             <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}` }}>

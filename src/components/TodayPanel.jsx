@@ -97,7 +97,7 @@ export default function TodayPanel({
           fontSize: typography.body,
           fontFamily: typography.fontBody,
         }}>
-          No supplements scheduled
+          No supplements scheduled for this day.
         </div>
       ) : (
         <div style={{

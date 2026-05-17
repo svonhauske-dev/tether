@@ -88,10 +88,14 @@ export default function Auth({ onSignIn }) {
     <div style={{ fontFamily: typography.fontBody, background: theme.gradients.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: spacing.md }}>
       <div style={{ width: "100%", maxWidth: layout.signInWidth, textAlign: "center" }}>
         <div style={{
-          // Decorative emoji — sized outside the typography system intentionally
-          fontSize: 40,
-          marginBottom: spacing.md,
-        }}>💊</div>
+          fontSize: typography.heading,
+          fontWeight: typography.bold,
+          fontFamily: typography.fontHeading,
+          letterSpacing: typography.labelSpacingWide,
+          textTransform: 'uppercase',
+          color: theme.text.primary,
+          marginBottom: spacing.lg,
+        }}>Origin</div>
         <div style={{ fontSize: typography.display, fontWeight: typography.bold, color: theme.text.primary, letterSpacing: typography.headingLetterSpacing, marginBottom: spacing.xs }}>
           {mode === "signin" ? "Welcome back" : "Hello"}
         </div>

@@ -323,7 +323,7 @@ export default function ProtocolDetailScreen({
               {tab === 'stopped' && (
                 stoppedSupps.length === 0 ? (
                   <div style={{ fontSize: typography.body, color: theme.text.secondary, paddingBottom: spacing.xl }}>
-                    No stopped supplements.
+                    Nothing stopped yet.
                   </div>
                 ) : (
                   <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, marginBottom: spacing.xl }}>
@@ -377,7 +377,7 @@ export default function ProtocolDetailScreen({
       >
         {patients.length === 0 ? (
           <p style={{ fontSize: typography.body, color: theme.text.secondary, margin: 0 }}>
-            No patients assigned to your account yet.
+            No patients yet.
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
