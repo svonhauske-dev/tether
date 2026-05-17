@@ -163,7 +163,10 @@ export function signOut() {
 // Protocols
 export const dbGetProtocols    = (userId, t) => supa("GET",  `/rest/v1/protocols?user_id=eq.${userId}&select=*&order=created_at.asc`, null, t);
 export const dbAddProtocol     = (p, t)    => supa("POST",   "/rest/v1/protocols", p, t);
-export const dbUpdateProtocol  = (p, t)    => supa("PATCH",  `/rest/v1/protocols?id=eq.${p.id}`, { name: p.name, status: p.status, treatment_mode: p.treatment_mode, starts_at: p.starts_at ?? null, ends_at: p.ends_at ?? null, updated_at: new Date().toISOString() }, t);
+// Defense-in-depth: filter by both id AND user_id so a client can't PATCH a
+// protocol owned by someone else even if the server's RLS policy is wrong
+// or absent. The `id=eq` is the natural key; `user_id=eq` is the guard.
+export const dbUpdateProtocol  = (p, t)    => supa("PATCH",  `/rest/v1/protocols?id=eq.${p.id}&user_id=eq.${p.user_id}`, { name: p.name, status: p.status, treatment_mode: p.treatment_mode, starts_at: p.starts_at ?? null, ends_at: p.ends_at ?? null, updated_at: new Date().toISOString() }, t);
 export const dbDeleteProtocol  = (id, t)   => supa("DELETE", `/rest/v1/protocols?id=eq.${id}`, null, t);
 
 const dbResetProtocolSupps = (protocolId, t) =>

@@ -846,9 +846,14 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   };
 
   const activateReceived = async (send) => {
+    // Multi-step write: 1) create protocol, 2) bulk-insert supps, 3) mark send activated.
+    // If supps fail mid-batch we'd leave a created protocol with partial children AND a
+    // protocol_send still marked 'pending'. Roll back the protocol so the user can retry
+    // cleanly. Real fix would be a server-side transaction (RPC) — flagged for later.
+    let newProto = null;
     try {
       const protoRows = await dbAddProtocol({ name: send.name, status: 'active', user_id: user.id, treatment_mode: 'indefinite', source: 'clinician' }, token);
-      const newProto = protoRows?.[0];
+      newProto = protoRows?.[0];
       if (!newProto) throw new Error('Protocol creation failed');
       const snapshot = send.supplements_snapshot || [];
       const suppRows = await Promise.all(snapshot.map(s =>
@@ -858,7 +863,20 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       setSupps(s => [...s, ...suppRows.flatMap(r => r || []).map(x => ({ ...x, paused: x.paused ?? false }))]);
       await dbUpdateProtocolSend(send.id, { status: 'activated' }, token);
       showToast(`${send.name} activated`);
-    } catch (err) { showToast("Couldn't activate. Try again."); console.error(err); }
+    } catch (err) {
+      console.error(err);
+      if (newProto) {
+        // Rollback: delete the partial protocol + any supps already inserted under it.
+        try {
+          const inserted = await supa("GET", `/rest/v1/supplements?protocol_id=eq.${newProto.id}&select=id`, null, token).catch(() => []);
+          await Promise.all((inserted || []).map(s => dbDeleteSupp(s.id, token).catch(() => {})));
+          await dbDeleteProtocol(newProto.id, token).catch(() => {});
+        } catch (rollbackErr) {
+          console.error("activateReceived rollback also failed:", rollbackErr);
+        }
+      }
+      showToast("Couldn't activate. Try again.");
+    }
   };
 
   const sendProtocol = async (protocol, patientId) => {

@@ -69,7 +69,10 @@ Deno.serve(async (req: Request) => {
   const localToday    = getLocalDateStr(tz, 0);
   const localTomorrow = getLocalDateStr(tz, 1);
 
-  // Auto-stop supplements whose treatment window has ended
+  // Auto-stop supplements whose treatment window has ended.
+  // Use `lt` (strict less-than) not `lte`: a supplement with ends_at = today
+  // is still active today and should still fire today's notifications.
+  // It'll be auto-stopped on tomorrow's recompute.
   await admin
     .from("supplements")
     .update({ status: "stopped", stopped_at: localToday })
@@ -77,7 +80,7 @@ Deno.serve(async (req: Request) => {
     .in("treatment_mode", ["scheduled", "cycled"])
     .eq("status", "active")
     .not("ends_at", "is", null)
-    .lte("ends_at", localToday);
+    .lt("ends_at", localToday);
 
   const [schedResult, suppsResult, logResult, subResult] = await Promise.all([
     admin.from("user_schedule").select("*").eq("user_id", userId).maybeSingle(),

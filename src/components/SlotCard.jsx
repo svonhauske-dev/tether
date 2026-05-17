@@ -51,9 +51,13 @@ export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset
         <div style={{ padding: `${spacing.sm}px ${spacing.md}px`, borderTop: `${theme.borderWidth.default}px solid ${sc.border}`, display: "flex", flexDirection: "column", gap: spacing.sm }}>
           {slotSupps.map((supp, i) => {
             const done = isChecked(slot.id, supp.id);
+            // Expand 24pt visual checkbox to touch.min hit area without inflating the row.
+            // Padding adds tappable area; negative margin pulls the layout box back to 24pt.
+            const VISUAL_SIZE = 24;
+            const expand = (touch.min - VISUAL_SIZE) / 2;
             return (
               <div key={supp.id} style={{ display: "flex", alignItems: "center", gap: spacing.xs, minHeight: touch.row }}>
-                <button type="button" onClick={() => { if (!isFuture && !isReadOnly) toggleCheck(slot.id, supp.id); }} aria-label={done ? `Uncheck ${supp.name}` : `Check ${supp.name}`} aria-pressed={done} style={{ background: "none", border: "none", padding: 10, margin: -10, cursor: (isFuture || isReadOnly) ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}>
+                <button type="button" onClick={() => { if (!isFuture && !isReadOnly) toggleCheck(slot.id, supp.id); }} aria-label={done ? `Uncheck ${supp.name}` : `Check ${supp.name}`} aria-pressed={done} style={{ background: "none", border: "none", padding: expand, margin: -expand, cursor: (isFuture || isReadOnly) ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}>
                   <div style={{ width: 24, height: 24, borderRadius: theme.radius.surfaceInner, border: `${theme.borderWidth.accent}px solid ${done ? theme.accent.default : theme.border.strong}`, background: done ? theme.accent.default : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {done && <span style={{ color: theme.text.onAccent, fontSize: typography.label, fontWeight: typography.bold }}>✓</span>}
                   </div>

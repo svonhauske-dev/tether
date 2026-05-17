@@ -58,18 +58,25 @@ function ProtocolRow({ protocol, count, onTap }) {
 
 function IntentOption({ label, description, onClick, theme }) {
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
       style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: `${spacing.sm}px 0`,
+        width: "100%",
+        background: "transparent",
+        border: "none",
         borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+        padding: `${spacing.sm}px 0`,
         minHeight: touch.min, cursor: "pointer", userSelect: "none",
+        textAlign: "left",
+        fontFamily: "inherit",
+        color: "inherit",
         WebkitTapHighlightColor: "transparent",
       }}
     >
       <div style={{ flex: 1, paddingRight: spacing.sm }}>
-        <div style={{ fontSize: typography.body, fontWeight: typography.medium, color: theme.text.primary, marginBottom: "2px" }}>
+        <div style={{ fontSize: typography.body, fontWeight: typography.medium, color: theme.text.primary, marginBottom: spacing.xxxs }}>
           {label}
         </div>
         <div style={{ fontSize: typography.caption, color: theme.text.secondary, lineHeight: 1.4 }}>
@@ -77,7 +84,7 @@ function IntentOption({ label, description, onClick, theme }) {
         </div>
       </div>
       <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
-    </div>
+    </button>
   );
 }
 

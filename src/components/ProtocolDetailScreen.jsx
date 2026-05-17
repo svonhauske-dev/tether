@@ -130,9 +130,9 @@ export default function ProtocolDetailScreen({
               onBlur={saveName}
               style={{
                 width: '100%', background: 'none', border: 'none',
-                borderBottom: `1px solid ${theme.accent.default}`,
+                borderBottom: `${theme.borderWidth.default}px solid ${theme.accent.default}`,
                 fontSize: typography.body, fontWeight: typography.semibold,
-                color: theme.text.primary, padding: '2px 0', outline: 'none',
+                color: theme.text.primary, padding: `${spacing.xxs}px 0`, outline: 'none',
                 textAlign: 'center', fontFamily: 'inherit',
               }}
             />
@@ -336,7 +336,9 @@ export default function ProtocolDetailScreen({
                             display: 'flex', alignItems: 'center',
                             padding: `${spacing.sm}px 0`,
                             borderBottom: isLast ? 'none' : `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-                            minHeight: touch.min,
+                            // Multi-line row (name + optional dose) — use touch.row (52pt)
+                            // rather than touch.min (44pt) per design rules Cat 13.
+                            minHeight: touch.row,
                           }}
                         >
                           <div style={{ flex: 1, minWidth: 0 }}>

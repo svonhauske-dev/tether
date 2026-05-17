@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { spacing, typography } from '../design-system';
+import { spacing, typography, shadows } from '../design-system';
 import { useTheme } from '../lib/theme';
 import { dateKey } from '../lib/time';
 import { calculateAdherenceForDate } from '../lib/adherence';
@@ -42,7 +42,7 @@ export function DayCell({ date, log, supplements, isSelected, isFuture, isToday,
         position: 'relative',
         zIndex: isSelected ? 1 : 'auto',
         transform: isSelected ? 'scale(1.02)' : 'none',
-        boxShadow: isSelected ? '0 2px 8px rgba(26,26,26,0.08)' : 'none',
+        boxShadow: isSelected ? shadows.elevated : 'none',
         transition: 'background 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease',
       }}
     >

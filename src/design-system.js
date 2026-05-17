@@ -142,11 +142,12 @@ export const gradients = {
 };
 
 export const shadows = {
-  card:    "0 1px 2px rgba(26,26,26,0.04)",
-  modal:   "0 8px 32px rgba(26,26,26,0.08), 0 2px 8px rgba(26,26,26,0.04)",
-  popover: "0 4px 16px rgba(26,26,26,0.06)",
-  toast:   "0 4px 16px rgba(26,26,26,0.10)",
-  focus:   "0 0 0 3px rgba(26,26,26,0.15)",
+  card:     "0 1px 2px rgba(26,26,26,0.04)",
+  elevated: "0 2px 8px rgba(26,26,26,0.08)",  // small lift — selected day cells, hovered tiles
+  modal:    "0 8px 32px rgba(26,26,26,0.08), 0 2px 8px rgba(26,26,26,0.04)",
+  popover:  "0 4px 16px rgba(26,26,26,0.06)",
+  toast:    "0 4px 16px rgba(26,26,26,0.10)",
+  focus:    "0 0 0 3px rgba(26,26,26,0.15)",
 };
 
 export const zIndex = {

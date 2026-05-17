@@ -1,5 +1,5 @@
 import { useTheme } from '../lib/theme';
-import { spacing, typography } from '../design-system';
+import { spacing, typography, touch } from '../design-system';
 
 export default function TabBar({ tabs, active, onChange, style }) {
   const { theme } = useTheme();
@@ -22,6 +22,7 @@ export default function TabBar({ tabs, active, onChange, style }) {
               : '2px solid transparent',
             marginBottom: -1,
             padding: `${spacing.xs}px 0 ${spacing.sm}px`,
+            minHeight: touch.min,
             fontSize: typography.body,
             fontWeight: active === value ? typography.semibold : typography.regular,
             color: active === value ? theme.text.primary : theme.text.secondary,
