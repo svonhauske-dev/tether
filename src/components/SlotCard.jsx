@@ -34,7 +34,7 @@ export default function SlotCard({ slot, slotSupps, status, timeLabel, hasOffset
             ? <div style={{ width: 20, height: 20, borderRadius: theme.radius.surfaceInner, background: theme.accent.default, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ color: theme.text.onAccent, fontSize: typography.label, fontWeight: typography.bold }}>✓</span></div>
             : <span style={{ color: theme.slot.default, fontSize: typography.caption, flexShrink: 0, width: 20, textAlign: "center" }}>{slot.icon}</span>
           }
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, textAlign: "left" }}>
             <div style={{ fontSize: typography.caption, fontWeight: typography.semibold, color: allDone ? theme.text.secondary : theme.text.primary, display: "flex", alignItems: "center", gap: spacing.xs }}>
               {slot.label}
               {sc.badge && <Badge variant={sc.badge.label === "now" ? "now" : "missed"}>{sc.badge.label}</Badge>}
