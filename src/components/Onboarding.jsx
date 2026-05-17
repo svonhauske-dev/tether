@@ -376,18 +376,79 @@ export default function Onboarding({ onComplete }) {
                 })}
               </div>
             </div>
-            <Label>Pre-meal window</Label>
-            <HelperText>How early before each meal to take pre-meal items</HelperText>
-            <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
-              <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
-              <Input
-                variant="number" width={52} min="0" max="120"
-                inputMode="numeric" pattern="[0-9]*"
-                value={config.pre_meal_window ?? 30}
-                onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
-              />
-              <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
-            </Card>
+            <div style={{ marginBottom: spacing.md }}>
+              <Label>Pre-meal window</Label>
+              <HelperText>How early before each meal to take pre-meal items</HelperText>
+              <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Pre-meal items</span>
+                <Input
+                  variant="number" width={52} min="0" max="120"
+                  inputMode="numeric" pattern="[0-9]*"
+                  value={config.pre_meal_window ?? 30}
+                  onChange={e => updateConfig("pre_meal_window", parseInt(e.target.value) || 0)}
+                />
+                <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
+              </Card>
+            </div>
+
+            <div style={{ marginBottom: spacing.lg }}>
+              <Label>Evening</Label>
+              <HelperText>A fixed slot at the end of your day</HelperText>
+              <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.sm }}>
+                {([
+                  [null,           "Off"],
+                  ["fixed",        "Fixed time"],
+                  ["before_sleep", "Before sleep"],
+                ]).map(([val, label]) => (
+                  <button key={String(val)} onClick={() => updateEvening({ evening_mode: val })} style={segBtnStyle(em === val)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {em === "fixed" && (
+                <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                  <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Evening time</span>
+                  <Input
+                    variant="time"
+                    value={config.evening_time || ""}
+                    onChange={e => updateEvening({ evening_mode: "fixed", evening_time: e.target.value || null })}
+                    style={{ width: "auto" }}
+                  />
+                </Card>
+              )}
+              {em === "before_sleep" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
+                  <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                    <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Bedtime</span>
+                    <Input
+                      variant="time"
+                      value={config.sleep_time || ""}
+                      onChange={e => updateEvening({ evening_mode: "before_sleep", sleep_time: e.target.value || null })}
+                      style={{ width: "auto" }}
+                    />
+                  </Card>
+                  <Card style={{ display: "flex", alignItems: "center", gap: spacing.xs, padding: `${spacing.xs}px ${spacing.sm}px`, marginBottom: 0 }}>
+                    <span style={{ flex: 1, fontSize: typography.caption, color: theme.text.secondary }}>Before bedtime</span>
+                    <Input
+                      variant="number" width={52} min="0" max="23"
+                      inputMode="numeric" pattern="[0-9]*"
+                      value={(config.evening_offset_hours ?? 1) || ""}
+                      onChange={e => updateEvening({ evening_mode: "before_sleep", evening_offset_hours: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                    />
+                    <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>hr</span>
+                    <Input
+                      variant="number" width={52} min="0" max="59"
+                      inputMode="numeric" pattern="[0-9]*"
+                      value={(config.evening_offset_minutes ?? 0) || ""}
+                      onChange={e => updateEvening({ evening_mode: "before_sleep", evening_offset_minutes: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                    />
+                    <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>min</span>
+                  </Card>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
