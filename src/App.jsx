@@ -764,7 +764,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   const activateReceived = async (send) => {
     try {
-      const protoRows = await dbAddProtocol({ name: send.name, status: 'active', user_id: user.id, treatment_mode: 'indefinite' }, token);
+      const protoRows = await dbAddProtocol({ name: send.name, status: 'active', user_id: user.id, treatment_mode: 'indefinite', source: 'clinician' }, token);
       const newProto = protoRows?.[0];
       if (!newProto) throw new Error('Protocol creation failed');
       const snapshot = send.supplements_snapshot || [];

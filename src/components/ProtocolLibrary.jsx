@@ -45,6 +45,7 @@ function ProtocolRow({ protocol, count, onTap }) {
         </div>
         <div style={{ fontSize: typography.caption, color: theme.text.secondary }}>
           {count} {count === 1 ? "supplement" : "supplements"}
+          {protocol.source === 'clinician' && " · From clinician"}
           {protocol.status === 'paused'   && " · Paused"}
           {protocol.status === 'archived' && " · Archived"}
           {protocol.ends_at && protocol.status === 'active' && ` · Ends ${formatDate(protocol.ends_at)}`}
