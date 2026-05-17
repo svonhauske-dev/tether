@@ -28,7 +28,7 @@ import SlotCard from "./components/SlotCard";
 import EditForm from "./components/EditForm";
 import Hero from "./components/Hero";
 import Sidebar, { AccountAvatar } from "./components/Sidebar";
-import PatientsPanel from "./components/PatientsPanel";
+import PatientDetailPanel from "./components/PatientDetailPanel";
 import WeekStrip from "./components/WeekStrip";
 import TodayPanel from "./components/TodayPanel";
 import InsightsPanel from "./components/InsightsPanel";
@@ -204,9 +204,16 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const [viewedWeekEnd, setViewedWeekEnd] = useState(() => startOfDay(TODAY));
   const [selectedProtocol, setSelectedProtocol]   = useState(null);
   const [activeNavItem, setActiveNavItem]         = useState('home');
+  const [patients, setPatients]                   = useState([]);
+  const [selectedPatient, setSelectedPatient]     = useState(null);
   const { show: showToast } = useToast();
 
   const isClinician = profile?.is_clinician === true;
+
+  useEffect(() => {
+    if (!isClinician || !user?.id || !token) return;
+    dbGetMyPatients(user.id, token).catch(() => []).then(rows => setPatients(rows || []));
+  }, [isClinician, user?.id]);
 
   const slotOffsets   = scheduleMode === "fixed" ? null : deriveOffsets(scheduleMode, scheduleConfig);
   const visibleSupps  = supps.filter(s => !pendingDeletes[s.id]);
@@ -869,11 +876,14 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           displayName={profile?.display_name?.trim().split(" ")[0] || null}
           isClinician={isClinician}
           activeNavItem={activeNavItem}
-          onNavChange={setActiveNavItem}
+          onNavChange={(nav) => { setActiveNavItem(nav); setSelectedPatient(null); }}
+          patients={patients}
+          selectedPatient={selectedPatient}
+          onPatientSelect={(p) => setSelectedPatient(prev => prev?.id === p.id ? null : p)}
         />
         <main style={{ flex: 1, overflowY: "auto", padding: spacing.xl, minWidth: 0 }}>
-          {activeNavItem === 'patients' ? (
-            <PatientsPanel userId={user.id} token={token} />
+          {selectedPatient ? (
+            <PatientDetailPanel patient={selectedPatient} token={token} />
           ) : (<>
           {/* Header: greeting left, avatar right */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xl }}>

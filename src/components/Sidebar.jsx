@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, List, Settings, Users } from 'lucide-react';
+import { Home, List, Settings, Users, ChevronDown, ChevronRight } from 'lucide-react';
 import { spacing, typography } from '../design-system';
 import { useTheme } from '../lib/theme';
 
@@ -62,8 +62,10 @@ export function AccountAvatar({ displayName, small }) {
   );
 }
 
-export default function Sidebar({ pushScreen, displayName, isClinician, activeNavItem = 'home', onNavChange }) {
+export default function Sidebar({ pushScreen, displayName, isClinician, activeNavItem = 'home', onNavChange, patients = [], selectedPatient, onPatientSelect }) {
   const { theme } = useTheme();
+  const [patientsOpen, setPatientsOpen] = useState(false);
+
   return (
     <aside style={{
       width: 240,
@@ -93,17 +95,70 @@ export default function Sidebar({ pushScreen, displayName, isClinician, activeNa
 
       {/* Nav items */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-        <SidebarNavItem icon={Home}  label="Home"     active={activeNavItem === 'home'}     onClick={() => onNavChange?.('home')} />
-        <SidebarNavItem icon={List}  label="Protocols" active={false}                        onClick={() => { onNavChange?.('home'); pushScreen('manage_protocol'); }} />
-        {isClinician && (
-          <SidebarNavItem icon={Users} label="Patients" active={activeNavItem === 'patients'} onClick={() => onNavChange?.('patients')} />
-        )}
+        <SidebarNavItem icon={Home} label="Home" active={activeNavItem === 'home' && !selectedPatient} onClick={() => onNavChange?.('home')} />
+        <SidebarNavItem icon={List} label="Protocols" active={false} onClick={() => { onNavChange?.('home'); pushScreen('manage_protocol'); }} />
+        {isClinician && (<>
+          {/* Patients toggle */}
+          <button
+            onClick={() => setPatientsOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing.sm,
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              background: patientsOpen ? theme.surface.cardSubtle : 'transparent',
+              border: 'none', borderRadius: theme.radius.surface,
+              color: patientsOpen ? theme.text.primary : theme.text.secondary,
+              cursor: 'pointer',
+              fontFamily: typography.fontBody, fontSize: typography.body,
+              fontWeight: patientsOpen ? typography.semibold : typography.regular,
+              textAlign: 'left', width: '100%',
+              transition: 'background 150ms ease, color 150ms ease',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <Users size={18} />
+            <span style={{ flex: 1 }}>Patients</span>
+            {patientsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+
+          {/* Patient sub-list */}
+          {patientsOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {patients.length === 0 ? (
+                <div style={{ paddingLeft: 36 + spacing.sm, fontSize: typography.caption, color: theme.text.secondary }}>
+                  No patients yet
+                </div>
+              ) : patients.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => onPatientSelect?.(p)}
+                  style={{
+                    display: 'flex', alignItems: 'center',
+                    paddingLeft: 36 + spacing.sm,
+                    paddingRight: spacing.md,
+                    paddingTop: spacing.xs,
+                    paddingBottom: spacing.xs,
+                    background: selectedPatient?.id === p.id ? theme.surface.cardSubtle : 'transparent',
+                    border: 'none', borderRadius: theme.radius.surface,
+                    color: selectedPatient?.id === p.id ? theme.text.primary : theme.text.secondary,
+                    cursor: 'pointer',
+                    fontFamily: typography.fontBody, fontSize: typography.body,
+                    fontWeight: selectedPatient?.id === p.id ? typography.medium : typography.regular,
+                    textAlign: 'left', width: '100%',
+                    transition: 'background 150ms ease, color 150ms ease',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  {p.display_name || 'Unnamed'}
+                </button>
+              ))}
+            </div>
+          )}
+        </>)}
       </nav>
 
-      {/* Spacer pushes settings + account to bottom */}
+      {/* Spacer pushes settings to bottom */}
       <div style={{ flex: 1 }} />
 
-      {/* Settings */}
       <SidebarNavItem icon={Settings} label="Settings" onClick={() => pushScreen('settings')} />
     </aside>
   );
