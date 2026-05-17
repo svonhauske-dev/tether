@@ -241,12 +241,17 @@ Deno.serve(async (req: Request) => {
       // to the closing time — the meal notification covers the closing message, so skip the duplicate).
       const closingAt    = addMins(windowOpenAt, durationMins - 30);
       const closingTime  = closingAt.getTime();
+      // Treat any meal slot within 5 minutes of closing as "covering" the
+      // closing notification. A 60-second window was tight enough that
+      // non-default pre_meal_window values (e.g. pmw=29 → meal fires 61s
+      // away from closing) would deliver a near-duplicate pair.
+      const CLOSING_DEDUPE_MS = 5 * 60 * 1000;
       const closingCoveredByMeal = IF_TIMED_SLOT_IDS.some((slotId) => {
         if (slotId === "evening") return false;
         const hhmm = slotTimes[slotId as string];
         if (!hhmm) return false;
         const at = parseLocalHHMM(dateStr, hhmm, tz);
-        if (Math.abs(at.getTime() - closingTime) >= 60_000) return false;
+        if (Math.abs(at.getTime() - closingTime) >= CLOSING_DEDUPE_MS) return false;
         return supps.some(
           (s) => Array.isArray(s.slots) && s.slots.includes(slotId) &&
                  Array.isArray(s.days)  && s.days.includes(dayOfWeek) &&

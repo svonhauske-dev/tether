@@ -111,7 +111,7 @@ export default function PatientsPanel({ userId, token }) {
       <div style={{ marginBottom: spacing.xl }}>
         <h1 style={{
           fontSize: typography.heading, fontWeight: typography.semibold,
-          color: theme.text.primary, fontFamily: 'var(--font-heading)',
+          color: theme.text.primary, fontFamily: typography.fontHeading,
           margin: 0,
         }}>
           Patients

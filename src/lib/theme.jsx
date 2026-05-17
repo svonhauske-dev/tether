@@ -47,18 +47,9 @@ export function ThemeProvider({ children }) {
   const [{ pref, name }, setState] = useState(getInitial);
   const userIdRef = useRef(null);
 
-  // Live system color-scheme listener — only active when preference is 'system'
-  useEffect(() => {
-    if (pref !== "system") return;
-    try {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const handler = () => {
-        setState(s => s.pref === "system" ? { ...s, name: getSystemTheme() } : s);
-      };
-      mq.addEventListener("change", handler);
-      return () => mq.removeEventListener("change", handler);
-    } catch {}
-  }, [pref]);
+  // (The old 'system' branch — prefers-color-scheme listener calling an
+  // undefined getSystemTheme — was unreachable since VALID_PREFS only
+  // accepts 'achromatic'. Removed in Round C cleanup.)
 
   // Called once by ProtocolApp after auth — fetches DB preference and syncs if it differs from localStorage
   const syncFromDB = useCallback(async (userId, token) => {

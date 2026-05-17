@@ -600,6 +600,15 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     setFormOpen(true);
   };
 
+  // Fire-and-forget notif recompute that surfaces failures as a toast instead
+  // of silently swallowing them. Used by every recompute trigger that follows
+  // a user action; TZ-change recomputes stay silent.
+  const recomputeWithToast = () => {
+    recomputeNotifications(token).then(ok => {
+      if (!ok) showToast("Notifications didn't update — try again later");
+    });
+  };
+
   const submitForm = async () => {
     if (!form.name.trim() || submitting) return;
     const txMode = form.treatment_mode || "indefinite";
@@ -641,7 +650,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           dbAddSupplementHistory(user.id, savedName, token).catch(() => {});
         }
       }
-      recomputeNotifications(token);
+      recomputeWithToast();
       closeForm();
     } catch (err) {
       setSubmitError("Couldn't save — try again");
@@ -752,7 +761,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         setPillTimes(pt => ({ ...pt, [dk]: cTime }));
       }
 
-      recomputeNotifications(token);
+      recomputeWithToast();
     } catch (err) {
       showToast("Couldn't save — try again");
       console.error(err);
@@ -768,7 +777,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       await dbUpdateSupp(updated, token);
       setSupps(s => s.map(x => x.id === supp.id ? updated : x));
       showToast(wasPaused ? `Resumed ${supp.name}` : `Paused ${supp.name}`);
-      recomputeNotifications(token);
+      recomputeWithToast();
     } catch (err) {
       showToast("Couldn't update — try again");
       console.error(err);
@@ -908,7 +917,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       try {
         await dbDeleteSupp(supp.id, token);
         setSupps(s => s.filter(x => x.id !== supp.id));
-        recomputeNotifications(token);
+        recomputeWithToast();
       } catch (err) {
         showToast("Couldn't delete — try again");
         console.error(err);
@@ -1011,7 +1020,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           try { await dbUpdateSupp(s, token); } catch (e) { console.warn("IF slot migration write failed for", s.id, e); }
         }
         setNeedsIFMigration(false);
-        recomputeNotifications(token);
+        recomputeWithToast();
       }}
     />
   );
@@ -1142,7 +1151,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           token={token}
           profile={profile}
           onProfileUpdate={(updated) => setProfile(updated)}
-          onNotificationsEnabled={() => recomputeNotifications(token)}
+          onNotificationsEnabled={recomputeWithToast}
           scheduleMode={scheduleMode}
           scheduleConfig={scheduleConfig}
           anchorBehavior={anchorBehavior}
@@ -1274,7 +1283,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         token={token}
         profile={profile}
         onProfileUpdate={(updated) => setProfile(updated)}
-        onNotificationsEnabled={() => recomputeNotifications(token)}
+        onNotificationsEnabled={recomputeWithToast}
         scheduleMode={scheduleMode}
         scheduleConfig={scheduleConfig}
         anchorBehavior={anchorBehavior}

@@ -6,34 +6,44 @@ const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 // lines per page load in production.
 const logDev = (...args) => { if (import.meta.env.DEV) console.log(...args); };
 
+// Memoize the in-flight refresh. Without this, parallel 401s (e.g. boot-time
+// Promise.all reads, or rapid card-click saves) each trigger their own
+// /token POST, all of which race to overwrite localStorage. With this, all
+// concurrent callers await the same promise and a single refresh runs.
+let inFlightRefresh = null;
+
 export async function refreshSession() {
-  const refreshToken = localStorage.getItem("sb_refresh_token");
-  logDev("[auth] refreshSession — refresh token present:", !!refreshToken);
-  if (!refreshToken) return null;
-  try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPA_KEY },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    logDev("[auth] refresh endpoint status:", res.status);
-    if (res.ok) {
-      const d = await res.json();
-      if (d.access_token) {
-        localStorage.setItem("sb_token", d.access_token);
-        if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
-        logDev("[auth] refresh succeeded — new_refresh_token present:", !!d.refresh_token);
-        return d.access_token;
+  if (inFlightRefresh) return inFlightRefresh;
+  inFlightRefresh = (async () => {
+    const refreshToken = localStorage.getItem("sb_refresh_token");
+    logDev("[auth] refreshSession — refresh token present:", !!refreshToken);
+    if (!refreshToken) return null;
+    try {
+      const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPA_KEY },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      logDev("[auth] refresh endpoint status:", res.status);
+      if (res.ok) {
+        const d = await res.json();
+        if (d.access_token) {
+          localStorage.setItem("sb_token", d.access_token);
+          if (d.refresh_token) localStorage.setItem("sb_refresh_token", d.refresh_token);
+          logDev("[auth] refresh succeeded — new_refresh_token present:", !!d.refresh_token);
+          return d.access_token;
+        }
+        console.warn("[auth] refresh ok but no access_token in body:", JSON.stringify(d));
+      } else {
+        const body = await res.json().catch(() => ({}));
+        console.error("[auth] refresh failed:", res.status, JSON.stringify(body));
       }
-      console.warn("[auth] refresh ok but no access_token in body:", JSON.stringify(d));
-    } else {
-      const body = await res.json().catch(() => ({}));
-      console.error("[auth] refresh failed:", res.status, JSON.stringify(body));
+    } catch (e) {
+      console.error("[auth] refresh fetch threw:", e);
     }
-  } catch (e) {
-    console.error("[auth] refresh fetch threw:", e);
-  }
-  return null;
+    return null;
+  })().finally(() => { inFlightRefresh = null; });
+  return inFlightRefresh;
 }
 
 export async function supa(method, path, body, token) {
@@ -204,12 +214,16 @@ export const dbSaveSchedule = async (data, t) => {
 export const dbUpdateScheduleField = (field, value, userId, token) =>
   supa("PATCH", `/rest/v1/user_schedule?user_id=eq.${userId}`, { [field]: value }, token);
 
-export async function dbGetAdherenceCounts(userId, suppIds, token) {
+export async function dbGetAdherenceCounts(userId, suppIds, token, daysBack = 365) {
   if (!suppIds.length) return {};
-  // Filter by user_id so we count only this user's check-marks (RLS isn't
-  // enforced at the DB level for daily_logs — without the explicit filter
-  // we'd be counting other users' checks too).
-  const rows = await supa("GET", `/rest/v1/daily_logs?user_id=eq.${userId}&select=checked`, null, token);
+  // Cap the scan so the query doesn't grow unbounded as a user's log_date
+  // history accumulates. 365 days is the default — the count is "lifetime
+  // adherence" for practical purposes since the supps aren't expected to
+  // outlive a year.
+  const since = new Date();
+  since.setDate(since.getDate() - daysBack);
+  const sinceStr = since.toISOString().slice(0, 10);
+  const rows = await supa("GET", `/rest/v1/daily_logs?user_id=eq.${userId}&log_date=gte.${sinceStr}&select=checked`, null, token);
   const counts = Object.fromEntries(suppIds.map(id => [id, 0]));
   for (const row of (rows || [])) {
     for (const [key, val] of Object.entries(row.checked || {})) {
@@ -222,6 +236,9 @@ export async function dbGetAdherenceCounts(userId, suppIds, token) {
   return counts;
 }
 
+// Returns true on success so callers can show a quiet "notifications won't
+// fire" hint if the edge function rejected the request. Most callers
+// fire-and-forget; in App.jsx we now `then(ok => ok || showToast(...))`.
 export async function recomputeNotifications(token) {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   try {
@@ -233,9 +250,14 @@ export async function recomputeNotifications(token) {
       },
       body: JSON.stringify({ timezone }),
     });
-    if (!res.ok) console.error("Recompute failed:", await res.text());
+    if (!res.ok) {
+      console.error("Recompute failed:", await res.text());
+      return false;
+    }
+    return true;
   } catch (e) {
     console.error("Recompute error:", e);
+    return false;
   }
 }
 

@@ -1,23 +1,11 @@
 import { useTheme, THEME_NAMES } from "../lib/theme";
 
 const SWATCHES = {
-  light:                ["#F4F6F8", "#1A1A1A", "#1A1A1A"],
-  dark:                 ["#04060A", "#F5F5F7", "#F5F5F7"],
-  terminalAmber:        ["#0D0D0D", "#E8E2D6", "#FFB000"],
-  terminalCyan:         ["#0D0D0D", "#E0E8F0", "#00D4FF"],
-  terminalPhosphor:     ["#0D0D0D", "#A0E0B0", "#33FF66"],
-  achromatic:           ["#0D0D0D", "#FFFFFF", "#FFFFFF"],
-  terminalMagenta:      ["#0D0D0D", "#F0E8E8", "#FF3D9A"],
+  achromatic: ["#0D0D0D", "#FFFFFF", "#FFFFFF"],
 };
 
 const LABELS = {
-  light:                "Light",
-  dark:                 "Dark",
-  terminalAmber:        "Amber",
-  terminalCyan:         "Cyan",
-  terminalPhosphor:     "Phosphor",
-  achromatic:           "Achromatic",
-  terminalMagenta:      "Magenta",
+  achromatic: "Achromatic",
 };
 
 export default function DevThemePicker() {
