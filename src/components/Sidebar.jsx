@@ -43,8 +43,7 @@ export function AccountAvatar({ displayName, small, size: sizeProp, onClick }) {
   return <div style={baseStyle}>{initial}</div>;
 }
 
-// Triage severity for a percentage. Anchored at the same thresholds the
-// PatientsPanel adherence label uses (≥80 high, ≥50 at-risk, <50 low).
+// Triage severity for a percentage. ≥80 high, ≥50 at-risk, <50 low.
 // `null` means "no data yet" — render no dot.
 function severity(pct) {
   if (pct == null) return null;

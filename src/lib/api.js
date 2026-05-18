@@ -182,10 +182,6 @@ export const dbDeleteProtocol  = (id, t)   => supa("DELETE", `/rest/v1/protocols
 const dbResetProtocolSupps = (protocolId, t) =>
   supa("PATCH", `/rest/v1/supplements?protocol_id=eq.${protocolId}`, { status: 'active', paused: false, updated_at: new Date().toISOString() }, t);
 
-export const dbPauseProtocol = async (protocolId, t) => {
-  await dbResetProtocolSupps(protocolId, t);
-  return supa("PATCH", `/rest/v1/protocols?id=eq.${protocolId}`, { status: 'paused',   updated_at: new Date().toISOString() }, t);
-};
 export const dbArchiveProtocol = async (protocolId, t) => {
   await dbResetProtocolSupps(protocolId, t);
   return supa("PATCH", `/rest/v1/protocols?id=eq.${protocolId}`, { status: 'archived', updated_at: new Date().toISOString() }, t);
@@ -194,10 +190,20 @@ export const dbActivateProtocol = (protocolId, t) =>
   supa("PATCH", `/rest/v1/protocols?id=eq.${protocolId}`, { status: 'active', updated_at: new Date().toISOString() }, t);
 
 // Supplements
-export const dbGetSupps     = (userId, t) => supa("GET",  `/rest/v1/supplements?user_id=eq.${userId}&select=*&order=created_at.asc`, null, t);
+// Reads filter out soft-deleted rows (deleted_at IS NULL) so the cockpit never
+// shows deleted supps. Past-day adherence math iterates over this filtered set,
+// so removed supps stop contributing to historical denominators — same
+// "delete = it never happened in your live view" semantic as before, but the
+// row is preserved in the DB for future audit-log / undo work.
+export const dbGetSupps     = (userId, t) => supa("GET",  `/rest/v1/supplements?user_id=eq.${userId}&deleted_at=is.null&select=*&order=created_at.asc`, null, t);
 export const dbAddSupp      = (s, t)    => supa("POST",   "/rest/v1/supplements", s, t);
-export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, timePreference: s.timePreference, paused: s.paused ?? false, status: s.status ?? 'active', stopped_at: s.stopped_at ?? null, protocol_id: s.protocol_id ?? null, treatment_mode: s.treatment_mode ?? "indefinite", starts_at: s.starts_at ?? null, ends_at: s.ends_at ?? null, cycle_on_value: s.cycle_on_value ?? null, cycle_on_unit: s.cycle_on_unit ?? null, cycle_off_value: s.cycle_off_value ?? null, cycle_off_unit: s.cycle_off_unit ?? null, updated_at: new Date().toISOString() }, t);
-export const dbDeleteSupp   = (id, t)   => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
+export const dbUpdateSupp   = (s, t)    => supa("PATCH",  `/rest/v1/supplements?id=eq.${s.id}`, { name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category, paused: s.paused ?? false, status: s.status ?? 'active', stopped_at: s.stopped_at ?? null, protocol_id: s.protocol_id ?? null, treatment_mode: s.treatment_mode ?? "indefinite", starts_at: s.starts_at ?? null, ends_at: s.ends_at ?? null, cycle_on_value: s.cycle_on_value ?? null, cycle_on_unit: s.cycle_on_unit ?? null, cycle_off_value: s.cycle_off_value ?? null, cycle_off_unit: s.cycle_off_unit ?? null, updated_at: new Date().toISOString() }, t);
+// User-facing delete — soft. Sets deleted_at = now(); row stays in DB but
+// disappears from dbGetSupps reads. Use this for any user-initiated removal.
+export const dbDeleteSupp   = (id, t)   => supa("PATCH",  `/rest/v1/supplements?id=eq.${id}`, { deleted_at: new Date().toISOString() }, t);
+// Hard delete — for cascade cleanup (orphans on protocol delete) and rollback
+// paths (failed bulk insert). Not user-reachable.
+export const dbHardDeleteSupp = (id, t) => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
 export const dbGetLog       = (userId, date, t) => supa("GET",    `/rest/v1/daily_logs?user_id=eq.${userId}&select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 export const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
 // user_schedule needs an explicit user_id filter on the read — without it

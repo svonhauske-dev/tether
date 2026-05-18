@@ -19,6 +19,7 @@ import { DayCell } from '../WeekStrip';
 import InsightsPanel from '../InsightsPanel';
 import InlineTip from '../InlineTip';
 import LogAtSheet from '../LogAtSheet';
+import { ModalPreview, PopoverPreview, SidePanelPreview } from './previews';
 
 // ── Stub helpers ───────────────────────────────────────────────────────────────
 
@@ -251,6 +252,35 @@ export const componentRegistry = {
         { name: 'danger',  props: { status: 'danger' } },
         { name: 'neutral', props: { status: null } },
         { name: 'lg 10',   props: { status: 'success', size: 10 } },
+      ],
+    },
+
+    Modal: {
+      component: ModalPreview,
+      description: 'Full-screen backdrop dialog. Bottom sheet on mobile (drag-to-dismiss, 90dvh max), centered card on desktop (480px default / 360px compact, 80dvh max). Sticky header + scrollable body + sticky footer. Escape + Tab focus trap + auto-focus on open. Use `size="compact"` for confirms and short prompts; default for forms and longer content. Each variant below renders a trigger button; click to open.',
+      variants: [
+        { name: 'default (480) — with footer', props: { size: 'default', withFooter: true,  title: 'Edit supplement' } },
+        { name: 'default (480) — no footer',   props: { size: 'default', withFooter: false, title: 'Details' } },
+        { name: 'compact (360) — confirm',     props: { size: 'compact', withFooter: true,  title: 'Stop supplement?' } },
+      ],
+    },
+
+    Popover: {
+      component: PopoverPreview,
+      description: 'Floating menu panel anchored to a trigger. Lighter than Modal — no backdrop, no focus trap, preserves surrounding context. Use for short menus, overflow actions, and pickers. Dismisses on outside-click or Escape. Caller owns the trigger and provides an `anchorRef`. Children are typically `PopoverItem` (menu rows, optional `destructive`/`disabled`/`icon`) and `PopoverSection` (uppercase divider label for grouping).',
+      variants: [
+        { name: 'basic menu',         props: { withSection: false, destructive: false } },
+        { name: 'with destructive',   props: { withSection: false, destructive: true  } },
+        { name: 'with section label', props: { withSection: true,  destructive: false } },
+      ],
+    },
+
+    SidePanel: {
+      component: SidePanelPreview,
+      description: 'Right-side editing panel for focused work that should preserve surrounding context (Linear / Notion / Stripe Dashboard pattern). 480px wide on desktop, anchored to the right edge with no backdrop — the surface beneath stays visible. On mobile delegates to Modal (bottom sheet) via `useIsDesktop` since side panels don\'t fit a phone viewport. API matches Modal so migration from `<Modal>` to `<SidePanel>` is a tag swap.',
+      variants: [
+        { name: 'open with footer', props: { withFooter: true  } },
+        { name: 'open no footer',   props: { withFooter: false } },
       ],
     },
 

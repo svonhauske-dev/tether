@@ -8,7 +8,7 @@ import Button from "./Button";
 import Modal from "./Modal";
 import Popover, { PopoverItem } from "./Popover";
 import TabBar from "./TabBar";
-import { isPausedSupp, isStoppedSupp } from "../lib/time";
+import { isActiveSupp, isPausedSupp } from "../lib/time";
 
 function CategoryIcon({ category, color }) {
   if (category === "Rx")         return <Pill    size={14} color={color} style={{ flexShrink: 0 }} />;
@@ -35,7 +35,7 @@ const CONFIRM_COPY = {
 
 export default function ProtocolDetailScreen({
   isOpen, onBack, protocol, supplements,
-  onUpdateProtocol, onPauseProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
+  onUpdateProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
   onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp,
   isClinician, patients = [], onSendToPatient,
   desktop = false,
@@ -73,17 +73,19 @@ export default function ProtocolDetailScreen({
   }, [editingName]);
 
   const isActive   = protocol?.status === 'active';
-  const isPaused   = protocol?.status === 'paused';
-  const isArchived = protocol?.status === 'archived';
+  // Protocols are Active or Archived only — the legacy 'paused' state was
+  // collapsed into 'archived' when lifecycle was consolidated. Anything not
+  // active is treated as archived.
+  const isArchived = !isActive;
 
   const protocolSupps = (protocol && supplements)
     ? supplements.filter(s => s.protocol_id === protocol.id)
     : [];
-  const activeSupps  = protocolSupps.filter(s => !isStoppedSupp(s)).sort((a, b) => {
-    if (isPausedSupp(a) !== isPausedSupp(b)) return isPausedSupp(a) ? 1 : -1;
-    return a.name.localeCompare(b.name);
-  });
-  const stoppedSupps = protocolSupps.filter(s => isStoppedSupp(s)).sort((a, b) => a.name.localeCompare(b.name));
+  // Active = strictly status='active'. Paused supps now live in their own tab
+  // (the old "Stopped" tab was renamed to "Paused" when the lifecycle states
+  // were consolidated — `stopped` no longer exists as a distinct state).
+  const activeSupps = protocolSupps.filter(s => isActiveSupp(s)).sort((a, b) => a.name.localeCompare(b.name));
+  const pausedSupps = protocolSupps.filter(s => isPausedSupp(s)).sort((a, b) => a.name.localeCompare(b.name));
 
   const saveName = async () => {
     if (!protocol) return;
@@ -108,16 +110,12 @@ export default function ProtocolDetailScreen({
     if (!protocol || readOnly) return [];
     const items = [];
     if (isActive) {
-      items.push({ key: 'pause',    label: 'Pause protocol',    onSelect: () => { setMenuOpen(false); onPauseProtocol(protocol); } });
-      items.push({ key: 'archive',  label: 'Archive protocol',  onSelect: () => { setMenuOpen(false); setConfirmAction('archive'); } });
-    } else if (isPaused) {
-      items.push({ key: 'activate', label: 'Activate protocol', onSelect: () => { setMenuOpen(false); onActivateProtocol(protocol); } });
       items.push({ key: 'archive',  label: 'Archive protocol',  onSelect: () => { setMenuOpen(false); setConfirmAction('archive'); } });
     } else if (isArchived) {
       items.push({ key: 'activate', label: 'Activate protocol', onSelect: () => { setMenuOpen(false); onActivateProtocol(protocol); } });
       items.push({ key: 'delete',   label: 'Delete protocol',   onSelect: () => { setMenuOpen(false); setConfirmAction('delete'); }, destructive: true });
     }
-    if (isClinician && (isActive || isPaused)) {
+    if (isClinician && isActive) {
       items.push({ key: 'send', label: 'Send to patient', onSelect: () => { setMenuOpen(false); setSendModalOpen(true); } });
     }
     return items;
@@ -241,7 +239,7 @@ export default function ProtocolDetailScreen({
               the tab strip / list, flush under the sticky header. */}
 
           {/* Archived: flat list (no pause/resume, since archive resets all supps to active state).
-              Active / Paused: Active / Stopped tabs. */}
+              Active / Paused: Active / Paused tabs. */}
           {isArchived ? (
             protocolSupps.length === 0 ? (
               <div style={{ fontSize: typography.body, color: theme.text.secondary, paddingBottom: spacing.xl }}>
@@ -294,7 +292,7 @@ export default function ProtocolDetailScreen({
             <>
               {/* Tab bar */}
               <TabBar
-                tabs={[{ value: 'active', label: 'Active' }, { value: 'stopped', label: 'Stopped' }]}
+                tabs={[{ value: 'active', label: 'Active' }, { value: 'paused', label: 'Paused' }]}
                 active={tab}
                 onChange={setTab}
                 style={{ marginBottom: spacing.lg }}
@@ -318,7 +316,6 @@ export default function ProtocolDetailScreen({
                             padding: `${spacing.sm}px 0`,
                             borderBottom: isLast ? 'none' : `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
                             minHeight: touch.row,
-                            opacity: isPausedSupp(supp) ? 0.5 : 1,
                           }}
                         >
                           <div
@@ -332,7 +329,6 @@ export default function ProtocolDetailScreen({
                             <div style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium, display: 'flex', alignItems: 'center', gap: spacing.xs2 }}>
                               {supp.name}
                               <CategoryIcon category={supp.category} color={theme.text.secondary} />
-                              {isPausedSupp(supp) && <Badge variant="neutral">Paused</Badge>}
                             </div>
                             <div style={{ fontSize: typography.label, color: theme.text.secondary, marginTop: spacing.xxxs, minHeight: 14 }}>
                               {supp.dose}{supp.notes ? ` · ${supp.notes}` : ''}
@@ -341,14 +337,11 @@ export default function ProtocolDetailScreen({
                           {!readOnly && isActive && (
                             <Button
                               variant="icon"
-                              aria-label={isPausedSupp(supp) ? `Resume ${supp.name}` : `Pause ${supp.name}`}
+                              aria-label={`Pause ${supp.name}`}
                               onClick={() => onTogglePauseSupp(supp)}
                               style={{ border: 'none' }}
                             >
-                              {isPausedSupp(supp)
-                                ? <Play  size={18} color={theme.text.secondary} />
-                                : <Pause size={18} color={theme.text.secondary} />
-                              }
+                              <Pause size={18} color={theme.text.secondary} />
                             </Button>
                           )}
                         </div>
@@ -358,16 +351,19 @@ export default function ProtocolDetailScreen({
                 )
               )}
 
-              {/* ── Stopped tab ── */}
-              {tab === 'stopped' && (
-                stoppedSupps.length === 0 ? (
+              {/* ── Paused tab ── */}
+              {/* Paused row: [name] [(paused) tag] ———— [trash] [play].
+                  Trash soft-deletes (writes deleted_at; row disappears from cockpit).
+                  Play resumes (status='active'; row moves to the Active tab). */}
+              {tab === 'paused' && (
+                pausedSupps.length === 0 ? (
                   <div style={{ fontSize: typography.body, color: theme.text.secondary, paddingBottom: spacing.xl }}>
-                    Nothing stopped yet.
+                    Nothing paused.
                   </div>
                 ) : (
                   <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, marginBottom: spacing.xl }}>
-                    {stoppedSupps.map((supp, i) => {
-                      const isLast = i === stoppedSupps.length - 1;
+                    {pausedSupps.map((supp, i) => {
+                      const isLast = i === pausedSupps.length - 1;
                       return (
                         <div
                           key={supp.id}
@@ -381,9 +377,10 @@ export default function ProtocolDetailScreen({
                           }}
                         >
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: typography.body, color: theme.text.secondary, fontWeight: typography.medium, display: 'flex', alignItems: 'center', gap: spacing.xs2 }}>
+                            <div style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium, display: 'flex', alignItems: 'center', gap: spacing.xs2 }}>
                               {supp.name}
                               <CategoryIcon category={supp.category} color={theme.text.secondary} />
+                              <Badge variant="neutral">paused</Badge>
                             </div>
                             {supp.dose && <div style={{ fontSize: typography.caption, color: theme.text.faint }}>{supp.dose}</div>}
                           </div>
@@ -393,12 +390,17 @@ export default function ProtocolDetailScreen({
                                 variant="icon"
                                 aria-label={`Delete ${supp.name}`}
                                 onClick={() => setDeletingSupp(supp)}
-                                style={{ border: 'none', marginRight: spacing.xs }}
+                                style={{ border: 'none', marginRight: spacing.xxs }}
                               >
                                 <Trash2 size={18} color={theme.status.danger} />
                               </Button>
-                              <Button variant="secondary" size="compact" onClick={() => onResumeSupp(supp)}>
-                                Resume
+                              <Button
+                                variant="icon"
+                                aria-label={`Resume ${supp.name}`}
+                                onClick={() => onResumeSupp(supp)}
+                                style={{ border: 'none' }}
+                              >
+                                <Play size={18} color={theme.text.primary} />
                               </Button>
                             </>
                           )}

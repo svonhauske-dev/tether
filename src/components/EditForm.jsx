@@ -9,7 +9,6 @@ import SupplementNameAutocomplete from './SupplementNameAutocomplete';
 import Label from './Label';
 import Badge from './Badge';
 import HelperText from './HelperText';
-import Modal from './Modal';
 
 const CATEGORIES = ["Oral", "Rx", "Injectable", "Topical"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -20,11 +19,10 @@ const TREATMENT_MODES = [
 ];
 const UNITS = ["days", "weeks", "months"];
 
-export default function EditForm({ form, setForm, editingId, onStop, onResume, onDelete, scheduleMode, mealCount = 3, eveningMode = null, supplementHistory = [], activeProtocols = [] }) {
+export default function EditForm({ form, setForm, editingId, onDelete, scheduleMode, mealCount = 3, eveningMode = null, supplementHistory = [], activeProtocols = [] }) {
   const { theme } = useTheme();
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
-  const [showStopConfirm, setShowStopConfirm] = useState(false);
 
   const today = dateKey(new Date());
   const touch = (field) => setTouched(t => ({ ...t, [field]: true }));
@@ -59,30 +57,6 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
   const mode = form.treatment_mode || "indefinite";
   const dateOrderError = mode !== "indefinite" && form.starts_at && form.ends_at && form.ends_at <= form.starts_at;
   const errStyle = { fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs };
-
-  // Archive view — supplement has been stopped
-  if (form.status === 'stopped') {
-    return (
-      <div>
-        <div style={{
-          background: theme.surface.cardSubtle,
-          border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-          borderRadius: theme.radius.input,
-          padding: `${spacing.sm}px ${spacing.md}px`,
-          marginBottom: spacing.md,
-          fontSize: typography.body,
-          color: theme.text.secondary,
-          lineHeight: 1.5,
-        }}>
-          This supplement is in your archive. Restart it to make changes.
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs, marginTop: spacing.sm }}>
-          {onResume && <Button variant="primary" fullWidth onClick={onResume}>Resume</Button>}
-          {onDelete && <Button variant="destructive" fullWidth onClick={onDelete}>Delete</Button>}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -338,30 +312,6 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
         </div>
       )}
 
-      {editingId && onStop && (
-        <div style={{ marginTop: spacing.lg }}>
-          <Button variant="secondary" fullWidth onClick={() => setShowStopConfirm(true)}>
-            Stop
-          </Button>
-        </div>
-      )}
-
-      <Modal
-        open={showStopConfirm}
-        onClose={() => setShowStopConfirm(false)}
-        size="compact"
-        title={`Stop ${form.name || "this supplement"}?`}
-        footer={
-          <div style={{ display: "flex", gap: spacing.xs }}>
-            <Button variant="secondary" fullWidth onClick={() => setShowStopConfirm(false)}>Cancel</Button>
-            <Button variant="primary" fullWidth onClick={() => { setShowStopConfirm(false); onStop?.(); }}>Stop</Button>
-          </div>
-        }
-      >
-        <div style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
-          This moves it to your archive. You can restart anytime.
-        </div>
-      </Modal>
     </div>
   );
 }
