@@ -71,28 +71,34 @@ export default function SupplementRow({ supplement, checked, isReadOnly, onToggl
         )}
       </div>
 
-      {/* Edit pencil — revealed on hover */}
-      {hovered && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: theme.text.secondary,
-            padding: `${spacing.xxs}px`,
-            minWidth: 32,
-            minHeight: 32,
-            display: 'flex',
-            alignItems: 'center',
-            borderRadius: theme.radius.surfaceInner,
-            flexShrink: 0,
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <Pencil size={14} />
-        </button>
-      )}
+      {/* Edit pencil — always in the layout, fades in on hover so the row
+          doesn't shift width when the cursor passes over. Hidden buttons
+          stay tab-skippable so keyboard nav still has a sensible Tab order. */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+        tabIndex={hovered ? 0 : -1}
+        aria-hidden={!hovered}
+        aria-label="Edit"
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: theme.text.secondary,
+          padding: `${spacing.xxs}px`,
+          minWidth: 32,
+          minHeight: 32,
+          display: 'flex',
+          alignItems: 'center',
+          borderRadius: theme.radius.surfaceInner,
+          flexShrink: 0,
+          opacity: hovered ? 1 : 0,
+          pointerEvents: hovered ? 'auto' : 'none',
+          transition: 'opacity 150ms ease',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <Pencil size={14} />
+      </button>
     </div>
   );
 }

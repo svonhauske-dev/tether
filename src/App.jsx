@@ -13,6 +13,8 @@ import Card from "./components/Card";
 import Badge from "./components/Badge";
 import Label from "./components/Label";
 import Modal from "./components/Modal";
+import Popover, { PopoverItem, PopoverSection } from "./components/Popover";
+import SidePanel from "./components/SidePanel";
 import SettingsScreen from "./components/SettingsScreen";
 import { NavigationProvider, useNavigation } from "./lib/navigation";
 import { ToastProvider, useToast } from "./components/ToastContext";
@@ -316,7 +318,12 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   // archive/un-archive actions.
   const [archivedPatientIds, setArchivedPatientIds] = useState(new Set());
   const [patientActionsOpen, setPatientActionsOpen]     = useState(false);
+  // Anchor element captured at click time so the Popover can render under the
+  // trigger button. Stored as state (not ref) because the trigger lives in
+  // a child component (ProtocolLibrary) for sendToPatientAnchor.
+  const [patientActionsAnchor, setPatientActionsAnchor] = useState(null);
   const [sendToPatientPickerOpen, setSendToPatientPickerOpen] = useState(false);
+  const [sendToPatientAnchor, setSendToPatientAnchor]   = useState(null);
   const [confirmArchivePatient, setConfirmArchivePatient]     = useState(false);
   // When true, the patient-view ProtocolLibrary opens its internal
   // new-protocol create modal; on successful creation we auto-send the
@@ -1430,7 +1437,11 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
                 trendLogs={patientTrendLogs}
                 theme={theme}
               />
-              <Button variant="icon" aria-label="Patient actions" onClick={() => setPatientActionsOpen(true)}>
+              <Button
+                variant="icon"
+                aria-label="Patient actions"
+                onClick={(e) => { setPatientActionsAnchor(e.currentTarget); setPatientActionsOpen(true); }}
+              >
                 <MoreHorizontal size={18} />
               </Button>
             </div>
@@ -1595,7 +1606,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
               token={token}
               onActivateReceived={selectedPatient ? null : activateReceived}
               adherenceMap={selectedPatient ? patientProtocolAdherence : null}
-              onPlusClick={selectedPatient ? () => setSendToPatientPickerOpen(true) : null}
+              onPlusClick={selectedPatient ? (e) => { setSendToPatientAnchor(e?.currentTarget || null); setSendToPatientPickerOpen(true); } : null}
               controlledShowNew={selectedPatient ? createForPatientOpen : undefined}
               onShowNewChange={selectedPatient ? setCreateForPatientOpen : undefined}
             />
@@ -1628,7 +1639,10 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           )}
         </aside>
         </div>
-        <Modal
+        {/* EditForm — context-preserving side panel on desktop, bottom sheet
+            on mobile (delegated to Modal internally). Lets the clinician/user
+            keep an eye on the surface they're editing against. */}
+        <SidePanel
           open={formOpen}
           onClose={closeForm}
           title={editingId ? "Edit item" : "New item"}
@@ -1644,104 +1658,61 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           }
         >
           <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
-        </Modal>
+        </SidePanel>
 
-        {/* Patient actions overflow menu — Archive only. (Send protocol moved
-            to the + button in the patient's protocols column.) */}
-        <Modal
+        {/* Patient actions overflow menu — Archive only. Popover anchored to
+            the ⋯ trigger; lighter than a modal for a single-action menu. */}
+        <Popover
           open={patientActionsOpen}
           onClose={() => setPatientActionsOpen(false)}
-          title={selectedPatient?.display_name || 'Patient actions'}
+          anchorRef={{ current: patientActionsAnchor }}
+          placement="bottom-end"
+          width={220}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <button
-              type="button"
-              onClick={() => { setPatientActionsOpen(false); setConfirmArchivePatient(true); }}
-              style={{
-                display: 'flex', alignItems: 'center', width: '100%',
-                padding: `${spacing.md}px 0`,
-                background: 'transparent', border: 'none',
-                color: theme.text.primary,
-                fontFamily: 'inherit', fontSize: typography.body, fontWeight: typography.medium,
-                textAlign: 'left', cursor: 'pointer', minHeight: touch.min,
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              Archive patient
-            </button>
-          </div>
-        </Modal>
+          <PopoverItem onClick={() => { setPatientActionsOpen(false); setConfirmArchivePatient(true); }}>
+            Archive patient
+          </PopoverItem>
+        </Popover>
 
-        {/* Send-or-create picker — opened from the + in the patient's protocols
-            column. Two options surface here: build a brand-new protocol
-            (then auto-send to this patient on save), or send one of the
-            clinician's existing library protocols. */}
-        <Modal
+        {/* Send-or-create picker — popover anchored to the + in the
+            patient's protocols column. Two paths: build new protocol
+            (auto-sends on save), or send one from the clinician's library. */}
+        <Popover
           open={sendToPatientPickerOpen}
           onClose={() => setSendToPatientPickerOpen(false)}
-          title={`Send to ${selectedPatient?.display_name || 'patient'}`}
+          anchorRef={{ current: sendToPatientAnchor }}
+          placement="bottom-end"
+          width={280}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <button
-              type="button"
-              onClick={() => {
+          <PopoverItem
+            icon={<Plus size={14} />}
+            onClick={() => { setSendToPatientPickerOpen(false); setCreateForPatientOpen(true); }}
+          >
+            Create new protocol
+          </PopoverItem>
+          {protocols.filter(p => p.status === 'active').length > 0 && (
+            <PopoverSection>From your library</PopoverSection>
+          )}
+          {protocols.filter(p => p.status === 'active').map((proto) => (
+            <PopoverItem
+              key={proto.id}
+              onClick={async () => {
+                await sendProtocol(proto, selectedPatient.id);
                 setSendToPatientPickerOpen(false);
-                setCreateForPatientOpen(true);
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: spacing.sm,
-                width: '100%',
-                padding: `${spacing.sm}px 0`,
-                background: 'transparent', border: 'none',
-                color: theme.text.primary,
-                fontFamily: 'inherit', fontSize: typography.body, fontWeight: typography.medium,
-                textAlign: 'left', cursor: 'pointer', minHeight: touch.min,
-                WebkitTapHighlightColor: 'transparent',
               }}
             >
-              <Plus size={18} />
-              <span>Create new protocol</span>
-            </button>
-            {protocols.filter(p => p.status === 'active').length > 0 && (
-              <div style={{
-                fontSize: typography.label, color: theme.text.secondary,
-                letterSpacing: typography.labelSpacingWide,
-                textTransform: 'uppercase', fontWeight: typography.semibold,
-                fontFamily: typography.fontHeading,
-                paddingTop: spacing.md, paddingBottom: spacing.xs,
-                borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-                marginTop: spacing.xs,
-              }}>
-                From your library
-              </div>
-            )}
-            {protocols.filter(p => p.status === 'active').map((proto) => (
-              <button
-                key={proto.id}
-                type="button"
-                onClick={async () => {
-                  await sendProtocol(proto, selectedPatient.id);
-                  setSendToPatientPickerOpen(false);
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  width: '100%',
-                  padding: `${spacing.sm}px 0`,
-                  background: 'transparent', border: 'none',
-                  color: theme.text.primary,
-                  fontFamily: 'inherit', fontSize: typography.body, fontWeight: typography.medium,
-                  textAlign: 'left', cursor: 'pointer', minHeight: touch.min,
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                <span>{proto.name}</span>
-                <span style={{ fontSize: typography.caption, color: theme.text.secondary }}>
-                  {visibleSupps.filter(s => s.protocol_id === proto.id).length} supplements
+              <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm, width: '100%' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proto.name}</span>
+                <span style={{
+                  fontSize: typography.label, color: theme.text.secondary,
+                  fontFamily: typography.fontData, flexShrink: 0,
+                }}>
+                  {visibleSupps.filter(s => s.protocol_id === proto.id).length}
                 </span>
-              </button>
-            ))}
-          </div>
-        </Modal>
+              </span>
+            </PopoverItem>
+          ))}
+        </Popover>
 
         {/* Archive patient confirmation — only hides from clinician's roster
             (RLS access preserved per Phase 4 design). Patient is not notified. */}
@@ -1880,7 +1851,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         patients={patients}
         onSendToPatient={sendProtocol}
       />
-      <Modal
+      <SidePanel
         open={formOpen}
         onClose={closeForm}
         title={editingId ? "Edit item" : "New item"}
@@ -1896,7 +1867,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         }
       >
         <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
-      </Modal>
+      </SidePanel>
     </div>
   );
 }
