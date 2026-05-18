@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { spacing, typography, radius, shadows, effects, zIndex as zIndexTokens } from "../design-system";
+import { spacing, typography, radius, shadows, effects, breakpoints, zIndex as zIndexTokens } from "../design-system";
 import { useTheme } from "../lib/theme";
 import Button from "./Button";
 
@@ -10,8 +10,21 @@ const ModalDepthCtx = createContext(0);
 
 const ANIM_MS = 300; // matches CSS transition duration
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= breakpoints.desktop
+  );
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= breakpoints.desktop);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return isDesktop;
+}
+
 export default function Modal({ open, onClose, title, children, footer, leftAction }) {
   const { theme } = useTheme();
+  const isDesktop = useIsDesktop();
   const depth = useContext(ModalDepthCtx);
   const zBackdrop = zIndexTokens.backdrop + depth * 100;
   const zSheet    = zIndexTokens.modal    + depth * 100;
@@ -113,13 +126,42 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
     if (finalOffset > 100) onClose();
   };
 
-  const sheetTransform = isDragging
+  const mobileTransform = isDragging
     ? `translateY(${dragOffset}px)`
     : shown ? "translateY(0)" : "translateY(100%)";
+  const desktopTransform = shown
+    ? "translate(-50%, -50%) scale(1)"
+    : "translate(-50%, -50%) scale(0.96)";
 
-  const sheetTransition = isDragging ? "none" : "transform 0.3s ease-out";
+  const sheetTransform = isDesktop ? desktopTransform : mobileTransform;
+  const sheetTransition = isDragging
+    ? "none"
+    : isDesktop
+      ? "transform 200ms ease-out, opacity 200ms ease-out"
+      : "transform 0.3s ease-out";
 
   if (!mounted) return null;
+
+  const desktopSheetStyle = {
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    width: "min(480px, calc(100vw - 48px))",
+    maxHeight: "80dvh",
+    borderRadius: theme.radius.surface,
+    border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+    opacity: shown ? 1 : 0,
+  };
+
+  const mobileSheetStyle = {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    maxHeight: "90dvh",
+    borderRadius: `${radius.xl}px ${radius.xl}px 0 0`,
+    paddingBottom: "env(safe-area-inset-bottom)",
+  };
 
   // Portal to document.body so position:fixed is never constrained by a
   // transformed ancestor (e.g. the outer sheet's translateY animation).
@@ -135,8 +177,8 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
           left: 0,
           right: 0,
           background: theme.surface.backdrop,
-          backdropFilter: effects.backdropBlur,
-          WebkitBackdropFilter: effects.backdropBlur,
+          backdropFilter: isDesktop ? "none" : effects.backdropBlur,
+          WebkitBackdropFilter: isDesktop ? "none" : effects.backdropBlur,
           opacity: shown ? 1 : 0,
           transition: "opacity 250ms ease-out",
           pointerEvents: shown ? "all" : "none",
@@ -144,64 +186,62 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
         }}
       />
 
-      {/* Bottom sheet card */}
+      {/* Sheet/dialog card — bottom-anchored on mobile, centered on desktop */}
       <div
         ref={sheetRef}
         style={{
           fontFamily: typography.fontBody,
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          maxHeight: "90dvh",
           background: theme.surface.modal,
-          borderRadius: `${radius.xl}px ${radius.xl}px 0 0`,
           boxShadow: shadows.modal,
           transform: sheetTransform,
           transition: sheetTransition,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          paddingBottom: "env(safe-area-inset-bottom)",
           zIndex: zSheet,
           pointerEvents: open ? "all" : "none",
+          ...(isDesktop ? desktopSheetStyle : mobileSheetStyle),
         }}
       >
-        {/* Drag zone — full-width touch target around the handle pill */}
-        <div
-          onTouchStart={handleDragStart}
-          onTouchMove={handleDragMove}
-          onTouchEnd={handleDragEnd}
-          style={{
-            width: "100%",
-            paddingTop: 16,
-            paddingBottom: 12,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flexShrink: 0,
-            cursor: "grab",
-            WebkitTapHighlightColor: "transparent",
-            touchAction: "none",
-          }}
-        >
-          {/* Visual drag handle pill */}
-          <div style={{
-            width: 36,
-            height: 5,
-            borderRadius: theme.radius.pill,
-            background: theme.border.subtle,
-            opacity: 0.7,
-            flexShrink: 0,
-          }} />
-        </div>
+        {/* Drag zone — mobile only (bottom-sheet dismiss gesture) */}
+        {!isDesktop && (
+          <div
+            onTouchStart={handleDragStart}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
+            style={{
+              width: "100%",
+              paddingTop: 16,
+              paddingBottom: 12,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              flexShrink: 0,
+              cursor: "grab",
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "none",
+            }}
+          >
+            {/* Visual drag handle pill */}
+            <div style={{
+              width: 36,
+              height: 5,
+              borderRadius: theme.radius.pill,
+              background: theme.border.subtle,
+              opacity: 0.7,
+              flexShrink: 0,
+            }} />
+          </div>
+        )}
 
         {/* Header */}
         <div style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: `${spacing.xs}px ${spacing.md}px ${spacing.sm}px`,
+          padding: isDesktop
+            ? `${spacing.md}px ${spacing.md}px ${spacing.sm}px`
+            : `${spacing.xs}px ${spacing.md}px ${spacing.sm}px`,
           flexShrink: 0,
           borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
         }}>

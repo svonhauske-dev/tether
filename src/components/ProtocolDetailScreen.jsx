@@ -37,6 +37,8 @@ export default function ProtocolDetailScreen({
   onUpdateProtocol, onPauseProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
   onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp,
   isClinician, patients = [], onSendToPatient,
+  desktop = false,
+  readOnly = false,
 }) {
   const { theme } = useTheme();
   const [tab, setTab]                       = useState('active');
@@ -96,8 +98,10 @@ export default function ProtocolDetailScreen({
 
   // Overflow menu items — order matches iOS action-sheet conventions
   // (lifecycle/state changes first, destructive last).
+  // In readOnly mode (clinician viewing a patient's protocol), the menu is
+  // empty since the clinician can't modify patient-owned data.
   const menuItems = (() => {
-    if (!protocol) return [];
+    if (!protocol || readOnly) return [];
     const items = [];
     if (isActive) {
       items.push({ key: 'pause',    label: 'Pause protocol',    onSelect: () => { setMenuOpen(false); onPauseProtocol(protocol); } });
@@ -118,7 +122,15 @@ export default function ProtocolDetailScreen({
   return (
     <div
       ref={scrollRef}
-      style={{
+      style={desktop ? {
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        background: theme.surface.card,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+      } : {
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.3s ease-out',
@@ -131,25 +143,18 @@ export default function ProtocolDetailScreen({
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
-        background: theme.surface.canvas,
+        padding: desktop
+          ? `${spacing.md}px ${spacing.md}px ${spacing.sm}px`
+          : `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
+        background: desktop ? theme.surface.card : theme.surface.canvas,
         borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
         position: 'sticky', top: 0, zIndex: 1,
       }}>
-        <button
-          onClick={onBack}
-          aria-label="Back"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: `${spacing.xs}px`, marginLeft: -spacing.xs,
-            color: theme.text.primary, display: 'flex', alignItems: 'center',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <ChevronLeft size={24} />
-        </button>
+        <Button variant="icon" aria-label="Back" onClick={onBack}>
+          <ChevronLeft size={18} />
+        </Button>
 
-        {editingName ? (
+        {editingName && !readOnly ? (
           <form
             onSubmit={e => { e.preventDefault(); saveName(); }}
             style={{ flex: 1, margin: `0 ${spacing.sm}px` }}
@@ -168,6 +173,15 @@ export default function ProtocolDetailScreen({
               }}
             />
           </form>
+        ) : readOnly ? (
+          <span style={{
+            flex: 1, textAlign: 'center',
+            fontSize: typography.body, fontWeight: typography.semibold,
+            color: theme.text.primary,
+            padding: `${spacing.xs}px ${spacing.sm}px`,
+          }}>
+            {protocol?.name || ''}
+          </span>
         ) : (
           <button
             onClick={() => { setEditingName(true); setNameVal(protocol?.name || ''); }}
@@ -183,44 +197,28 @@ export default function ProtocolDetailScreen({
           </button>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xxs }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
           {menuItems.length > 0 && (
-            <button
-              onClick={() => setMenuOpen(true)}
-              aria-label="Protocol actions"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: `${spacing.xs}px`,
-                color: theme.text.primary, display: 'flex', alignItems: 'center',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <MoreHorizontal size={22} />
-            </button>
+            <Button variant="icon" aria-label="Protocol actions" onClick={() => setMenuOpen(true)}>
+              <MoreHorizontal size={18} />
+            </Button>
           )}
-          {(isActive || isArchived) ? (
-            <button
-              onClick={onAddSupp}
-              aria-label="Add supplement"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: `${spacing.xs}px`, marginRight: -spacing.xs,
-                color: theme.accent.default, display: 'flex', alignItems: 'center',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <Plus size={22} />
-            </button>
-          ) : (
-            <div style={{ width: 40 }} />
+          {!readOnly && (isActive || isArchived) && (
+            <Button variant="icon" aria-label="Add supplement" onClick={onAddSupp}>
+              <Plus size={18} />
+            </Button>
           )}
         </div>
       </div>
 
       {protocol && (
         <div style={{
-          maxWidth: layout.maxContentWidth, margin: '0 auto',
-          padding: `${spacing.md}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
+          maxWidth: desktop ? 'none' : layout.maxContentWidth,
+          width: '100%',
+          margin: '0 auto',
+          padding: desktop
+            ? `${spacing.md}px ${spacing.md}px ${spacing.md}px`
+            : `${spacing.md}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
         }}>
 
           {/* Body CTAs (Send to patient + Pause/Archive/Activate/Delete row) moved
@@ -249,9 +247,9 @@ export default function ProtocolDetailScreen({
                       }}
                     >
                       <div
-                        onClick={() => onEditSupp(supp)}
+                        onClick={readOnly ? undefined : () => onEditSupp(supp)}
                         style={{
-                          flex: 1, cursor: 'pointer', userSelect: 'none',
+                          flex: 1, cursor: readOnly ? 'default' : 'pointer', userSelect: 'none',
                           WebkitTapHighlightColor: 'transparent',
                           paddingRight: spacing.sm, display: 'flex', alignItems: 'center',
                           gap: spacing.xs2, minWidth: 0,
@@ -262,14 +260,16 @@ export default function ProtocolDetailScreen({
                         </span>
                         <CategoryIcon category={supp.category} color={theme.text.secondary} />
                       </div>
-                      <Button
-                        variant="icon"
-                        aria-label={`Delete ${supp.name}`}
-                        onClick={() => setDeletingSupp(supp)}
-                        style={{ border: 'none' }}
-                      >
-                        <Trash2 size={18} color={theme.status.danger} />
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          variant="icon"
+                          aria-label={`Delete ${supp.name}`}
+                          onClick={() => setDeletingSupp(supp)}
+                          style={{ border: 'none' }}
+                        >
+                          <Trash2 size={18} color={theme.status.danger} />
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
@@ -302,26 +302,28 @@ export default function ProtocolDetailScreen({
                             display: 'flex', alignItems: 'center',
                             padding: `${spacing.sm}px 0`,
                             borderBottom: isLast ? 'none' : `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-                            minHeight: touch.min,
+                            minHeight: touch.row,
                             opacity: isPausedSupp(supp) ? 0.5 : 1,
                           }}
                         >
                           <div
-                            onClick={() => onEditSupp(supp)}
+                            onClick={readOnly ? undefined : () => onEditSupp(supp)}
                             style={{
-                              flex: 1, cursor: 'pointer', userSelect: 'none',
+                              flex: 1, cursor: readOnly ? 'default' : 'pointer', userSelect: 'none',
                               WebkitTapHighlightColor: 'transparent',
-                              paddingRight: spacing.sm, display: 'flex', alignItems: 'center',
-                              gap: spacing.xs2, minWidth: 0,
+                              paddingRight: spacing.sm, minWidth: 0,
                             }}
                           >
-                            <span style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium }}>
+                            <div style={{ fontSize: typography.body, color: theme.text.primary, fontWeight: typography.medium, display: 'flex', alignItems: 'center', gap: spacing.xs2 }}>
                               {supp.name}
-                            </span>
-                            <CategoryIcon category={supp.category} color={theme.text.secondary} />
-                            {isPausedSupp(supp) && <Badge variant="neutral">Paused</Badge>}
+                              <CategoryIcon category={supp.category} color={theme.text.secondary} />
+                              {isPausedSupp(supp) && <Badge variant="neutral">Paused</Badge>}
+                            </div>
+                            <div style={{ fontSize: typography.label, color: theme.text.secondary, marginTop: spacing.xxxs, minHeight: 14 }}>
+                              {supp.dose}{supp.notes ? ` · ${supp.notes}` : ''}
+                            </div>
                           </div>
-                          {isActive && (
+                          {!readOnly && isActive && (
                             <Button
                               variant="icon"
                               aria-label={isPausedSupp(supp) ? `Resume ${supp.name}` : `Pause ${supp.name}`}
@@ -370,17 +372,21 @@ export default function ProtocolDetailScreen({
                             </div>
                             {supp.dose && <div style={{ fontSize: typography.caption, color: theme.text.faint }}>{supp.dose}</div>}
                           </div>
-                          <Button
-                            variant="icon"
-                            aria-label={`Delete ${supp.name}`}
-                            onClick={() => setDeletingSupp(supp)}
-                            style={{ border: 'none', marginRight: spacing.xs }}
-                          >
-                            <Trash2 size={18} color={theme.status.danger} />
-                          </Button>
-                          <Button variant="secondary" size="compact" onClick={() => onResumeSupp(supp)}>
-                            Resume
-                          </Button>
+                          {!readOnly && (
+                            <>
+                              <Button
+                                variant="icon"
+                                aria-label={`Delete ${supp.name}`}
+                                onClick={() => setDeletingSupp(supp)}
+                                style={{ border: 'none', marginRight: spacing.xs }}
+                              >
+                                <Trash2 size={18} color={theme.status.danger} />
+                              </Button>
+                              <Button variant="secondary" size="compact" onClick={() => onResumeSupp(supp)}>
+                                Resume
+                              </Button>
+                            </>
+                          )}
                         </div>
                       );
                     })}

@@ -16,9 +16,9 @@ function formatWeekRange(start, end) {
     : `${sm} ${start.getDate()} – ${em} ${end.getDate()}`;
 }
 
-export function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClick }) {
+export function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClick, activeSlotIds }) {
   const { theme } = useTheme();
-  const pct = isFuture ? null : calculateAdherenceForDate(date, supplements, log);
+  const pct = isFuture ? null : calculateAdherenceForDate(date, supplements, log, activeSlotIds);
   const dayName = DAYS_SHORT[date.getDay()];
 
   return (
@@ -111,6 +111,7 @@ export default function WeekStrip({
   weekDates, weekLogs, supplements,
   selectedDate, onSelectDate,
   onPrev, onNext, canNavigateNext,
+  activeSlotIds,
 }) {
   const { theme } = useTheme();
 
@@ -195,6 +196,7 @@ export default function WeekStrip({
               isFuture={isFuture}
               isToday={isToday}
               onClick={() => onSelectDate(date)}
+              activeSlotIds={activeSlotIds}
             />
           );
         })}
