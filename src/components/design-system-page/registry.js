@@ -9,6 +9,8 @@ import Badge from '../Badge';
 import Label from '../Label';
 import TabBar from '../TabBar';
 import AdherenceRing from '../AdherenceRing';
+import Sparkline from '../Sparkline';
+import StatusDot from '../StatusDot';
 import Hero from '../Hero';
 import SlotCard from '../SlotCard';
 import SlotRow from '../SlotRow';
@@ -222,6 +224,33 @@ export const componentRegistry = {
           props: { id: 'demo-take-all', label: 'Tip', children: 'Tap the icon at the left of a slot to log every item in it at once.' } },
         { name: 'No label (body only)',
           props: { id: 'demo-no-label', children: 'A short single-line tip without a heading.' } },
+      ],
+    },
+
+    Sparkline: {
+      component: Sparkline,
+      description: 'Single-color trend line for dense list rows. Renders a 0-100 value array. Default 60×12, optional endpoint dot, optional baseline hairline.',
+      variants: [
+        { name: 'flat 0',        props: { values: [0,0,0,0,0,0,0,0,0,0] } },
+        { name: 'climbing',      props: { values: [10,20,25,35,40,55,60,70,80,90] } },
+        { name: 'declining',     props: { values: [95,90,80,70,60,55,45,30,20,10] } },
+        { name: 'volatile',      props: { values: [60,80,40,90,20,70,50,80,30,100] } },
+        { name: '30-day window', props: { values: Array.from({length: 30}, (_,i) => Math.round(40 + 50 * Math.sin(i/4) + (Math.random()-0.5)*15)), width: 80 } },
+        { name: 'gaps',          props: { values: [60,80,null,null,50,70,90,null,80,100] } },
+        { name: 'with baseline', props: { values: [50,60,70,55,65,80,75,90,85,100], baseline: true } },
+        { name: 'no endpoint',   props: { values: [50,60,70,55,65,80,75,90,85,100], endpoint: false } },
+      ],
+    },
+
+    StatusDot: {
+      component: StatusDot,
+      description: 'Colored dot for at-a-glance status. Pair with a text.primary label so color carries severity without dominating the surface.',
+      variants: [
+        { name: 'success', props: { status: 'success' } },
+        { name: 'warning', props: { status: 'warning' } },
+        { name: 'danger',  props: { status: 'danger' } },
+        { name: 'neutral', props: { status: null } },
+        { name: 'lg 10',   props: { status: 'success', size: 10 } },
       ],
     },
 

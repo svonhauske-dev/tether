@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { spacing, typography } from '../design-system';
 import { useTheme } from '../lib/theme';
-import Button from './Button';
 import { calculateAdherenceForDate, getUpcomingEndings } from '../lib/adherence';
 import { dateKey, startOfDay } from '../lib/time';
 
@@ -16,7 +15,10 @@ function formatScheduleSummary(scheduleMode, anchorBehavior, consistentTime) {
     none:       'No Schedule',
   }[scheduleMode] || scheduleMode;
 
-  if (scheduleMode === 'none' || scheduleMode === 'fixed') return modeLabel;
+  // Fasting is a fixed-schedule model (no flex/consistent toggle), so don't
+  // append "· flexible" / "· consistent" — the suffix only applies to anchor
+  // modes (medication, wakeup).
+  if (scheduleMode === 'none' || scheduleMode === 'fixed' || scheduleMode === 'fasting') return modeLabel;
   if (anchorBehavior === 'consistent' && consistentTime) return `${modeLabel} · ${consistentTime} consistent`;
   return `${modeLabel} · flexible`;
 }
@@ -101,8 +103,9 @@ export default function InsightsPanel({
   scheduleMode,
   anchorBehavior,
   consistentTime,
-  onConfigureSchedule,
-  onManageProtocol,
+  activeSlotIds,
+  readOnly = false,
+  trend30 = null,
 }) {
   const { theme } = useTheme();
 
@@ -118,9 +121,9 @@ export default function InsightsPanel({
     (weekDates || []).map(date => {
       const d = startOfDay(new Date(date));
       if (d > today) return null;
-      return calculateAdherenceForDate(date, supplements, logMap[dateKey(date)] || null);
+      return calculateAdherenceForDate(date, supplements, logMap[dateKey(date)] || null, activeSlotIds);
     }),
-    [weekDates, logMap, supplements, today]
+    [weekDates, logMap, supplements, today, activeSlotIds]
   );
 
   const weekAvg = useMemo(() => {
@@ -149,8 +152,30 @@ export default function InsightsPanel({
       <div style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-          <SectionLabel>This week</SectionLabel>
+          <SectionLabel>7-day adherence</SectionLabel>
           <WeeklyAdherenceDisplay percentage={weekAvg} dailyValues={dailyValues} />
+          {trend30 && (
+            <div style={{
+              fontSize: typography.caption,
+              color: theme.text.secondary,
+              fontFamily: typography.fontBody,
+              marginTop: spacing.xxs,
+            }}>
+              <span style={{ fontFamily: typography.fontData, fontWeight: typography.medium, color: theme.text.primary }}>
+                {trend30.current}%
+              </span>
+              {' over 30 days'}
+              {trend30.delta === null ? (
+                <span style={{ color: theme.text.muted }}> · building baseline</span>
+              ) : trend30.delta === 0 ? (
+                <span> · no change from last month</span>
+              ) : (
+                <span style={{ color: trend30.delta > 0 ? theme.status.success : theme.status.danger }}>
+                  {' · '}{trend30.delta > 0 ? '↑' : '↓'} {Math.abs(trend30.delta)} pts from last month
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {streak >= 2 && (
@@ -200,13 +225,6 @@ export default function InsightsPanel({
             </div>
           </>
         )}
-
-        <Divider />
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-          <Button variant="secondary" onClick={onConfigureSchedule}>Configure schedule</Button>
-          <Button variant="secondary" onClick={onManageProtocol}>Manage protocol</Button>
-        </div>
 
       </div>
     </div>

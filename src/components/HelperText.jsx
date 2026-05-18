@@ -12,6 +12,7 @@ export default function HelperText({ children, style }) {
     <div style={{
       fontSize: typography.caption,
       color: theme.text.secondary,
+      fontFamily: typography.fontHeading,
       marginTop: spacing.xxs,
       marginBottom: spacing.md,
       lineHeight: 1.5,

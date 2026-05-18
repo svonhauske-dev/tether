@@ -291,6 +291,24 @@ export const dbSendProtocol     = (send, t)                     => supa("POST", 
 export const dbGetReceivedProtocols = (patientId, t)            => supa("GET", `/rest/v1/protocol_sends?patient_id=eq.${patientId}&status=eq.pending&select=*`, null, t);
 export const dbUpdateProtocolSend   = (id, data, t)             => supa("PATCH", `/rest/v1/protocol_sends?id=eq.${id}`, data, t);
 
+// ── Clinician-private notes + archive (Phase 4) ─────────────────────────
+// The clinician_patient_notes table is RLS-restricted to the owning clinician.
+// Patients cannot read or write it. One row per (clinician, patient) pair.
+export const dbGetClinicianNote = (clinicianId, patientId, t) =>
+  supa("GET", `/rest/v1/clinician_patient_notes?clinician_id=eq.${clinicianId}&patient_id=eq.${patientId}&select=*`, null, t)
+    .then(r => r?.[0] || null);
+
+// Upsert relies on the unique (clinician_id, patient_id) index and the
+// global Prefer=resolution=merge-duplicates header in `supa`. Pass any
+// subset of {notes, archived_at} along with clinician_id + patient_id.
+export const dbUpsertClinicianNote = (row, t) =>
+  supa("POST", "/rest/v1/clinician_patient_notes?on_conflict=clinician_id,patient_id", row, t);
+
+// All clinician_patient_notes rows owned by this clinician. Used to
+// derive the archived-patients view in the sidebar.
+export const dbGetClinicianNotes = (clinicianId, t) =>
+  supa("GET", `/rest/v1/clinician_patient_notes?clinician_id=eq.${clinicianId}&select=*`, null, t);
+
 export async function setThemePreference(pref, userId, token) {
   await supa("PATCH", `/rest/v1/user_profiles?id=eq.${userId}`, { theme_preference: pref }, token);
   return pref;

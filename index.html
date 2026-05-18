@@ -18,6 +18,9 @@
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { height: 100vh; height: 100dvh; }
+      /* Hide scrollbars — content still scrolls, just no visible bar. */
+      * { scrollbar-width: none; -ms-overflow-style: none; }
+      *::-webkit-scrollbar { width: 0; height: 0; display: none; }
       body { color: #1A1A1A; }
       /* Width-lock: invisible bold ghost prevents layout shift when selector weight changes */
       .selector-label { position: relative; display: inline-block; }

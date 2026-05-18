@@ -349,6 +349,7 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
       <Modal
         open={showStopConfirm}
         onClose={() => setShowStopConfirm(false)}
+        size="compact"
         title={`Stop ${form.name || "this supplement"}?`}
         footer={
           <div style={{ display: "flex", gap: spacing.xs }}>
@@ -357,7 +358,7 @@ export default function EditForm({ form, setForm, editingId, onStop, onResume, o
           </div>
         }
       >
-        <div style={{ fontSize: typography.body, color: theme.text.secondary, lineHeight: 1.5 }}>
+        <div style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
           This moves it to your archive. You can restart anytime.
         </div>
       </Modal>

@@ -23,20 +23,22 @@ function addDuration(startStr, value, unit) {
   return d.toISOString().split('T')[0];
 }
 
-function ProtocolRow({ protocol, count, onTap }) {
+function ProtocolRow({ protocol, count, onTap, adherence }) {
   const { theme } = useTheme();
   const isArchived = protocol.status !== 'active';
   return (
     <button
       onClick={onTap}
+      disabled={!onTap}
       style={{
         display: "flex", alignItems: "center", width: "100%",
         background: "none", border: "none",
         borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
-        padding: `${spacing.sm}px 0`, cursor: "pointer",
+        padding: `${spacing.sm}px 0`, cursor: onTap ? "pointer" : "default",
         minHeight: touch.min, textAlign: "left",
         WebkitTapHighlightColor: "transparent",
         opacity: isArchived ? 0.55 : 1,
+        gap: spacing.sm,
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -51,7 +53,27 @@ function ProtocolRow({ protocol, count, onTap }) {
           {protocol.ends_at && protocol.status === 'active' && ` · Ends ${formatDate(protocol.ends_at)}`}
         </div>
       </div>
-      <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />
+      {adherence && (
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{
+            fontSize: typography.title,
+            fontWeight: typography.bold,
+            fontFamily: typography.fontData,
+            color: theme.text.primary,
+            lineHeight: 1,
+          }}>
+            {adherence.pct}%
+          </div>
+          <div style={{
+            fontSize: typography.caption,
+            color: theme.text.secondary,
+            marginTop: spacing.xxxs,
+          }}>
+            {adherence.days} {adherence.days === 1 ? 'day' : 'days'}
+          </div>
+        </div>
+      )}
+      {onTap && <ChevronRight size={18} color={theme.text.secondary} style={{ flexShrink: 0 }} />}
     </button>
   );
 }
@@ -90,12 +112,25 @@ function IntentOption({ label, description, onClick, theme }) {
 
 const DURATION_UNITS = ["days", "weeks", "months"];
 
-export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived }) {
+// Optional controlled-create-modal pattern:
+//   - `controlledShowNew` (boolean, optional): if defined, replaces the
+//     internal showNew state — parent owns whether the create modal is open.
+//   - `onShowNewChange(value)`: called whenever the library wants to flip
+//     it (user closes via X or after a successful create).
+// Used in the patient-view "Create new and send" flow where App.jsx
+// triggers create externally and reacts to the completion.
+export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived, desktop = false, embedded = false, readOnly = false, adherenceMap = null, onPlusClick = null, controlledShowNew, onShowNewChange }) {
   const { theme } = useTheme();
   const today = new Date().toISOString().split('T')[0];
 
   const [tab, setTab]                       = useState('active');
-  const [showNew, setShowNew]               = useState(false);
+  const [internalShowNew, setInternalShowNew] = useState(false);
+  // Controlled if controlledShowNew prop is provided, otherwise internal state.
+  const showNew    = controlledShowNew !== undefined ? controlledShowNew : internalShowNew;
+  const setShowNew = (val) => {
+    setInternalShowNew(val);
+    if (onShowNewChange) onShowNewChange(val);
+  };
   const [step, setStep]                     = useState('form');
   const [newName, setNewName]               = useState('');
   const [txMode, setTxMode]                 = useState('indefinite');
@@ -190,8 +225,26 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
     </Button>
   );
 
+  // In patient (readOnly + embedded) mode the right column scrolls as a
+  // whole so the analytics panel below can stack with the library. We drop
+  // the inner overflow/height in that case.
+  const flowLayout = desktop && embedded && readOnly;
   return (
-    <div style={{
+    <div style={desktop ? (flowLayout ? {
+      position: "relative",
+      width: "100%",
+      background: theme.surface.card,
+      display: "flex",
+      flexDirection: "column",
+    } : {
+      position: "relative",
+      width: "100%",
+      height: "100%",
+      background: theme.surface.card,
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column",
+    }) : {
       position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
       transform: isOpen ? "translateX(0)" : "translateX(100%)",
       transition: "transform 0.3s ease-out",
@@ -203,39 +256,47 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
-        background: theme.surface.canvas,
+        padding: desktop
+          ? `${spacing.md}px ${spacing.md}px ${spacing.sm}px`
+          : `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
+        background: desktop ? theme.surface.card : theme.surface.canvas,
         borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
         position: "sticky", top: 0, zIndex: 1,
       }}>
-        <button onClick={onBack} aria-label="Back" style={{
-          background: "none", border: "none", cursor: "pointer",
-          padding: `${spacing.xs}px`, marginLeft: -spacing.xs,
-          color: theme.text.primary, display: "flex", alignItems: "center",
-          WebkitTapHighlightColor: "transparent",
-        }}>
-          <ChevronLeft size={18} />
-        </button>
+        {embedded ? (
+          <span style={{ width: touch.min }} aria-hidden />
+        ) : (
+          <Button variant="icon" aria-label="Back" onClick={onBack}>
+            <ChevronLeft size={18} />
+          </Button>
+        )}
         <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary }}>
           Protocols
         </span>
-        <button onClick={() => setShowNew(true)} aria-label="New protocol" style={{
-          background: "none", border: "none", cursor: "pointer",
-          padding: `${spacing.xs}px`, marginRight: -spacing.xs,
-          color: theme.accent.default, display: "flex", alignItems: "center",
-          WebkitTapHighlightColor: "transparent",
-        }}>
-          <Plus size={18} />
-        </button>
+        {readOnly && !onPlusClick ? (
+          <span style={{ width: touch.min }} aria-hidden />
+        ) : (
+          <Button
+            variant="icon"
+            aria-label={readOnly ? "Send or create protocol" : "New protocol"}
+            onClick={onPlusClick ? onPlusClick : () => setShowNew(true)}
+          >
+            <Plus size={18} />
+          </Button>
+        )}
       </div>
 
       {/* Content */}
       <div style={{
-        maxWidth: layout.maxContentWidth, margin: "0 auto",
-        padding: `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
+        maxWidth: desktop ? "none" : layout.maxContentWidth,
+        width: "100%",
+        margin: "0 auto",
+        padding: desktop
+          ? `${spacing.lg}px ${spacing.md}px ${spacing.md}px`
+          : `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
       }}>
-        {/* Received protocols */}
-        {received.length > 0 && (
+        {/* Received protocols — hidden in readOnly (patient-context) view */}
+        {!readOnly && received.length > 0 && (
           <div style={{ marginBottom: spacing.xl }}>
             <Label style={{ marginBottom: spacing.xs }}>From your clinician</Label>
             <div style={{
@@ -276,12 +337,18 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
         {tab === 'active' && (
           activeProtocols.length === 0 ? (
             <div style={{ fontSize: typography.body, color: theme.text.secondary }}>
-              No active protocols. Tap + to create one.
+              {readOnly ? 'No active protocols.' : 'No active protocols. Tap + to create one.'}
             </div>
           ) : (
             <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}` }}>
               {activeProtocols.map(p => (
-                <ProtocolRow key={p.id} protocol={p} count={suppCount(p.id)} onTap={() => onOpenDetail(p)} />
+                <ProtocolRow
+                  key={p.id}
+                  protocol={p}
+                  count={suppCount(p.id)}
+                  onTap={onOpenDetail ? () => onOpenDetail(p) : undefined}
+                  adherence={adherenceMap?.[p.id]}
+                />
               ))}
             </div>
           )
@@ -295,7 +362,12 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
           ) : (
             <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}` }}>
               {archivedProtocols.map(p => (
-                <ProtocolRow key={p.id} protocol={p} count={suppCount(p.id)} onTap={() => onOpenDetail(p)} />
+                <ProtocolRow
+                  key={p.id}
+                  protocol={p}
+                  count={suppCount(p.id)}
+                  onTap={onOpenDetail ? () => onOpenDetail(p) : undefined}
+                />
               ))}
             </div>
           )
@@ -448,6 +520,7 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
       <Modal
         open={!!activateModalSend}
         onClose={() => { if (!activating) setActivateModalSend(null); }}
+        size="compact"
         title={activateModalSend?.name || ''}
         footer={
           <div style={{ display: 'flex', gap: spacing.xs }}>
@@ -469,7 +542,7 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
           </div>
         }
       >
-        <p style={{ fontSize: typography.body, color: theme.text.secondary, lineHeight: 1.6, margin: 0 }}>
+        <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
           This will add <strong style={{ color: theme.text.primary }}>{activateModalSend?.name}</strong> with {(activateModalSend?.supplements_snapshot || []).length} supplement{(activateModalSend?.supplements_snapshot || []).length !== 1 ? 's' : ''} to your active protocols.
         </p>
       </Modal>

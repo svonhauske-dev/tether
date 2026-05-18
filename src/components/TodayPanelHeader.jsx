@@ -45,6 +45,9 @@ export default function TodayPanelHeader({
           textTransform: 'uppercase',
           fontFamily: typography.fontBody,
           marginBottom: hasAnchor && heroHasTime ? spacing.xxxs : 0,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}>
           {dayLabel} • {dateStr}
         </div>
@@ -117,21 +120,42 @@ export default function TodayPanelHeader({
         )}
       </div>
 
-      {/* Right: CTA */}
+      {/* Right: CTA · or a "View only" chip in read-only mode (patient view)
+          so the clinician never wonders if a click did something. */}
       <div style={{ flexShrink: 0, paddingTop: spacing.xxxs }}>
-        {isToday && hasAnchor && !heroHasTime && (
-          <Button variant="primary" size="compact" onClick={startDay}>
-            Start my day
-          </Button>
-        )}
-        {isPast && (
-          <Button
-            variant="secondary"
-            size="compact"
-            onClick={() => setPastDayEditing(!pastDayEditing)}
-          >
-            {pastDayEditing ? 'Done' : 'Edit'}
-          </Button>
+        {isReadOnly ? (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: `${spacing.xxxs}px ${spacing.xs}px`,
+            background: theme.surface.cardSubtle,
+            border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+            borderRadius: theme.radius.pill,
+            fontSize: typography.label,
+            fontFamily: typography.fontBody,
+            color: theme.text.secondary,
+            letterSpacing: typography.labelSpacing,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}>
+            View only
+          </span>
+        ) : (
+          <>
+            {isToday && hasAnchor && !heroHasTime && (
+              <Button variant="primary" size="compact" onClick={startDay}>
+                Start my day
+              </Button>
+            )}
+            {isPast && (
+              <Button
+                variant="secondary"
+                size="compact"
+                onClick={() => setPastDayEditing(!pastDayEditing)}
+              >
+                {pastDayEditing ? 'Done' : 'Edit'}
+              </Button>
+            )}
+          </>
         )}
       </div>
     </div>

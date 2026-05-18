@@ -47,7 +47,7 @@ function PasswordRule({ met, label }) {
 
 const TITLES = { main: 'Settings', schedule: 'Schedule', account: 'Account', install: 'Add to home screen' };
 
-export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule, supplements = [] }) {
+export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token, profile, onProfileUpdate, onNotificationsEnabled, scheduleMode, scheduleConfig, anchorBehavior, consistentTime, onSaveSchedule, supplements = [], desktop = false }) {
   const { theme } = useTheme();
   const { show: showToast } = useToast();
 
@@ -188,7 +188,15 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
   );
 
   return (
-    <div style={{
+    <div style={desktop ? {
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      background: theme.surface.card,
+      overflowY: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
       transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
@@ -201,34 +209,30 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
       {/* Sticky header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
-        background: theme.surface.canvas,
+        padding: desktop
+          ? `${spacing.md}px ${spacing.md}px ${spacing.sm}px`
+          : `max(20px, env(safe-area-inset-top)) ${spacing.md}px ${spacing.sm}px`,
+        background: desktop ? theme.surface.card : theme.surface.canvas,
         borderBottom: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
         position: 'sticky', top: 0, zIndex: 1,
       }}>
-        <button
-          onClick={handleBack}
-          aria-label="Back"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: `${spacing.xs}px`, marginLeft: -spacing.xs,
-            color: theme.text.primary, display: 'flex', alignItems: 'center',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
+        <Button variant="icon" aria-label="Back" onClick={handleBack}>
           <ChevronLeft size={18} />
-        </button>
+        </Button>
         <span style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary }}>
           {TITLES[view]}
         </span>
-        <div style={{ width: 40 }} />
+        <div style={{ width: touch.min }} />
       </div>
 
       {/* Scrollable content */}
       <div style={{
-        maxWidth: layout.maxContentWidth,
+        maxWidth: desktop ? 'none' : layout.maxContentWidth,
+        width: '100%',
         margin: '0 auto',
-        padding: `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
+        padding: desktop
+          ? `${spacing.lg}px ${spacing.md}px ${spacing.md}px`
+          : `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
       }}>
 
         {/* ── Main view ── */}

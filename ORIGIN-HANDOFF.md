@@ -1,6 +1,8 @@
 # Origin — Project Handoff Document
 
-*Last updated: May 18, 2026 — full mobile patient UX/UI audit shipped end-to-end across 6 sessions on branch `worktree-session-2-autocomplete-expand`. All 12 audit recommendations + 4 audit-discovered bugs + the design decision ladder (D1–D5) implemented. Highlights: mobile week strip (extracted DayCell with compact mode), Hero rewritten around a single state-helper (anchor-aware copy ladder, Start-day decoupled per D1, anchor-info as primary status line, success-green unified to status row, inline-edit preserves prefix), past-day pattern (eyebrow inside Hero card with read-only/editing suffix, Edit in header), Day-1 inline tip + reusable `InlineTip` primitive, log-at pill + `LogAtSheet` time-picker with per-supplement timestamp persistence in `daily_logs.checked` (new `{ checked: true, at: "HH:MM" }` shape coexists with legacy `true` via backwards-compat reads — no DB migration needed), take-all on slot icon with first-run InlineTip hint, Onboarding Step 2 live "Your day will look like" preview. Production bundle 384 KB. Branch in fresh worktree, not yet merged to main.*
+*Last updated: May 18, 2026 (evening) — full mobile patient UX/UI audit shipped end-to-end across 6 sessions on branch `worktree-session-2-autocomplete-expand`, then merged with parallel clinician work from `origin/main`. All 12 audit recommendations + 4 audit-discovered bugs + the design decision ladder (D1–D5) implemented. Highlights: mobile week strip (extracted DayCell with compact mode), Hero rewritten around a single state-helper (anchor-aware copy ladder, Start-day decoupled per D1, anchor-info as primary status line, success-green unified to status row, inline-edit preserves prefix), past-day pattern (eyebrow inside Hero card with read-only/editing suffix, Edit in header), Day-1 inline tip + reusable `InlineTip` primitive, log-at pill + `LogAtSheet` time-picker with per-supplement timestamp persistence in `daily_logs.checked` (new `{ checked: true, at: "HH:MM" }` shape coexists with legacy `true` via backwards-compat reads — no DB migration needed), take-all on slot icon with first-run InlineTip hint, Onboarding Step 2 live "Your day will look like" preview. Slide-in screen header icons normalized to 18px. Production bundle ~387 KB pre-merge. Merge with main combined the audit work with clinician backend + clinician surfaces + Popover/SidePanel primitives; key conflict resolutions: ProtocolDetailScreen header keeps the grid centering fix from the audit while taking main's Button-primitive refactor + desktop/readOnly props; App.jsx header keeps the past-day Edit/Done conditional and adopts main's Library-before-+ ordering; mobile slot list keeps the in-Hero past-day eyebrow pattern (no opacity dim wrapper); EditForm host is now `SidePanel` (from main) and `LogAtSheet` (from audit) coexist as separate overlays.*
+
+*Earlier May 18 — Three bundled clinician commits landed and pushed: `961d2d6` clinician backend (DB migrations: `clinician-link-migration.sql` adds `shares_adherence_with_clinician` consent toggle + patient↔clinician RLS, `clinician-notes-migration.sql` adds `clinician_patient_notes` table; analytics math in `lib/adherence.js`: `calculateProtocolAdherence` + per-supp + per-slot + `getUpcomingEndings` + `buildActivityLog`; notes API in `lib/api.js`: `dbGetClinicianNote` / `dbUpsertClinicianNote` / `dbGetClinicianNotes`; demo-seed stamps demo patients with `shares_adherence_with_clinician=true`). `738956c` clinician surfaces (PatientAnalyticsPanel new; ProtocolLibrary gains adherence-per-row + send-to-patient; ProtocolDetailScreen send-to-patient flow in overflow menu; SettingsScreen `desktop` prop swaps container shape; Modal primitive `useIsDesktop` → centered 480px / 80dvh card on desktop instead of bottom sheet; WeekStrip `activeSlotIds` plumbed through DayCell so IF v2 ring math doesn't inflate; index.html hides native scrollbars globally). `2ce9af7` chore (gitignore `supabase/.temp/`, untrack `cli-latest` tool artifact). Plus prior `c94792d` clinician desktop — primitives + sidebar revival + top bar restructure. Open §748 decisions still on the table: (1) modal sizing variants (compact/default/wide), (2) Onboarding + IFMigrationScreen desktop treatment, (3) Settings/Library/Detail host when aside collapses on roster view, (4) EditForm duplication across desktop/mobile branches. Next implementation: Phase 3 (Patient Roster as default landing).*
 
 *Previous milestone (May 17): IF v2 shipped + follow-up bugs fixed + full frontend/backend audit done across three rounds. Critical: schedule-not-saving bug traced to `dbGetSchedule` returning every user's rows because RLS wasn't on; client-side `user_id=eq.` filter added to dbGetSchedule + dbGetAdherenceCounts + dbGetSupplementHistory + dbGetReceivedProtocols; RLS enabled at the DB perimeter via Supabase Dashboard; UNIQUE constraints added on `user_schedule(user_id)`, `daily_logs(user_id, log_date)`, `user_supplement_history(user_id, name)`. Design system tightened: dead Light/Dark/Terminal-* themes deleted (production bundle −10.5KB), single makeSegBtnStyle helper replaces three local copies, shadows.elevated added, touch.row applied to multi-line rows. Backend hardened: cascade-delete on protocol delete, transactional rollback on activateReceived, refreshSession memoized, recomputeNotifications surfaces failures via toast.*
 *Owner: Sofia von Hauske (sofiavonhauske@gmail.com)*
@@ -623,6 +625,86 @@ Full frontend/backend audit (acting as HoD/FED + backend reviewer) produced a pu
 - `565eaea` — Replaced 💊 emoji empty-state visual with `◯` glyph (matches existing slot iconography `◎`/`●`/`◑`). Auth screen pill emoji replaced with "Origin" wordmark. Empty-state copy unified ("Nothing X yet" for secondary list empties, "No X yet. [CTA]" for actionable empties).
 - `a64a267` — Deleted orphan spike files (SettingsModal.jsx, ManageSupplementsSheet.jsx) and May-6 scratch notes. Added `.claude/` to .gitignore.
 
+**Mobile chrome unification (May 17, evening pass):**
+
+*Mobile home header refactor (commit `c7cbf3f`):*
+Settings moved off the sidebar nav into the top-right `AccountAvatar` (the avatar now accepts an `onClick` prop and a `size="touch"` variant for the 44pt mobile target). The body CTA row (Add + Library buttons) was removed; both actions migrated up into the header. AccountAvatar acts as the Settings entry point on both mobile and desktop.
+
+*Protocol Detail header cleanup + overflow menu (commit `730a3e4`):*
+The body action stack on the protocol detail screen (Send to patient + lifecycle CTA + delete CTA) was collapsed into a `⋯` overflow menu in the sticky header. Menu items are status-aware (Pause/Archive/Activate/Delete) and clinician-aware (`Send to patient` only when `isClinician=true`). Mobile call site explicitly passes `isClinician={false}` so the action is hidden on the phone surface. Header now reads `[<] Protocol name [⋯] [+]`.
+
+*Modal slide animation fix (same commit `730a3e4`):*
+Modals were popping into final position instead of sliding up from the bottom. Root cause: `transform: open ? translateY(0) : translateY(100%)` evaluated on the same render where `mounted` flipped true, so the browser never saw the `translateY(100%)` starting state. Split into two states — `mounted` (controls DOM presence, stays true through the 300ms exit) and `shown` (controls visible position). After mounting, a double `requestAnimationFrame` flips `shown` to true so the CSS transition has a starting frame to animate from. Affects every modal in the app (New item, Edit item, all overflow + confirm modals).
+
+*Slide-in screen icon parity + header order + Active row dose/notes (uncommitted, this turn):*
+Three small follow-ups after the chrome refactor.
+1. Slide-in screen headers (`SettingsScreen`, `ProtocolLibrary`, `ProtocolDetailScreen`) were using raw `<button>` chrome with no border — visually drifted from the home header chevrons + `+`/Library icons which use `Button variant="icon"` (44pt, 1px subtle border). Unified all of them to `Button variant="icon"` so every header chrome icon across the app now reads the same. Includes the new `⋯` overflow trigger.
+2. Home header icon order swapped from `[+] [Library]` → `[Library] [+]` so the most-used action (Add) sits closest to the right edge for thumb reach.
+3. Protocol Detail Active tab rows previously showed only `name + category icon + Pause/Play`. Updated to mirror the home `SlotCard` supplement row: `name + category icon + Paused badge` on line one, `dose · notes` on line two. Row min-height bumped from `touch.min` (44pt) to `touch.row` (52pt) per Cat 13.
+
+**Clinician desktop audit + Phases 0–2 (May 17, evening — uncommitted):**
+
+*Audit:*
+Mobbin-informed UX/UI audit of the desktop clinician dashboard. Reference scans: Linear (sidebar density, kbd patterns), Deel/Fresha (provider patient lists with stat headers), Sentry/Writer (sparkline trend columns, observability KPI cards), Fitbit (in-range stats by category), Runna/Fitplan (structured-program patterns), Bear (calm typography). Produced a 4-part deliverable: (1) audit of current desktop regions, (2) discovery scan organized by pattern, (3) ranked prioritized recommendations, (4) anti-patterns to avoid (streak guilt, color-coded categorization, chat-shape provider comms, etc.). Single largest leverage finding: the PatientsPanel component (rich row: avatar + name + N protocols + adherence % + status pill) was unused in the live layout; the actual rendered patient list in the sidebar was name-only. That row pattern was the foundation for Phase 1.
+
+*Phase 0 — primitives:*
+- New `Sparkline.jsx` — single-color SVG trend line for dense list rows. Default 60×12, accepts a 0–100 values array, optional endpoint dot + baseline hairline, breaks line across null values. Registered in design-system page with 8 variants.
+- New `StatusDot.jsx` — colored 4–6px dot keyed by status token (`success` / `warning` / `danger` / null). Designed to pair with `text.primary` label so color carries severity without dominating the surface. Registered in design-system page.
+
+*Phase 1 — sidebar revival:*
+- Patient enrichment lifted from PatientsPanel (orphan component) into App.jsx. New `patientStats` state map keyed by patient id. After patients resolve, fetches protocols + supps + schedule + 30d logs per patient in parallel and computes per-patient `activeCount` + `adherence7` + `adherence30` + 30-element `sparkline` array using `calculateAdherenceForDate`. Imports added: `calculateAdherenceForDate` to App.jsx.
+- Sidebar rewritten: brand wordmark removed (hoisted to top bar — see Phase 2.1), "Patients" collapsible toggle removed (flat list), patient rows redesigned left-aligned: avatar + name → `● 7d% · N protocols` → 30-day sparkline (80×10) stacked vertically. Search input added at top with in-place filter. "N need review" caption (warning color) appears when ≥1 patient is below 80%. Archived patients render as a static section (label + rows) when present. My Origin moved to a footer below a divider.
+
+*Phase 2 — patient detail polish:*
+- New `PatientIdentityBlock` inline in App.jsx — avatar + name (heading) + meta line (`joined Mar 12 · 3 protocols · logged today`). Replaces the bare-name header when a patient is selected. Meta builds from `selectedPatient.created_at`, `patientStats[id]?.activeCount`, and the most-recent log_date in `patientTrendLogs`. Patient actions overflow `⋯` stays trailing.
+- `PatientAnalyticsPanel` moved out of the right aside into the main column under `PatientDetailPanel`. Right aside stays focused on the patient's protocols. Removes the architectural awkwardness of the diagnostic surface (by-supplement / by-time-of-day / activity / notes) being stacked under a nav-shaped component (ProtocolLibrary).
+- `InsightsPanel` lost its bottom "Configure schedule / Manage protocol" buttons + the `onConfigureSchedule` / `onManageProtocol` props. The matching `openManageSchedule` / `openManageProtocol` helpers were dead-coded out of App.jsx (only used by those buttons). Settings is reachable via the avatar; Manage Protocol via the right-column ProtocolLibrary.
+- `TodayPanelHeader` gained a "VIEW ONLY" chip in `isReadOnly` mode (replaces the day-label CTA slot when the clinician is viewing a patient). Plus `whiteSpace: nowrap` + `textOverflow: ellipsis` on the day label so the header reads cleanly even in narrower columns.
+- Considered 60/40 Today/Insights ratio in patient view per audit recommendation; reverted to 50/50 after real-screen evaluation — at typical desktop widths the 40% TodayPanel column crowded the header and truncated supplement names. Analytics weight comes from PatientAnalyticsPanel stacked below.
+- Skipped applying StatusDot to legacy `PatientsPanel.jsx` rows (Phase 2f in the plan). That component isn't mounted in the live layout and will be rewritten in Phase 3 (Patient Roster as default landing). Updating dead code now is throwaway work.
+
+*Phase 2.1 — top bar restructure (Sofia's design call mid-session):*
+- New full-width top bar in App.jsx desktop layout (above the three panels): brand wordmark + greeting + clinician avatar. Sofia then refined: drop the greeting from chrome entirely and surface "Hello, Sofia" only inside the personal cockpit content as a heading. Result: top bar is just `Origin` (left) + clinician avatar (right). When viewing a patient, the in-context PatientIdentityBlock owns the main-column header; "Hello, Sofia" doesn't render. Personal warmth lives in personal mode; clinical chrome stays restrained.
+- Outer desktop container changed from horizontal flex → vertical flex (header above panel row).
+- Patients dropdown toggle removed from the sidebar per Sofia's call ("no chevron, flat list"), patient rows fully left-aligned.
+
+*Files changed:*
+- `src/App.jsx` — top bar, `PatientIdentityBlock` component, patient enrichment effect, analytics panel moved, greeting heading inside personal home, prop cleanup.
+- `src/components/Sidebar.jsx` — rewrite (brand removed, no dropdown, rich rows, search, count, my origin footer).
+- `src/components/InsightsPanel.jsx` — dropped Button import + two quick-action buttons + two props.
+- `src/components/PatientDetailPanel.jsx` — comment for 50/50 decision.
+- `src/components/TodayPanelHeader.jsx` — View only chip in read-only, nowrap on day label.
+- `src/components/Sparkline.jsx` — NEW.
+- `src/components/StatusDot.jsx` — NEW.
+- `src/components/design-system-page/registry.js` — Sparkline + StatusDot variants.
+
+*Commit:* `c94792d` — pushed to main on May 18.
+
+### Session of May 18
+
+**Working-tree cleanup — three bundled commits + push.**
+The working tree had a backlog of pending clinician work that hadn't been committed yet. Sorted into three logical commits and pushed all of them.
+
+*Commit `961d2d6` — clinician backend.*
+- `supabase/clinician-link-migration.sql` (NEW) — adds `shares_adherence_with_clinician` opt-in toggle on `user_profiles`. Adds patient↔clinician RLS so a clinician can read a patient's supplements, protocols, daily_logs, and schedule only when (1) `user_profiles.clinician_user_id = auth.uid()` AND (2) `shares_adherence_with_clinician = true`. Patient-side writes remain owner-only.
+- `supabase/clinician-notes-migration.sql` (NEW) — new `clinician_patient_notes` table (one row per (clinician, patient) pair, holding `notes` text + nullable `archived_at`). RLS restricts read+write to the owning clinician. Unique index on `(clinician_id, patient_id)` so PostgREST upserts work via `on_conflict`.
+- `supabase/demo-seed.sql` — stamps the four demo patients with `shares_adherence_with_clinician = true` so the clinician demo surface shows full data without each demo patient flipping the toggle.
+- `src/lib/api.js` — `dbGetClinicianNote(clinicianId, patientId, t)`, `dbUpsertClinicianNote(row, t)`, `dbGetClinicianNotes(clinicianId, t)`.
+- `src/lib/adherence.js` — gained `calculateProtocolAdherence` (per-protocol avg over a window that starts at the protocol's start_date, capped at `daysWindow` days), `calculateSupplementAdherence` (per-supp avg + expected/taken counts), `calculateSlotAdherence` (per-slot aggregated across all supps in that slot), `getUpcomingEndings` (supps with `ends_at` in the next N days for the Insights panel), `buildActivityLog` (recent pause/stop/resume/add/archive events). Also: `countExpectedChecks` + `calculateAdherenceForDate` now accept an optional `activeSlotIds` Set to filter the denominator — fixes the IF v2 case where stale legacy slot ids in a supp's `slots` array inflated expected counts.
+
+*Commit `738956c` — clinician surfaces.*
+- `src/components/PatientAnalyticsPanel.jsx` (NEW) — three stacked cards inside the patient detail surface: By supplement (30-day adherence, worst-first, colored pct), By time of day (mode-aware slot set, worst-first), Recent activity (last 10 events from `buildActivityLog`). Plus a private notes textarea (save-on-blur, re-syncs on patient change).
+- `src/components/ProtocolLibrary.jsx` — adherence-per-row when an `adherenceMap` prop is provided (clinician patient view). Send-to-patient affordances when a patient is selected. `ProtocolRow` respects an optional disabled state for read-only contexts.
+- `src/components/ProtocolDetailScreen.jsx` — send-to-patient flow in the header overflow menu (clinician-only, hidden on mobile and patient-view drill-ins). Patient picker modal lists the clinician's active patients.
+- `src/components/SettingsScreen.jsx` — `desktop` prop swaps the container shape from a fixed slide-from-right takeover (mobile) to a flow-positioned panel that fills its host (the right aside in App.jsx). Back-button uses shared `Button variant="icon"` chrome for parity with other slide-ins.
+- `src/components/Modal.jsx` — `useIsDesktop` hook. On desktop (≥1024), the modal renders as a centered card (480px max, 80dvh max) with scale-in animation instead of the mobile bottom-sheet slide. Backdrop blur disabled on desktop. Drag-to-dismiss handlers are mobile-only.
+- `src/components/WeekStrip.jsx` — `activeSlotIds` prop plumbed through WeekStrip → DayCell → `calculateAdherenceForDate`. Without this, IF v2 patients' ring math inflates expected counts because their supps carry both legacy and v2 slot ids from migration.
+- `index.html` — hides native scrollbars globally (Firefox + WebKit). Content still scrolls; the visible track is suppressed so multiple scrollable panels rendering side-by-side on desktop don't draw a forest of scrollbars.
+
+*Commit `2ce9af7` — chore: gitignore `supabase/.temp/` and untrack the `cli-latest` tool artifact that was getting bumped on every CLI command.*
+
+All three commits pushed to `origin/main` (range `730a3e4..2ce9af7`).
+
 ---
 
 ### Session of May 18 — Mobile patient UX/UI audit shipped end-to-end
@@ -821,7 +903,24 @@ None of these are blocking. All are real debt.
 
 ### Immediate
 
-**0. Portfolio link update at vonhauske.design/origin-app.**
+**0. §748 desktop modal compatibility — partially landed, design decisions still open (TOMORROW).**
+Discovery: Modal primitive *already has* a desktop variant (centered 480px / 80dvh, [Modal.jsx:145-154](src/components/Modal.jsx#L145)) and the three slide-in screens (`SettingsScreen`, `ProtocolLibrary`, `ProtocolDetailScreen`) *already render inline in the right aside* on desktop via the `desktop` prop. So the scope is smaller than the original handoff item implied. Four real decisions still need a call before any engineering:
+1. **Modal sizing** — every modal is currently 480px. Should we introduce a `size` prop with `compact` (360px for confirms/pickers) / `default` (480px) / `wide` (560px for long forms)? Then audit each call site.
+2. **Onboarding + IFMigrationScreen on desktop** — both are full-screen takeovers today. Onboarding could become a large centered modal (640px-ish) on desktop. IFMigrationScreen is a forced migration so full-screen gravity may be correct.
+3. **What happens to Settings/Library/Detail when the aside collapses** — once Phase 3 (Patient Roster as default landing) ships, the right aside collapses when no patient is selected. Slide-in-replaces-aside breaks. Options: Settings becomes a centered modal; aside stays at a narrower width when no patient; or full route-page treatment.
+4. **EditForm modal duplication** — rendered twice in App.jsx (desktop branch + mobile branch). Leave duplicated or consolidate?
+
+Sofia paused for the night with the design briefing on the table. Resume with these four decisions.
+
+**0a. Clinician desktop audit — Phases 0–2 shipped (uncommitted).**
+See May 17 session notes for what landed. Remaining recommendation phases:
+- **Phase 3 — Patient Roster as default landing** (~10h). New `PatientRoster.jsx` full-content table: avatar + name + N protocols + 30-day sparkline + last-active + status. Sortable columns (default sort: worst-adherence-first). Filter chips: All / Needs review / Active / Paused. Wired as default clinician landing when `isClinician && !selectedPatient`. Aside collapses on roster view. Depends on §748 modal decisions because roster will trigger Send-protocol flows.
+- **Phase 4 — Power user** (~10h). `⌘K` command palette (patients + protocols + actions). `[7D] [30D] [90D]` zoom toggle on WeekStrip in patient view.
+- **Phase 5 — Clinical narration** (~5h, design-heavy). Anomaly callouts (banner when 7d adherence drops >25 pts below 30d) — copy and threshold rules need Sofia. `<MetricLabel>` primitive with inline `?` definitions to anchor what "adherence" means without crossing into medical advice.
+
+Sparkline + StatusDot primitives are live and re-usable for Phase 3 row design.
+
+**0b. Portfolio link update at vonhauske.design/origin-app.**
 Update the portfolio entry to reflect the current `/design-system` URL and any copy changes needed after this morning's work. Low effort, high visibility.
 
 ### Highest priority

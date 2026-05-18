@@ -16,9 +16,9 @@ function formatWeekRange(start, end) {
     : `${sm} ${start.getDate()} – ${em} ${end.getDate()}`;
 }
 
-export function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClick, compact = false }) {
+export function DayCell({ date, log, supplements, isSelected, isFuture, isToday, onClick, compact = false, activeSlotIds }) {
   const { theme } = useTheme();
-  const pct = isFuture ? null : calculateAdherenceForDate(date, supplements, log);
+  const pct = isFuture ? null : calculateAdherenceForDate(date, supplements, log, activeSlotIds);
   const dayName = DAYS_SHORT[date.getDay()];
   // Compact tuning for mobile. Horizontal cell padding is xxs (4px) so the 28px
   // ring fits comfortably inside the cell content area even at 320px viewport
@@ -127,6 +127,7 @@ export default function WeekStrip({
   selectedDate, onSelectDate,
   onPrev, onNext, canNavigateNext,
   compact = false,
+  activeSlotIds,
 }) {
   const { theme } = useTheme();
 
@@ -212,6 +213,7 @@ export default function WeekStrip({
               isToday={isToday}
               onClick={() => onSelectDate(date)}
               compact={compact}
+              activeSlotIds={activeSlotIds}
             />
           );
         })}

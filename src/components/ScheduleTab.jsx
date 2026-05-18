@@ -640,6 +640,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       <Modal
         open={orphanConfirm !== null}
         onClose={() => setOrphanConfirm(null)}
+        size="compact"
         title="Supplements will be hidden"
         footer={
           <div style={{ display: 'flex', gap: spacing.xs }}>
@@ -648,7 +649,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </div>
         }
       >
-        <p style={{ fontSize: typography.body, color: theme.text.secondary, lineHeight: 1.6, margin: 0 }}>
+        <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
           You have supplements assigned to slots that won't exist with fewer meals. They'll be hidden from your home screen until you reassign them.
         </p>
       </Modal>

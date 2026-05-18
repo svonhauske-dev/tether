@@ -42,15 +42,19 @@ DECLARE
 BEGIN
 
 -- ── 1. Patient profiles ───────────────────────────────────────
-INSERT INTO user_profiles (id, display_name, is_clinician, clinician_user_id)
+-- shares_adherence_with_clinician = true so the clinician demo
+-- view shows full data without each demo patient having to flip
+-- the toggle. Real users default to false (opt-in).
+INSERT INTO user_profiles (id, display_name, is_clinician, clinician_user_id, shares_adherence_with_clinician)
 VALUES
-  (alex_id,   'Alex Chen',    false, sofia_id),
-  (maria_id,  'Maria Santos', false, sofia_id),
-  (jordan_id, 'Jordan Kim',   false, sofia_id),
-  (priya_id,  'Priya Patel',  false, sofia_id)
+  (alex_id,   'Alex Chen',    false, sofia_id, true),
+  (maria_id,  'Maria Santos', false, sofia_id, true),
+  (jordan_id, 'Jordan Kim',   false, sofia_id, true),
+  (priya_id,  'Priya Patel',  false, sofia_id, true)
 ON CONFLICT (id) DO UPDATE SET
-  display_name      = EXCLUDED.display_name,
-  clinician_user_id = EXCLUDED.clinician_user_id;
+  display_name                    = EXCLUDED.display_name,
+  clinician_user_id               = EXCLUDED.clinician_user_id,
+  shares_adherence_with_clinician = EXCLUDED.shares_adherence_with_clinician;
 
 -- ── 2. User schedules (none = no scheduling complexity) ───────
 INSERT INTO user_schedule (user_id, schedule_type)
