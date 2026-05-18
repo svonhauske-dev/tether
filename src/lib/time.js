@@ -25,6 +25,14 @@ export function isSupplementActiveOn(supp, date) {
     if (checkDate < createdLocal) return false;
   }
 
+  // Soft-deleted supps stop being expected from the deletion date forward.
+  // Defensive check — `dbGetSupps` already filters `deleted_at IS NULL`, but if
+  // a deleted row leaks through any other read path, this keeps the math clean.
+  if (supp.deleted_at) {
+    const deletedLocal = startOfDay(new Date(supp.deleted_at));
+    if (checkDate >= deletedLocal) return false;
+  }
+
   if (!supp.treatment_mode || supp.treatment_mode === "indefinite") return true;
 
   const parseLocalDate = (s) => { const [y, m, d] = s.split("-").map(Number); return startOfDay(new Date(y, m - 1, d)); };
@@ -55,8 +63,4 @@ export function isActiveSupp(supp) {
 
 export function isPausedSupp(supp) {
   return supp.status === 'paused' || (!supp.status && supp.paused === true);
-}
-
-export function isStoppedSupp(supp) {
-  return supp.status === 'stopped';
 }

@@ -41,8 +41,8 @@ import InsightsPanel from "./components/InsightsPanel";
 import {
   supa, getSession, signInPassword, signUp, signOut, refreshSession,
   dbGetProtocols, dbAddProtocol, dbUpdateProtocol, dbDeleteProtocol,
-  dbPauseProtocol, dbArchiveProtocol, dbActivateProtocol,
-  dbGetSupps, dbAddSupp, dbUpdateSupp, dbDeleteSupp,
+  dbArchiveProtocol, dbActivateProtocol,
+  dbGetSupps, dbAddSupp, dbUpdateSupp, dbDeleteSupp, dbHardDeleteSupp,
   dbGetLog, dbUpsertLog,
   dbGetSchedule, dbSaveSchedule,
   dbUpdateScheduleField,
@@ -59,7 +59,7 @@ import {
   dbUpsertClinicianNote,
   dbGetClinicianNotes,
 } from './lib/api';
-import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isStoppedSupp, isPausedSupp } from './lib/time';
+import { fmtTime, addMins, parseHHMM, dateKey, startOfDay, TODAY, isSupplementActiveOn, isActiveSupp, isPausedSupp } from './lib/time';
 import { calculateProtocolAdherence, calculateAdherenceForDate } from './lib/adherence';
 import { SLOTS, IF_SLOTS, isPushSupported, needsHomeScreenInstall, getCurrentSubscription, registerServiceWorker, subscribeToPush } from './lib/notifications';
 import NotificationPrompt from "./components/NotificationPrompt";
@@ -1104,43 +1104,11 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     }
   };
 
-  const stopSupp = async () => {
-    if (!editingId) return;
-    const supp = supps.find(s => s.id === editingId);
-    if (!supp) return;
-    const today = dateKey(new Date());
-    try {
-      await dbUpdateSupp({ ...supp, status: 'stopped', stopped_at: today }, token);
-      setSupps(s => s.map(x => x.id === editingId ? { ...x, status: 'stopped', stopped_at: today } : x));
-      closeForm();
-      showToast(`${supp.name} stopped`);
-    } catch (err) {
-      showToast(`Couldn't stop ${supp.name}. Try again.`);
-      console.error(err);
-    }
-  };
-
   const resumeSupp = async (supp) => {
     try {
-      const updated = { ...supp, status: 'active', stopped_at: null };
+      const updated = { ...supp, status: 'active', paused: false };
       await dbUpdateSupp(updated, token);
       setSupps(s => s.map(x => x.id === supp.id ? updated : x));
-      showToast(`${supp.name} resumed`);
-    } catch (err) {
-      showToast(`Couldn't resume ${supp.name}. Try again.`);
-      console.error(err);
-    }
-  };
-
-  const resumeSuppFromForm = async () => {
-    if (!editingId) return;
-    const supp = supps.find(s => s.id === editingId);
-    if (!supp) return;
-    try {
-      const updated = { ...supp, status: 'active', stopped_at: null };
-      await dbUpdateSupp(updated, token);
-      setSupps(s => s.map(x => x.id === editingId ? updated : x));
-      setForm(f => ({ ...f, status: 'active', stopped_at: null }));
       showToast(`${supp.name} resumed`);
     } catch (err) {
       showToast(`Couldn't resume ${supp.name}. Try again.`);
@@ -1230,15 +1198,6 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     } catch (err) { showToast("Couldn't save. Try again."); console.error(err); }
   };
 
-  const pauseProtocol = async (protocol) => {
-    try {
-      await dbPauseProtocol(protocol.id, token);
-      setProtocols(p => p.map(x => x.id === protocol.id ? { ...x, status: 'paused' } : x));
-      setSupps(s => s.map(x => x.protocol_id === protocol.id ? { ...x, status: 'active', paused: false } : x));
-      showToast(`${protocol.name} paused`);
-    } catch (err) { showToast("Couldn't pause. Try again."); console.error(err); }
-  };
-
   const archiveProtocol = async (protocol) => {
     try {
       await dbArchiveProtocol(protocol.id, token);
@@ -1258,11 +1217,13 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   const deleteProtocol = async (protocol) => {
     try {
-      // Delete supplements that belonged to the protocol first so they don't
-      // become orphans (they'd stay in supps, still count toward adherence,
-      // but never render anywhere since their protocol_id no longer exists).
+      // Hard-delete supplements that belonged to the protocol first so they
+      // don't become orphans (they'd stay in supps, still count toward
+      // adherence, but never render anywhere since their protocol_id no longer
+      // exists). Cascade cleanup uses the hard-delete path so we don't litter
+      // the DB with soft-deleted ghost rows for a protocol that no longer exists.
       const orphans = supps.filter(s => s.protocol_id === protocol.id);
-      await Promise.all(orphans.map(s => dbDeleteSupp(s.id, token)));
+      await Promise.all(orphans.map(s => dbHardDeleteSupp(s.id, token)));
       await dbDeleteProtocol(protocol.id, token);
       setSupps(s => s.filter(x => x.protocol_id !== protocol.id));
       setProtocols(p => p.filter(x => x.id !== protocol.id));
@@ -1291,10 +1252,12 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     } catch (err) {
       console.error(err);
       if (newProto) {
-        // Rollback: delete the partial protocol + any supps already inserted under it.
+        // Rollback: hard-delete the partial protocol + any supps already inserted under it.
+        // Rollback uses hard-delete because these rows were never user-acknowledged — soft
+        // would leave deleted_at-stamped ghosts the user never knew existed.
         try {
           const inserted = await supa("GET", `/rest/v1/supplements?protocol_id=eq.${newProto.id}&select=id`, null, token).catch(() => []);
-          await Promise.all((inserted || []).map(s => dbDeleteSupp(s.id, token).catch(() => {})));
+          await Promise.all((inserted || []).map(s => dbHardDeleteSupp(s.id, token).catch(() => {})));
           await dbDeleteProtocol(newProto.id, token).catch(() => {});
         } catch (rollbackErr) {
           console.error("activateReceived rollback also failed:", rollbackErr);
@@ -1310,13 +1273,6 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       await dbSendProtocol({ clinician_id: user.id, patient_id: patientId, source_protocol_id: protocol.id, name: protocol.name, supplements_snapshot: snapshot }, token);
       showToast(`${protocol.name} sent`);
     } catch (err) { showToast("Couldn't send protocol. Try again."); console.error(err); }
-  };
-
-  const handleEditFormTogglePause = async () => {
-    const supp = supps.find(s => s.id === editingId);
-    if (!supp) return;
-    const ok = await togglePause(supp);
-    if (ok) closeForm();
   };
 
   const undoDelete = (suppId) => {
@@ -1763,7 +1719,6 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
               protocol={selectedProtocol}
               supplements={selectedPatient ? patientSupps : visibleSupps}
               onUpdateProtocol={updateProtocol}
-              onPauseProtocol={pauseProtocol}
               onArchiveProtocol={archiveProtocol}
               onActivateProtocol={activateProtocol}
               onDeleteProtocol={deleteProtocol}
@@ -1788,17 +1743,15 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           onClose={closeForm}
           title={editingId ? "Edit item" : "New item"}
           footer={
-            form.status !== 'stopped' ? (
-              <>
-                {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
-                <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
-                  {submitting ? <InlineLoader size="sm" /> : (editingId ? "Save changes" : "Add to protocol")}
-                </Button>
-              </>
-            ) : null
+            <>
+              {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
+              <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
+                {submitting ? <InlineLoader size="sm" /> : (editingId ? "Save changes" : "Add to protocol")}
+              </Button>
+            </>
           }
         >
-          <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
+          <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
         </SidePanel>
 
         {/* Patient actions overflow menu — Archive only. Popover anchored to
@@ -2001,7 +1954,6 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         protocol={selectedProtocol}
         supplements={visibleSupps}
         onUpdateProtocol={updateProtocol}
-        onPauseProtocol={pauseProtocol}
         onArchiveProtocol={archiveProtocol}
         onActivateProtocol={activateProtocol}
         onDeleteProtocol={deleteProtocol}
@@ -2019,17 +1971,15 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         onClose={closeForm}
         title={editingId ? "Edit item" : "New item"}
         footer={
-          form.status !== 'stopped' ? (
-            <>
-              {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
-              <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
-                {submitting ? <InlineLoader size="sm" /> : (editingId ? "Save changes" : "Add to protocol")}
-              </Button>
-            </>
-          ) : null
+          <>
+            {submitError && <div style={{ fontSize: typography.label, color: theme.status.danger, marginBottom: spacing.xs, textAlign: "center" }}>{submitError}</div>}
+            <Button variant="primary" fullWidth onClick={submitForm} disabled={submitting || !form.name?.trim()}>
+              {submitting ? <InlineLoader size="sm" /> : (editingId ? "Save changes" : "Add to protocol")}
+            </Button>
+          </>
         }
       >
-        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onStop={stopSupp} onResume={resumeSuppFromForm} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
+        <EditForm key={editingId ?? 'new'} form={form} setForm={setForm} editingId={editingId} onDelete={deleteSupp} scheduleMode={scheduleMode} mealCount={mealCount} eveningMode={scheduleConfig.evening_mode ?? null} supplementHistory={supplementHistory} activeProtocols={protocols.filter(p => p.status === 'active')} />
       </SidePanel>
       <LogAtSheet
         open={!!logAtTarget}

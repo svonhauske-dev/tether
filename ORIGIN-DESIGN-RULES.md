@@ -157,6 +157,23 @@ Real conclusion: bottom sheets feel right on mobile but have real implementation
 - **Backdrop** dims 0.55, no blur on desktop (blur is iOS-aesthetic)
 - **Dismiss methods:** X button, backdrop tap, Escape key
 
+**Modal sizing (May 18):**
+- `Modal` accepts a `size` prop: `"default"` (480px wide, for forms and longer content) or `"compact"` (360px wide, for confirmations and short prompts).
+- Mobile bottom sheet ignores `size` — bottom sheets are always full-width.
+- Compact is the right call for the 6 confirm modals shipped May 18: Archive patient, Stop supp, Orphan supps, Activate received protocol, Archive/Delete protocol, Delete supplement.
+
+**SidePanel — context-preserving editing (May 18):**
+- For focused editing work where the surrounding surface should stay visible (Linear / Notion / Stripe Dashboard pattern), use the `SidePanel` primitive instead of `Modal`.
+- Desktop: renders as a 480px right-side panel with no backdrop. Scroll lock and surface dim are both intentionally absent — the underlying context stays interactive-looking.
+- Mobile: `SidePanel` internally delegates to `Modal` (bottom sheet) via `useIsDesktop` since a side panel doesn't fit a phone viewport. Migration from `<Modal>` to `<SidePanel>` is a tag swap — same API.
+- Currently used for EditForm.
+
+**Popover — anchored menus and pickers:**
+- For short menus, overflow actions, and pickers that should preserve surrounding context (no backdrop, no focus trap), use `Popover` instead of `Modal`.
+- Caller owns the trigger and passes an `anchorRef`. Popover positions itself via `getBoundingClientRect` and dismisses on outside-click or Escape.
+- Children are typically `PopoverItem` (menu rows, optional `destructive`/`disabled`/`icon`) and `PopoverSection` (uppercase divider label).
+- Currently used for: Patient actions overflow, Send-to-patient picker, ProtocolDetailScreen overflow.
+
 **Both:**
 - **Sticky header** (title + close button) — always visible
 - **Scrollable body** — content can overflow, body scrolls independently
@@ -171,11 +188,15 @@ Real lesson from autocomplete work: nested scroll inside iOS bottom sheets fight
 **Avoid nested scroll inside bottom sheets on mobile.** If a dropdown or list inside a modal would need to scroll, cap the visible items so scroll isn't needed (autocomplete capped at 5 results uses this pattern). If truly necessary, use a portal or full-screen takeover, not a nested scroll context.
 
 ### Required for new work
-- New mobile modal: bottom sheet unless it's a confirmation/alert (centered)
-- New desktop modal: centered modal
+- **Picking the right primitive:**
+  - Confirmation, alert, or short form → `<Modal size="compact">`
+  - Standard form or longer content → `<Modal>` (default 480)
+  - Focused editing that should preserve context → `<SidePanel>` (desktop panel, delegates to Modal bottom sheet on mobile)
+  - Anchored menu, overflow actions, picker → `<Popover>` (lightweight, no backdrop)
 - All modals: sticky header + scrollable body + sticky footer
 - All modals: open at scroll-top, never preserve position
 - Never nest a scrolling element inside a modal body on mobile
+- When in doubt between Modal and SidePanel: if the user is editing something they were just looking at, SidePanel wins. If they're making a decision or filling out something unrelated, Modal wins.
 
 ---
 

@@ -1,6 +1,21 @@
 # Origin — Project Handoff Document
 
-*Last updated: May 18, 2026 (afternoon) — Phase 3 of the clinician-surfaces audit shipped: **Patient Roster as the default clinician landing** (`483eec0`). New `PatientRoster.jsx` — heading + 3 KPI cards (Total / Need review / Quiet 7d) + filter chips + sortable table (Patient · 7d · 30d · Trend sparkline · Protocols · Last log · Status). Default sort: alphabetical by name (Sofia: "alphabetical always"); columns are click-to-sort, numeric columns default to descending for worst-first triage. Whole-row click opens patient detail. `patientStats` enrichment expanded to capture `lastLogDate` (drives the Last log column + Quiet 7d KPI). Right aside collapses on roster view — there's no patient-scoped content to host; aside reappears when a patient is selected or on My Origin. New `activeNavItem` value `'roster'` (default for clinicians); `'home'` is reserved for My Origin. New **Overview** sidebar entry at top with LayoutDashboard icon — explicit nav back to roster from anywhere, addressing the gap where the only way back was clicking the same patient twice. Earlier in the session: §748 modal-lane completion. `bf41bd3` shipped two new primitives — `Popover.jsx` (anchored floating panel + `PopoverItem` + `PopoverSection`) and `SidePanel.jsx` (right-side 480px panel on desktop, delegates to Modal bottom sheet on mobile) — and migrated 3 misused modals: Patient actions overflow → Popover, Send-to-patient picker → Popover, EditForm → SidePanel. SupplementRow pencil layout shift fixed (always rendered, opacity-faded on hover) so the column doesn't bounce when the cursor passes over rows. `8f1e752` added `size` prop to Modal (compact 360 / default 480), applied `size="compact"` to 6 confirm modals (Archive patient, Stop supp, Orphan supps, Activate received protocol, Archive/Delete protocol, Delete supplement), and flipped flowing-prose body copy from JetBrains Mono → Space Grotesk in confirm bodies + HelperText globally + empty-state subtitles. Principle: monospace for UI labels, identifying names, button text, and data; sans-serif (Space Grotesk) for any flowing-sentence prose. `6073549` converted ProtocolDetailScreen overflow ⋯ menu + Send-to-patient picker to Popovers anchored to the same ⋯ trigger. Then **merged with mobile UX audit from origin/main** (commit `1c6eaec`) — one conflict in App.jsx resolved by keeping both upstream's `logAtTarget` state and the new `'roster'` activeNavItem default. All my changes (PatientRoster wiring, Overview entry, aside collapse, lastLogDate enrichment) preserved through the merge. Next: build the Protocol Templates surface (per design conversation — `is_template` flag on protocols, new sidebar entry below My Origin, "+ New template" + per-row Send-to-patient popover + "Use for myself" clone action).*
+*Last updated: May 18, 2026 (evening) — Handoff cleanup + pre-lifecycle code/file/design-system audit + HIGH cleanup pass. Audit ran as 3 parallel sweeps (code/dead-code, design system, file hygiene). HIGH findings cleared in this session: (1) deleted `src/components/PatientsPanel.jsx` (150 lines, zero callsites — superseded by PatientRoster + PatientDetailPanel); (2) deleted `src/components/ManageProtocolScreen.jsx` (315 lines, zero callsites — superseded by ProtocolLibrary + ProtocolDetailScreen); (3) stripped stale `timePreference` field from `dbUpdateSupp` PATCH body in `src/lib/api.js:199` (column still exists in DB but UI hasn't written to it since the slot system shipped). Sidebar.jsx comment that referenced PatientsPanel adherence thresholds simplified. Handoff doc earlier in evening: removed orphan `---` separators, fixed "Read-only past days" description for post-audit pattern, expanded primitives list (Popover/SidePanel/Sparkline/StatusDot/InlineTip), added clinician surfaces to module structure, re-counted API helpers (22 → 43), corrected App.jsx line count (~554 → ~2040 post-merge), restructured backlog as locked active queue (6 items) + 4 explicitly-discarded items, added "Next session — Lifecycle consolidation + soft delete" section with 3 workstreams + ordered migrations. Three DB migrations run earlier in session: `ALTER TABLE supplements ADD COLUMN deleted_at timestamptz;` (column added; 0 rows touched), `UPDATE supplements SET status = 'paused' WHERE status = 'stopped';` (0 rows), `UPDATE protocols SET status = 'archived' WHERE status = 'paused';` (0 rows — DB was already clean of the soon-to-be-dropped statuses). MED design-system items also cleared in this session: registered `Modal`, `Popover`, `SidePanel` in `src/components/design-system-page/registry.js` via small trigger-button preview wrappers in a new `src/components/design-system-page/previews.jsx` (portal-based components can't render statically in the variant grid — wrappers expose them via click-to-open). Updated `ORIGIN-DESIGN-RULES.md` Category 3: documented Modal `size` prop (default 480 / compact 360), SidePanel context-preserving editing pattern with mobile→Modal delegation via `useIsDesktop`, Popover anchored menu/picker pattern with `PopoverItem` + `PopoverSection` sub-components, and rewrote the "Required for new work" decision tree so future contributors pick the right primitive (Modal vs Modal compact vs SidePanel vs Popover) without needing to read the source.
+
+**Lifecycle consolidation + soft delete shipped — all 3 workstreams in one session.**
+
+**W3 (Soft delete + active-on-date adherence) — fixes the 35-of-36 bug.**
+`dbGetSupps` now filters `&deleted_at=is.null` so soft-deleted rows never reach the cockpit. `dbDeleteSupp` is now a PATCH that writes `deleted_at = now()` (was a hard DELETE). New `dbHardDeleteSupp` preserves a real DELETE path for the two cascade/rollback callsites in App.jsx (orphans on protocol delete, rollback on failed `activateReceived` bulk insert) — those write paths intentionally hard-delete since the rows were never user-acknowledged. `isSupplementActiveOn(supp, date)` in `lib/time.js` gained a `deleted_at` ceiling check as defense in depth. Past-day adherence math iterates over the filtered set, so deleting a supp cleanly drops its expected slots from both numerator and denominator (no retroactive % shift).
+
+**W1 (Supp Stop → Pause consolidation).**
+Dropped the `stopped` state entirely. EditForm: removed the archive view (`form.status === 'stopped'` branch), the Stop button, the Stop confirm Modal, and the `onStop` / `onResume` / `showStopConfirm` plumbing. App.jsx: deleted `stopSupp`, `resumeSuppFromForm`, and the dead `handleEditFormTogglePause` handler; `resumeSupp` now writes `{ status: 'active', paused: false }` (no more `stopped_at`). `isStoppedSupp` removed from `lib/time.js`. ProtocolDetailScreen tabs flipped from `[Active, Stopped]` → `[Active, Paused]`; Active tab now shows strictly `status='active'` (paused supps no longer mixed in at the bottom). New Paused tab body: `[name + (paused) Badge] ———— [trash icon] [play icon]`. Trash routes through `onDeleteSupp` → soft-delete via `dbDeleteSupp`; Play routes through `onResumeSupp` → status='active'. Active-tab pause icon button is now Pause-only (no toggle-to-resume since paused supps aren't here). EditForm "Edit item" footer ternary that gated on `form.status !== 'stopped'` simplified — that branch is unreachable now. `adherence.js` `getUpcomingEndings` filter swapped `s.paused || s.status === 'stopped'` → `!isActiveSupp(s)`; stopped-supp activity-log branch removed.
+
+**W2 (Protocol Pause → Archive consolidation).**
+Dropped the `paused` state for protocols entirely. `dbPauseProtocol` removed from `lib/api.js`; `pauseProtocol` handler removed from App.jsx along with the two `onPauseProtocol={pauseProtocol}` prop callsites. ProtocolDetailScreen: removed `isPaused` and `onPauseProtocol` props; `isArchived` simplified to `!isActive` (any non-active protocol is archived); overflow menu collapsed — Active state offers only Archive (+ Send to patient for clinicians), Archived state offers Activate + Delete. ProtocolLibrary: removed dead `" · Paused"` row badge (the "archived" tab already swallows both states via `status !== 'active'`). `adherence.js` activity-log: removed dead `'paused_protocol'` branch.
+
+**Net surface change:** UI now has exactly two lifecycle states per entity. Supplements: Active / Paused (with soft-delete via trash icon on paused rows). Protocols: Active / Archived. Stop button gone from EditForm; Pause-protocol menu item gone from ProtocolDetailScreen overflow. All Vite-transformed files parse 200 on the dev server.*
+
+*Earlier on May 18 (afternoon) — Phase 3 of the clinician-surfaces audit shipped: **Patient Roster as the default clinician landing** (`483eec0`). New `PatientRoster.jsx` — heading + 3 KPI cards (Total / Need review / Quiet 7d) + filter chips + sortable table (Patient · 7d · 30d · Trend sparkline · Protocols · Last log · Status). Default sort: alphabetical by name (Sofia: "alphabetical always"); columns are click-to-sort, numeric columns default to descending for worst-first triage. Whole-row click opens patient detail. `patientStats` enrichment expanded to capture `lastLogDate` (drives the Last log column + Quiet 7d KPI). Right aside collapses on roster view — there's no patient-scoped content to host; aside reappears when a patient is selected or on My Origin. New `activeNavItem` value `'roster'` (default for clinicians); `'home'` is reserved for My Origin. New **Overview** sidebar entry at top with LayoutDashboard icon — explicit nav back to roster from anywhere, addressing the gap where the only way back was clicking the same patient twice. Earlier in the session: §748 modal-lane completion. `bf41bd3` shipped two new primitives — `Popover.jsx` (anchored floating panel + `PopoverItem` + `PopoverSection`) and `SidePanel.jsx` (right-side 480px panel on desktop, delegates to Modal bottom sheet on mobile) — and migrated 3 misused modals: Patient actions overflow → Popover, Send-to-patient picker → Popover, EditForm → SidePanel. SupplementRow pencil layout shift fixed (always rendered, opacity-faded on hover) so the column doesn't bounce when the cursor passes over rows. `8f1e752` added `size` prop to Modal (compact 360 / default 480), applied `size="compact"` to 6 confirm modals (Archive patient, Stop supp, Orphan supps, Activate received protocol, Archive/Delete protocol, Delete supplement), and flipped flowing-prose body copy from JetBrains Mono → Space Grotesk in confirm bodies + HelperText globally + empty-state subtitles. Principle: monospace for UI labels, identifying names, button text, and data; sans-serif (Space Grotesk) for any flowing-sentence prose. `6073549` converted ProtocolDetailScreen overflow ⋯ menu + Send-to-patient picker to Popovers anchored to the same ⋯ trigger. Then **merged with mobile UX audit from origin/main** (commit `1c6eaec`) — one conflict in App.jsx resolved by keeping both upstream's `logAtTarget` state and the new `'roster'` activeNavItem default. All my changes (PatientRoster wiring, Overview entry, aside collapse, lastLogDate enrichment) preserved through the merge. Next: build the Protocol Templates surface (per design conversation — `is_template` flag on protocols, new sidebar entry below My Origin, "+ New template" + per-row Send-to-patient popover + "Use for myself" clone action).*
 
 *Earlier on May 18 — full mobile patient UX/UI audit shipped end-to-end across 6 sessions on branch `worktree-session-2-autocomplete-expand` and merged into main. All 12 audit recommendations + 4 audit-discovered bugs + the design decision ladder (D1–D5) implemented. Highlights: mobile week strip (extracted DayCell with compact mode), Hero rewritten around a single state-helper (anchor-aware copy ladder, Start-day decoupled per D1, anchor-info as primary status line, success-green unified to status row, inline-edit preserves prefix), past-day pattern (eyebrow inside Hero card with read-only/editing suffix, Edit in header), Day-1 inline tip + reusable `InlineTip` primitive, log-at pill + `LogAtSheet` time-picker with per-supplement timestamp persistence in `daily_logs.checked` (new `{ checked: true, at: "HH:MM" }` shape coexists with legacy `true` via backwards-compat reads — no DB migration needed), take-all on slot icon with first-run InlineTip hint, Onboarding Step 2 live "Your day will look like" preview. Slide-in screen header icons normalized to 18px. Production bundle ~387 KB pre-merge.*
 
@@ -28,8 +43,6 @@
 **Sofia's workflow:** download updated doc → save to repo → next session reads it fresh.
 
 Both Claude (chat) and Claude Code (in Cursor) reference this document for continuity. Keep it accurate; future sessions depend on it.
-
----
 
 ---
 
@@ -101,14 +114,20 @@ The design system uses a token-based theme architecture. All components consume 
 
 **CSS variable font system:** `typography.fontBody/fontHeading/fontData` resolve to `var(--font-body/heading/data)`. ThemeProvider sets those CSS vars on every theme change. All existing components automatically get the right font for whichever theme is active.
 
-**7 primitives:**
+**Primitives:**
 - `Button` — variants: primary, secondary, tertiary, destructive, icon, selector, startDay (+ size: default/compact)
-- `Input`
+- `Input` — text / time / number variants. `colorScheme: dark` so native UI renders correctly. Time picker indicator hidden globally in index.html.
 - `Card`
-- `Badge`
+- `Badge` — variants: now / missed / category / neutral
 - `Label`
-- `Modal` — bottom sheet on mobile (drag-to-dismiss), centered modal on desktop
+- `Modal` — bottom sheet on mobile (drag-to-dismiss), centered modal on desktop (`useIsDesktop` hook, 480px max / 80dvh max). `size` prop: `compact` (360px) / `default` (480px).
 - `Toast` — supports optional `action` prop for Undo affordances, top-anchored
+- `TabBar` — keyboard-accessible tab buttons (`minHeight: touch.min`)
+- `InlineTip` (NEW May 18) — dismissible inline tip, `localStorage`-backed under `origin.tip.<id>`; powers Day-1 explainer + take-all hint
+- `Popover` (NEW May 18) — anchored to a trigger; replaces misused modals for overflow menus + send-to-patient picker
+- `SidePanel` (NEW May 18) — slide-from-right panel; hosts EditForm on mobile and desktop
+- `Sparkline` — single-color SVG trend line for dense list rows (clinician roster)
+- `StatusDot` — colored 4–6px dot keyed by status token
 
 **Notable patterns:**
 - Pill width-locked via CSS `::before` pseudo-element so bold-active state doesn't cause layout shift
@@ -215,10 +234,9 @@ The design system uses a token-based theme architecture. All components consume 
 
 **Read-only past days** (mobile + desktop):
 - Past days default to read-only mode
-- Mobile: 60% opacity, all interactions disabled, Hero eyebrow reads "VIEWING [date]"
-- Desktop: PAST DAY label in Today panel header, slot rows still expandable for review
-- Edit button on Hero card (mobile) / Today panel header (desktop) unlocks editing for session
-- Edit mode allows ONLY checkbox toggling and pill_time editing
+- Mobile (post-May 18 audit): no opacity dim. Hero card carries an eyebrow `Viewing [date] · read-only` (suffix `text.muted`) or `Viewing [date] · editing` (suffix accent white) when editing. Edit/Done lives in the top-right of the App header (replaces the `+` icon on past days, alongside the Library icon). Late-slot badge uses `variant="neutral"` (achromatic) in read-only mode, `variant="missed"` (warning ochre) when editing.
+- Desktop: PAST DAY label in Today panel header, slot rows still expandable for review. Edit button in panel header.
+- Edit mode allows ONLY checkbox toggling, pill_time editing, and (post-Session 5) log-at retroactive timestamps.
 - Add/edit/delete supplements and schedule editing remain hidden in both states
 
 **Length of treatment (per-supplement, via `treatment_mode` column):**
@@ -795,12 +813,12 @@ All three commits pushed to `origin/main` (range `730a3e4..2ce9af7`).
 
 ## Codebase Health
 
-**App.jsx is ~1340 lines** (May 17 measurement). Still pure orchestration — state, effects, handlers, home screen layout container. Every major rendering concern is in its own focused file.
+**App.jsx is ~2040 lines** (May 18 measurement, post-clinician-merge + mobile audit). Still pure orchestration — state, effects, handlers, home screen layout container. Every major rendering concern is in its own focused file. Growth from prior ~1340 came from clinician roster wiring (`activeNavItem`, `selectedPatientId`, patient data fetching/enrichment), send-to-patient flow, mobile audit (`logAtTarget` state, `logCheckAt`, `takeAllInSlot`, `isDay1`, anchor edit state), and desktop right-aside coordination.
 
 **design-system.js is 191 lines** (was 688 before the May 17 cleanup). Only the Achromatic theme ships; the dead Light/Dark/Terminal-* themes were removed, along with the old top-level `colors`/`gradients` exports that no component imported. Production bundle 373 KB / 102 KB gzipped.
 
 **Module structure:**
-- `src/lib/api.js` — Supabase data layer + auth (22 exported functions, see API Helpers reference below)
+- `src/lib/api.js` — Supabase data layer + auth (43 exported functions, see API Helpers reference below)
 - `src/lib/time.js` — time/date utilities
 - `src/lib/notifications.js` — scheduleNotifications, SLOTS, IF_SLOTS (IF v2)
 - `src/lib/adherence.js` — adherence calculations (per-date + week + streak)
@@ -809,15 +827,16 @@ All three commits pushed to `origin/main` (range `730a3e4..2ce9af7`).
 - `src/design-system.js` — single source of truth for tokens. Exports: `spacing`, `radius`, `typography`, `touch`, `layout`, `shadows`, `zIndex`, `effects`, `breakpoints`, `themes` (Achromatic only), and the reusable `makeSegBtnStyle(theme)` curry that emits `(on) => style` for segmented buttons. The dead Light/Dark/Terminal themes were deleted May 17.
 - `src/data/supplements-database.js` — autocomplete static list (~300 entries)
 - `src/components/`:
-  - Primitives: Button, Card, Input, Label, Badge, Modal, Toast, Loader, InlineLoader, TabBar, InlineTip (NEW May 18 — dismissible inline tip, localStorage-backed; powers Day-1 tip + take-all hint)
+  - Primitives: Button, Card, Input, Label, Badge, Modal, Toast, Loader, InlineLoader, TabBar, InlineTip, Popover, SidePanel, Sparkline, StatusDot
   - Auth & onboarding: Auth, PromptName, Onboarding, NotificationPrompt, IFMigrationScreen
-  - Home (mobile): Hero, SlotCard, WeekStrip (now compact-mode on mobile, full-size on desktop — both call sites share the same component)
+  - Home (mobile): Hero, SlotCard, WeekStrip (compact-mode on mobile, full-size on desktop — both call sites share the same component)
   - Home (desktop): Sidebar, WeekStrip, AdherenceRing, TodayPanel (+ TodayPanelHeader sub-component), SlotRow, SupplementRow, InsightsPanel; DayCell is a named export from WeekStrip.jsx (no standalone file)
-  - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ProtocolLibrary, ProtocolDetailScreen, LogAtSheet (NEW May 18 — bottom-sheet time-picker for logging missed supps at the actual time)
+  - Modals & screens: EditForm, ScheduleTab, SettingsScreen, ProtocolLibrary, ProtocolDetailScreen, LogAtSheet
+  - Clinician surfaces (desktop): PatientRoster (default landing for clinicians), PatientDetailPanel, PatientAnalyticsPanel
   - Shared: HelperText, SupplementNameAutocomplete, DevThemePicker, ToastContext
   - Design system page (dev + portfolio): `design-system-page/DesignSystemPage.jsx`, `design-system-page/registry.js`
 
-**API Helpers Reference (`src/lib/api.js`, 22 functions):**
+**API Helpers Reference (`src/lib/api.js`, 43 functions):**
 
 *Auth:*
 - `refreshSession()` — refresh JWT via stored refresh token
@@ -827,14 +846,21 @@ All three commits pushed to `origin/main` (range `730a3e4..2ce9af7`).
 - `updateEmail(newEmail, token)`, `updatePassword(newPassword, token)`
 
 *Supplements:*
-- `dbGetSupps(t)` — GET all supplements ordered by created_at
+- `dbGetSupps(userId, t)` — GET all supplements for user, ordered by created_at
 - `dbAddSupp(s, t)`, `dbUpdateSupp(s, t)`, `dbDeleteSupp(id, t)`
 - `dbGetAdherenceCounts(userId, suppIds, token, daysBack=365)` — count check marks per supplement over the last N days (default 365)
 
+*Protocols:*
+- `dbGetProtocols(userId, t)` — GET all protocols ordered by created_at asc
+- `dbAddProtocol(p, t)`, `dbUpdateProtocol(p, t)`, `dbDeleteProtocol(id, t)`
+- `dbPauseProtocol(protocolId, t)` — set status='paused' + bulk-reset all member supps via `dbResetProtocolSupps` (internal helper, not exported)
+- `dbArchiveProtocol(protocolId, t)` — set status='archived' + bulk-reset all member supps
+- `dbActivateProtocol(protocolId, t)` — set status='active'
+
 *Daily logs:*
-- `dbGetLog(date, t)` — GET single daily_log by date
+- `dbGetLog(userId, date, t)` — GET single daily_log by date
 - `dbUpsertLog(log, t)` — POST daily_log with on_conflict upsert
-- `dbGetDailyLogsRange(start, end, t)` — GET logs in date range (used for week strip)
+- `dbGetDailyLogsRange(userId, start, end, t)` — GET logs in date range (used for week strip)
 
 *Schedule:*
 - `dbGetSchedule(userId, t)` — filter by user_id, order by updated_at desc, return latest
@@ -848,6 +874,16 @@ All three commits pushed to `origin/main` (range `730a3e4..2ce9af7`).
 
 *Supplement history (autocomplete):*
 - `dbGetSupplementHistory(userId, t)`, `dbAddSupplementHistory(userId, name, t)`
+
+*Clinician (May 18 backend):*
+- `dbGetMyPatients(clinicianId, t)` — GET all user_profiles where `clinician_user_id` matches
+- `dbGetPatientLog(patientId, date, t)`, `dbGetPatientLogs(patientId, start, end, t)` — per-patient adherence reads (RLS-gated via patient consent)
+- `dbSendProtocol(send, t)` — POST protocol_sends row (clinician → patient)
+- `dbGetReceivedProtocols(patientId, t)` — patient inbox of pending protocol sends
+- `dbUpdateProtocolSend(id, data, t)` — patient accepts/dismisses a sent protocol
+- `dbGetClinicianNote(clinicianId, patientId, t)` — fetch single note
+- `dbUpsertClinicianNote(row, t)` — write/update note on patient
+- `dbGetClinicianNotes(clinicianId, t)` — fetch all notes by this clinician
 
 *Notifications:*
 - `recomputeNotifications(token)` — POST to edge function with timezone
@@ -882,7 +918,7 @@ Real debt that exists in the codebase and DB. Not blocking, but worth tracking s
 - `api.js:getThemePreference()` validates only `light` / `dark` / `system` — doesn't recognize `achromatic`. Low severity since app always falls back to achromatic regardless. Real fix worth shipping during HIG pass.
 
 **Legacy schema columns still present:**
-- `supplements.timePreference` (text, default `'Anytime'`) — was the original "when to take it" pre-slot system. Not used in current UI; replaced by `slots` array. Could be dropped in a migration pass.
+- `supplements.timePreference` (text, default `'Anytime'`) — was the original "when to take it" pre-slot system. Not used in current UI; replaced by `slots` array. **May 18:** stripped from `dbUpdateSupp` PATCH body so we no longer write to it; column still exists in DB and can be dropped in a future migration pass when convenient.
 - `supplements.paused` (boolean) — superseded by `status` column. Currently both exist. Could be dropped.
 
 **Config legacy:**
@@ -896,8 +932,6 @@ Real debt that exists in the codebase and DB. Not blocking, but worth tracking s
 4. Remove `injectable`/`topical` from FIXED_SLOTS if confirmed unused
 
 None of these are blocking. All are real debt.
-
----
 
 ---
 
@@ -949,8 +983,8 @@ Service Worker, VAPID subscription flow, `recompute_notifications` + `process_no
 **4. Configurable meal count — IF side addressed (May 17).**
 IF v2 makes meal_count a first-class user-facing setting (2 or 3 meals, with the slot picker filtering accordingly). Cascade-mode meal count (Medication / Wakeup) is still hard-coded to 3 — separate decision if/when that becomes friction.
 
-### Mobile audit (May 18) — DONE
-**Full audit shipped end-to-end across 6 sessions on `worktree-session-2-autocomplete-expand`. Awaiting real-use validation and PR merge.** See "Session of May 18" in Today's Major Work for the detailed implementation log. Items shipped:
+### Mobile audit (May 18) — DONE + MERGED
+**Full audit shipped end-to-end across 6 sessions on `worktree-session-2-autocomplete-expand`, merged to main in commit `1c6eaec`.** See "Session of May 18" in Today's Major Work for the detailed implementation log. Items shipped:
 
 | Rec | What | Where to see it |
 |---|---|---|
@@ -968,23 +1002,66 @@ IF v2 makes meal_count a first-class user-facing setting (2 or 3 meals, with the
 | Polish | Day-1 inline tip (D4) + InlineTip primitive | Home empty state for new users |
 | Polish | "MY PROTOCOL" eyebrow + chevron date row gone | Mobile header |
 
-### Other lower-priority items (parked from various sessions)
+### Next session — Lifecycle consolidation + soft delete (locked May 18, ~4–6h, bundled)
 
-- **Injectables-as-event-log** — instead of daily checkboxes, log doses with timestamps + units. Useful for Tirzepatide titration. (Note: log-at flow now captures the actual log time for any supp — partially overlaps but doesn't fully replace dose-log UX for injectables.)
-- **Symptom logging** — free-text journal vs structured ratings. Open design questions.
-- **Motion graphics pass** — skeleton screens, checkbox tick animation, hero progress ring fill animation, page transitions. Real polish moment.
-- **Accessibility hardening** — `aria-live` regions for toasts + loading; keyboard skip links; focus management refinement. (HIG foundational pass shipped May 12 covered touch targets, reduced-motion, focus states, Modal keyboard.)
-- **Name field required on sign-up** — currently shipped optional, spec was required.
-- **Rename "Name" / "display_name" to "Full name"** — clearer ask.
-- **`icon-bare` Button variant** — encapsulate inline border:none overrides on icon buttons.
-- **Real-use period for mobile audit branch** — Sofia uses the app for several days on `worktree-session-2-autocomplete-expand` before PR merge to catch any friction signals from the new Hero / log-at / take-all / live-preview surfaces.
+Three workstreams that sit in the same conceptual neighborhood and touch overlapping files (`App.jsx`, `ProtocolLibrary.jsx`, `EditForm.jsx`, manage flows). Bundle into one session.
 
-### Parked from past sessions (lower urgency)
+**Workstream 1 — Supplement lifecycle: drop Stop entirely (keep Pause only).**
+Current shipped state has both `paused` (legacy boolean) and `status` (`active`/`paused`/`stopped`). Sofia's call: the active vs not-active distinction is the only thing that earns its keep — `stopped` is just `paused` with extra ceremony. Plan:
+- Remove all "Stop" CTAs from EditForm + manage screens.
+- Remove the "Stopped" tab; rename what was "Paused" tab → just **Paused** and surface all not-active supps there.
+- Row in the Paused tab: supplement name + small `(paused)` tag + two icon affordances on the right — **play** (resume → status='active') and **trash** (soft-delete; see Workstream 3).
+- DB migration (Supabase Dashboard): `UPDATE supplements SET status = 'paused' WHERE status = 'stopped';` Optional follow-up: enum constraint to forbid `'stopped'` going forward.
+- Code: `handleEditFormTogglePause` (currently dead per Codebase Health note) can be deleted entirely. Any branch that special-cased `status === 'stopped'` collapses into `status === 'paused'`.
 
-- **MOB-026 — DONE** accessibility role/aria markup shipped: `aria-expanded` on SlotCard expand header, `aria-label` + `aria-pressed` on SlotCard and SupplementRow checkboxes. Commit `f2b3da4`.
-- **MOB-009 — slot card chevron discoverability** — partially addressed by the take-all split header (May 18) which makes the slot icon and chevron each their own button with cursor + hover affordance.
-- **MOB-019 — skeleton screens during initial app load.**
-- **B3 persona finding** — left chevron one-handed reach issue, swipe gesture on date row could help right-handed one-handed use. (Chevron date row removed May 18; week strip is the new date nav — re-evaluate this finding under the new pattern.)
+**Workstream 2 — Protocol lifecycle: drop Pause entirely (keep Active + Archived).**
+Mirror of Workstream 1 on the protocol side. For protocols, archive is the verb that makes sense — you don't pause a protocol, you put it on the shelf. Plan:
+- Remove "Pause" CTA from ProtocolLibrary row actions + ProtocolDetailScreen overflow.
+- Status set becomes `active` | `archived`. The "Paused" tab/segment in ProtocolLibrary collapses into Archived.
+- DB migration: `UPDATE protocols SET status = 'archived' WHERE status = 'paused';`
+- `dbPauseProtocol` can be deleted; `dbArchiveProtocol` remains. Both currently bulk-reset member supps via `dbResetProtocolSupps` — keep that behavior on archive.
+
+**Workstream 3 — Soft delete + active-on-date past adherence (fixes the 35-of-36 bug).**
+The bug: Sofia deleted a supplement, and yesterday's adherence dropped from 100% → 97%. Root cause: `countExpectedChecks` uses the *current* `isActiveSupp()` filter to decide which supps were expected on a past date — so any current-state change (delete, pause, stop) retroactively rewrites the past. Fix:
+- DB migration: `ALTER TABLE supplements ADD COLUMN deleted_at timestamptz;` (nullable; null = not deleted).
+- Trash icon in Paused tab and any "delete" CTA writes `deleted_at = now()` instead of hard `DELETE`. `dbDeleteSupp` becomes a soft-delete (rename to `dbSoftDeleteSupp` or leave name, document behavior). A hard-delete path can stay for admin/test cleanup but is not user-reachable.
+- All read queries (`dbGetSupps`) gain `&deleted_at=is.null` filter so the cockpit never sees deleted rows.
+- Adherence math: introduce `isSupplementActiveOn(supp, date)` predicate that considers `created_at` (already shipped May 18 in `lib/time.js`), `deleted_at`, AND a paused-on-date check via `status_changes` (deferred — for now treat `paused` as "not expected today onward" only; past days continue to expect based on `created_at` floor + `deleted_at` ceiling). `countExpectedChecks` swaps from current-`isActiveSupp` to per-date `isSupplementActiveOn`.
+- Verify: delete a supp today, yesterday's % stays at whatever it was. Pause a supp today, yesterday's % stays put (paused is forward-looking; retro paused-day tracking deferred until we add `status_changes` history).
+
+**Order of operations within the session:**
+1. Run all three migrations in Supabase Dashboard first (additive — won't break the running app).
+2. Workstream 3 first (soft delete plumbing + active-on-date) because both other workstreams depend on the trash icon going through the soft path.
+3. Workstream 1 (supp Stop → Pause).
+4. Workstream 2 (protocol Pause → Archive).
+5. Update Codebase Health + remove the "supplements.paused legacy column" / "handleEditFormTogglePause dead code" notes once cleaned up.
+
+### Active backlog (locked from May 18 backlog review)
+
+Sofia did a multi-select keep/discard pass across the parked queue on May 18 (post-audit-merge). Items below are confirmed in-scope and ranked roughly by readiness; items moved to "Considered + discarded" are explicitly out of scope until a new signal surfaces them.
+
+| # | Item | Notes |
+|---|------|-------|
+| 1 | **Symptom logging** | Free-text journal vs structured ratings still open. Schedule a design conversation before any build. |
+| 2 | **Motion / skeleton screens pass** | Initial-load skeletons (MOB-019), checkbox tick animation, hero ring fill, page transitions. Polish moment, not blocking. |
+| 3 | **`aria-live` regions + skip links** | Toast/loading announcements + keyboard skip links. Builds on May 12 HIG pass. |
+| 4 | **Name required on sign-up** | Currently optional; spec was required. One-line schema/UI change. |
+| 5 | **Rename "Name" / `display_name` → "Full name"** | Clearer label; same column, no migration. |
+| 6 | **`icon-bare` Button variant** | Encapsulate inline `border:none` overrides on icon-only buttons (e.g., overflow menus). |
+
+### Parked but worth keeping in view
+
+- **MOB-009 — slot card chevron discoverability** — partially addressed by the split header take-all (May 18); revisit only if real-use shows friction.
+- **B3 persona finding (one-handed reach on left chevron)** — chevron date row was removed May 18 in favor of week strip. Original finding obsolete under the new pattern — re-evaluate only if a new one-handed friction signal appears.
+
+### Considered + discarded (May 18 backlog review)
+
+These were on the parked list but Sofia chose not to invest in them. Recorded so future sessions don't re-surface them unnecessarily.
+
+- **Injectables-as-event-log** — log-at flow (May 18 mobile audit) now captures actual log time per supplement. Sofia judged the partial overlap good enough for now; no dedicated dose-log UX is planned.
+- **Portfolio link from `/design-system`** — page is publicly accessible and portfolio-visible already; an explicit "back to portfolio" link adds clutter and isn't needed.
+- **Web Push reliability re-audit** — `process_notifications_queue` dead-subscription cleanup (404/410 auto-delete) is shipped; no new reliability complaints. Revisit only if real users report missed notifications.
+- **Configurable meals-per-day count** — current 2-meal default works; making it user-configurable adds onboarding surface area without a real signal asking for it.
 
 ---
 
@@ -1041,7 +1118,7 @@ Optional consent toggle at import time. Per-user drill-down for creators with 7-
 **Radius:** 0 for all UI elements (`radius.full` 9999 reserved for circular shapes)
 
 **Critical files:**
-- `src/App.jsx` (~554 lines, viewport detection for desktop branch)
+- `src/App.jsx` (~2040 lines post-May 18 — orchestration for both mobile + desktop branches, clinician roster wiring, mobile audit state for log-at + take-all + anchor edit)
 - `src/design-system.js` (Achromatic + dev variants, CSS variable font system)
 - `src/config.js`:
   - `DEFAULT_CONFIG` — `{ pre_meal_window: 30, breakfast: 60, lunch: 300, dinner: 540, after_dinner: 660, window_start: 0, window_length: 480, meals_per_day: 2, fixed_times: {...} }`
@@ -1117,15 +1194,22 @@ Optional consent toggle at import time. Per-user drill-down for creators with 7-
 
 ## Suggested First Action for the New Chat
 
-Read this document plus `/ORIGIN-DESIGN-RULES.md` (once committed). Then real first action depends on Sofia's priorities:
+Read this document plus `/ORIGIN-DESIGN-RULES.md`. State of the world:
 
-1. **If continuing identity/design work:** spend a week using Origin in Achromatic. Surface friction signals from real daily use. Likely candidates: mobile screens may need explicit alignment to Achromatic (verify Hero card, slot cards, etc. all render well under the new identity), specific HIG audit items.
+- Mobile UX audit (all 12 recommendations) shipped + merged to main (`1c6eaec`).
+- Clinician Phase 3 (Patient Roster as default landing) shipped + merged (`483eec0`).
+- §748 modal lane closed (Popover/SidePanel primitives + 6 confirm modals sized compact).
+- Backlog reviewed; 6 items locked on active queue, 4 explicitly discarded.
 
-2. **If shipping new features:** Web Push notifications (highest user value), then Protocol Library Phase 1 (foundation for clinician work).
+Two pieces of in-flight work are queued as the next sessions, in this order:
 
-3. **If focused engineering:** HIG bulk fix pass (real backlog of audit findings to apply).
+1. **Protocol Templates surface** (~4–5h) — see Pending Queue item 0. Design is locked: `is_template` column on `protocols`, sidebar entry below My Origin, list of template rows with per-row Send-to-patient + Use-for-myself. Architecture distinction (run vs share) drives the separation from ProtocolLibrary. Start with the DB migration, then the new `Templates.jsx` component, then sidebar wiring, then ProtocolLibrary filter update.
 
-4. **If everything feels solid:** start clinician feature roadmap conversation, beginning with Protocol Library Phase 1 design.
+2. **Lifecycle consolidation + soft delete** (~4–6h, bundled session) — see "Next session — Lifecycle consolidation + soft delete" above. Drop Stop entirely (supplements → Active/Paused only), drop Pause entirely (protocols → Active/Archived only), add `supplements.deleted_at` + active-on-date filtering so historical adherence is never rewritten by current state changes. Order: migrations first, then soft-delete plumbing (Workstream 3), then supp lifecycle (Workstream 1), then protocol lifecycle (Workstream 2). This fixes the 35-of-36 bug Sofia reported on May 18.
+
+If Sofia hasn't picked between them, default to Templates first — it's smaller, lighter on schema risk, and unblocks the clinician roadmap. Lifecycle work is a refactor that can wait a session without anyone noticing the drift.
+
+Anything outside these two is on the active backlog (Symptom logging design conversation, motion/skeleton pass, aria-live + skip links, Name required, Full name rename, icon-bare Button variant) — touch only if explicitly asked.
 
 ---
 

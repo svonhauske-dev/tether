@@ -185,7 +185,7 @@ export function calculateSlotAdherence(slotId, supplements, logs, daysWindow = 3
 // Recent activity log — reverse-chronological list of supplement/protocol
 // state changes inferred from timestamps + current status. Origin doesn't
 // have a true audit log, so this is best-effort: "added X" comes from
-// `created_at`, "stopped X" from `stopped_at`, "paused X" from `updated_at`
+// `created_at`, "paused X" from `updated_at`
 // when status='paused' (close approximation when the patient hasn't edited
 // the row otherwise). Good enough for "what changed since last check-in."
 export function buildActivityLog(supplements = [], protocols = [], daysBack = 30, limit = 10) {
@@ -203,10 +203,6 @@ export function buildActivityLog(supplements = [], protocols = [], daysBack = 30
         events.push({ at: t, kind: 'added_supp', text: `Added ${s.name}${sourceTag}` });
       }
     }
-    if (s.stopped_at) {
-      const t = new Date(s.stopped_at);
-      if (t >= cutoff) events.push({ at: t, kind: 'stopped_supp', text: `Stopped ${s.name}` });
-    }
     if (s.status === 'paused' && s.updated_at) {
       const t = new Date(s.updated_at);
       if (t >= cutoff) events.push({ at: t, kind: 'paused_supp', text: `Paused ${s.name}` });
@@ -220,10 +216,6 @@ export function buildActivityLog(supplements = [], protocols = [], daysBack = 30
         const sourceTag = p.source === 'clinician' ? ' (from clinician)' : '';
         events.push({ at: t, kind: 'activated_protocol', text: `Activated ${p.name}${sourceTag}` });
       }
-    }
-    if (p.status === 'paused' && p.updated_at) {
-      const t = new Date(p.updated_at);
-      if (t >= cutoff) events.push({ at: t, kind: 'paused_protocol', text: `Paused ${p.name}` });
     }
     if (p.status === 'archived' && p.updated_at) {
       const t = new Date(p.updated_at);
@@ -243,7 +235,7 @@ export function getUpcomingEndings(supplements, daysAhead = 14) {
   return supplements
     .filter(s => {
       if (!s.ends_at) return false;
-      if (s.paused || s.status === 'stopped') return false;
+      if (!isActiveSupp(s)) return false;
       const [y, m, dd] = s.ends_at.split('-').map(Number);
       const endDate = startOfDay(new Date(y, m - 1, dd));
       return endDate >= today && endDate <= horizon;
