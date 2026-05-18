@@ -1,3 +1,11 @@
 # Supabase project config
 # Run `supabase link --project-ref yahimlivfieuknagusxp` to link to the remote project.
 project_id = "tether"
+
+# Disable Supabase gateway JWT check for recompute_notifications so pg_cron
+# can call it with an X-Cron-Secret header instead of a JWT. The function
+# still verifies the user JWT internally on frontend calls (see userClient
+# .auth.getUser()) and the X-Cron-Secret on cron calls. Same pattern
+# process_notifications_queue uses for its every-minute pg_cron drain.
+[functions.recompute_notifications]
+verify_jwt = false
