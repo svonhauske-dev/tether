@@ -220,8 +220,17 @@ export const dbSaveSchedule = async (data, t) => {
   // current device — if they travel and re-save their schedule, the cron
   // catches up.
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // Read the existing row BEFORE delete so we can preserve columns that
+  // aren't controlled by the schedule form (notifications_enabled, etc.).
+  // Without this preservation step, the DELETE-then-INSERT cycle silently
+  // reset notifications_enabled to FALSE on every schedule save — the bug
+  // that took down Bego's notifications on May 18, discovered May 19 evening.
+  const existing = await supa("GET", `/rest/v1/user_schedule?user_id=eq.${data.user_id}&select=notifications_enabled`, null, t).catch(() => []);
+  const preservedFlags = {
+    notifications_enabled: existing?.[0]?.notifications_enabled ?? data.notifications_enabled ?? false,
+  };
   await supa("DELETE", `/rest/v1/user_schedule?user_id=eq.${data.user_id}`, null, t).catch(() => {});
-  return supa("POST", "/rest/v1/user_schedule", { ...data, timezone, updated_at: new Date().toISOString() }, t);
+  return supa("POST", "/rest/v1/user_schedule", { ...data, ...preservedFlags, timezone, updated_at: new Date().toISOString() }, t);
 };
 
 export const dbUpdateScheduleField = (field, value, userId, token) =>
