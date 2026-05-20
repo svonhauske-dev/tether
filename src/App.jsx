@@ -1242,6 +1242,21 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     } catch (err) { showToast("Couldn't delete. Try again."); console.error(err); }
   };
 
+  // Decline a received protocol — marks the row as 'declined' (not
+  // 'pending') so it disappears from the recipient's queue without
+  // activating. Distinct from Cancel (which closes the modal but keeps
+  // the row pending for later). Doesn't notify the sender of the decline.
+  const declineReceived = async (send) => {
+    try {
+      await dbUpdateProtocolSend(send.id, { status: 'declined' }, token);
+      setPendingReceivedCount(c => Math.max(0, c - 1));
+      showToast(`${send.name} declined`);
+    } catch (err) {
+      console.error(err);
+      showToast("Couldn't decline. Try again.");
+    }
+  };
+
   // Activate or save a received protocol. `intent` controls what happens to
   // the recipient's existing actives:
   //   'stack'      — new protocol added as active, current actives untouched
@@ -2047,6 +2062,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         onProtocolCreated={(p) => { setSelectedProtocol(p); pushScreen('protocol_detail'); openAddToProtocol(p); }}
         token={token}
         onActivateReceived={activateReceived}
+        onDeclineReceived={declineReceived}
       />
       <ProtocolDetailScreen
         isOpen={screenStack.some(s => s.name === 'protocol_detail')}

@@ -118,7 +118,7 @@ const DURATION_UNITS = ["days", "weeks", "months"];
 //     it (user closes via X or after a successful create).
 // Used in the patient-view "Create new and send" flow where App.jsx
 // triggers create externally and reacts to the completion.
-export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived, desktop = false, embedded = false, readOnly = false, adherenceMap = null, onPlusClick = null, controlledShowNew, onShowNewChange }) {
+export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived, onDeclineReceived, desktop = false, embedded = false, readOnly = false, adherenceMap = null, onPlusClick = null, controlledShowNew, onShowNewChange }) {
   const { theme } = useTheme();
   const today = new Date().toISOString().split('T')[0];
 
@@ -579,6 +579,24 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
             >
               Save for later
             </Button>
+            {onDeclineReceived && (
+              <Button
+                variant="destructive"
+                fullWidth
+                disabled={activating}
+                onClick={async () => {
+                  if (!activateModalSend) return;
+                  setActivating(true);
+                  const send = activateModalSend;
+                  await onDeclineReceived(send);
+                  setReceived(r => r.filter(s => s.id !== send.id));
+                  setActivateModalSend(null);
+                  setActivating(false);
+                }}
+              >
+                Decline
+              </Button>
+            )}
             <Button variant="tertiary" fullWidth onClick={() => setActivateModalSend(null)} disabled={activating}>
               Cancel
             </Button>

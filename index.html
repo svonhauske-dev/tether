@@ -34,19 +34,16 @@
           max-width: 440px;
           margin: 0 auto;
           /* Phone-frame side edges painted INSIDE the content area via
-             inset box-shadow (not border) so they aren't clipped by the
-             clip-path below. 2px width survives subpixel slicing — when
-             slide-in screens (SettingsScreen, ProtocolLibrary etc.)
-             render position:fixed with right:0 and translateX(100%),
-             their canvas-colored background sits exactly at body's right
-             edge and a 1px shadow gets sliced away by ~0.5px subpixel
-             overlap. 2px leaves visible pixels on both sides. */
+             inset box-shadow (2px to survive subpixel slicing). */
           box-shadow: inset 2px 0 0 #2A2A2A, inset -2px 0 0 #2A2A2A;
           overflow: hidden;
-          /* clip-path enforces strict clipping of all descendants
-             (including fixed-position slide-in screens that translate
-             off-body to translateX(100%) when closed). overflow: hidden
-             alone doesn't reliably clip transformed fixed descendants. */
+          /* clip-path enforces strict clipping of fixed-position descendants
+             (slide-in screens that translate off-body). transform: translateZ
+             makes body the containing block so fixed children (slide-in
+             screens, Modal bottom sheet, Toast) anchor inside the phone-frame
+             instead of stretching across the viewport. Popover uses
+             getBoundingClientRect (viewport coords) and compensates by
+             subtracting bodyRect offset on desktop — see Popover.jsx. */
           clip-path: inset(0);
           transform: translateZ(0);
         }
