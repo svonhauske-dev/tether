@@ -1368,12 +1368,25 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       const sendRow = Array.isArray(rows) ? rows[0] : rows;
       const recipientLabel = match.display_name?.trim().split(' ')[0] || cleanEmail;
       showToast(`Sent to ${recipientLabel}`);
-      // Fire push notification — best-effort; failure doesn't undo the send.
-      // dbNotifyProtocolSent logs response status + body to console so push
-      // issues can still be diagnosed without surfacing a second toast.
+      // DIAGNOSTIC (May 20 evening) — Bego didn't get notifications either,
+      // so the push isn't a per-device issue. Surface the edge function's
+      // response as a second toast to expose the failure mode without
+      // requiring devtools. Revert to silent fire-and-forget once root cause
+      // is fixed.
       if (sendRow?.id) {
         const senderName = profile?.display_name?.trim().split(' ')[0] || 'Someone';
-        dbNotifyProtocolSent(sendRow.id, senderName, token).catch(() => {});
+        dbNotifyProtocolSent(sendRow.id, senderName, token)
+          .then(body => {
+            try {
+              const r = JSON.parse(body);
+              if (r?.ok && r?.sent > 0) showToast(`Push sent (${r.sent})`);
+              else if (r?.reason)      showToast(`Push: ${r.reason}`);
+              else                     showToast(`Push: ${String(body).slice(0, 80)}`);
+            } catch {
+              showToast(`Push raw: ${String(body).slice(0, 80)}`);
+            }
+          })
+          .catch(e => showToast(`Push error: ${(e?.message || e).toString().slice(0, 100)}`));
       }
       return { ok: true };
     } catch (err) {
