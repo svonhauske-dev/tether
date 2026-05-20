@@ -292,7 +292,7 @@ export const componentRegistry = {
       description: 'Top card on mobile Home. Single state-driven shape across all modes + past/today/future. Eyebrow always carries the date (with read-only/editing suffix on past). Status row holds the primary state ("Started at HH:MM" mid-day, "Done for today" green when all-done, "Not started yet" when no anchor). Submeta carries the secondary line (completion count, anchor info, or schedule context). Locked min-height; success-green only ever on the status row.',
       examples: [
         {
-          name: 'Today · anchor mode · no anchor set (Set anchor pill)',
+          name: 'Today · anchor mode · no anchor set (Start my day CTA)',
           props: { ...heroBase, scheduleMode: 'medication', isToday: true, viewDate: TODAY, shortDate: fmt(TODAY), pct: 0,   coreTotal: 4, coreDone: 0, pillTime: null,   isFuture: false, isPast: false, isReadOnly: false, viewDay: TODAY.getDay() },
         },
         {
