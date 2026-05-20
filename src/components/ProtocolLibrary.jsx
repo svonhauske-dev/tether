@@ -8,6 +8,7 @@ import Label from "./Label";
 import Input from "./Input";
 import Modal from "./Modal";
 import TabBar from "./TabBar";
+import InlineTip from "./InlineTip";
 import HelperText from "./HelperText";
 
 function formatDate(dateStr) {
@@ -319,6 +320,14 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
         {!readOnly && received.length > 0 && (
           <div style={{ marginBottom: spacing.xl }}>
             <Label style={{ marginBottom: spacing.xs }}>Received</Label>
+            {/* First-received tip — appears once, dismissible, never returns.
+                Explains the four-way choice ahead of the modal so the user
+                isn't surprised by the buttons. */}
+            <div style={{ marginBottom: spacing.sm }}>
+              <InlineTip id="first-received" label="What you can do">
+                Tap a protocol to review it. You can stack it on what you're already running, replace your current protocols, save it for later, or decline.
+              </InlineTip>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
               {received.map((send) => (
                 <button
@@ -361,8 +370,21 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
 
         {tab === 'active' && (
           activeProtocols.length === 0 ? (
-            <div style={{ fontSize: typography.body, color: theme.text.secondary }}>
-              {readOnly ? 'No active protocols.' : 'No active protocols. Tap + to create one.'}
+            <div style={{ textAlign: 'center', padding: `${spacing.xl}px ${spacing.md}px` }}>
+              <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
+              <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>
+                {readOnly ? 'No active protocols' : 'Build your first protocol'}
+              </div>
+              <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5, marginBottom: spacing.lg }}>
+                {readOnly
+                  ? 'When they start a protocol, it shows up here.'
+                  : 'Group supplements that go together. You can run more than one at a time.'}
+              </div>
+              {!readOnly && (
+                <Button variant="primary" fullWidth onClick={onPlusClick ? onPlusClick : () => setShowNew(true)}>
+                  New protocol
+                </Button>
+              )}
             </div>
           ) : (
             <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}` }}>
@@ -381,8 +403,14 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
 
         {tab === 'archived' && (
           archivedProtocols.length === 0 ? (
-            <div style={{ fontSize: typography.body, color: theme.text.secondary }}>
-              Nothing archived yet.
+            <div style={{ textAlign: 'center', padding: `${spacing.xl}px ${spacing.md}px` }}>
+              <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
+              <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>
+                Nothing archived yet
+              </div>
+              <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
+                Past protocols you've moved out of rotation will show up here.
+              </div>
             </div>
           ) : (
             <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}` }}>
