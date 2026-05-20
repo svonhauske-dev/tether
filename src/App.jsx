@@ -1218,11 +1218,26 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     } catch (err) { showToast("Couldn't archive. Try again."); console.error(err); }
   };
 
-  const activateProtocol = async (protocol) => {
+  // Activate an archived protocol. `intent` controls what happens to the
+  // user's existing active protocols:
+  //   'stack'   — leave actives untouched, activate this one alongside (default)
+  //   'replace' — archive all current actives first, then activate this one
+  // Default 'stack' preserves the prior single-arg call sites.
+  const activateProtocol = async (protocol, intent = 'stack') => {
+    let archivedNames = '';
     try {
+      if (intent === 'replace') {
+        const activeProtos = protocols.filter(p => p.status === 'active' && p.id !== protocol.id);
+        archivedNames = activeProtos.map(p => p.name).join(', ');
+        await Promise.all(activeProtos.map(p => dbArchiveProtocol(p.id, token)));
+        setProtocols(prev => prev.map(p => (p.status === 'active' && p.id !== protocol.id) ? { ...p, status: 'archived' } : p));
+        const archivedIds = new Set(activeProtos.map(p => p.id));
+        setSupps(s => s.map(x => archivedIds.has(x.protocol_id) ? { ...x, status: 'active', paused: false } : x));
+      }
       await dbActivateProtocol(protocol.id, token);
       setProtocols(p => p.map(x => x.id === protocol.id ? { ...x, status: 'active' } : x));
-      showToast(`${protocol.name} activated`);
+      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} archived` : '';
+      showToast(`${protocol.name} activated${suffix}`);
     } catch (err) { showToast("Couldn't activate. Try again."); console.error(err); }
   };
 

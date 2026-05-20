@@ -57,6 +57,10 @@ export default function ProtocolDetailScreen({
   const [sendUserEmail, setSendUserEmail]   = useState('');
   const [sendUserError, setSendUserError]   = useState(null);
   const [sendingUser, setSendingUser]       = useState(false);
+  // Activate-from-archive intent picker. Matches the receive flow's UX:
+  // when activating an archived protocol, ask whether to stack on existing
+  // actives or replace them.
+  const [activateIntentOpen, setActivateIntentOpen] = useState(false);
   // Anchor element for the overflow + send-to-patient popovers. Both anchor
   // to the same ⋯ trigger so the picker visually replaces the menu in place.
   const [menuAnchor, setMenuAnchor]         = useState(null);
@@ -119,7 +123,7 @@ export default function ProtocolDetailScreen({
     if (isActive) {
       items.push({ key: 'archive',  label: 'Archive protocol',  onSelect: () => { setMenuOpen(false); setConfirmAction('archive'); } });
     } else if (isArchived) {
-      items.push({ key: 'activate', label: 'Activate protocol', onSelect: () => { setMenuOpen(false); onActivateProtocol(protocol); } });
+      items.push({ key: 'activate', label: 'Activate protocol', onSelect: () => { setMenuOpen(false); setActivateIntentOpen(true); } });
       items.push({ key: 'delete',   label: 'Delete protocol',   onSelect: () => { setMenuOpen(false); setConfirmAction('delete'); }, destructive: true });
     }
     if (isClinician && isActive) {
@@ -568,6 +572,47 @@ export default function ProtocolDetailScreen({
       >
         <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
           This permanently deletes <strong style={{ color: theme.text.primary }}>{deletingSupp?.name}</strong>. This cannot be undone.
+        </p>
+      </Modal>
+
+      {/* Activate-from-archive intent picker. Matches the received-protocol
+          flow's verbs so the mental model is consistent: any protocol coming
+          back to active state offers Stack vs Replace. */}
+      <Modal
+        open={activateIntentOpen}
+        onClose={() => setActivateIntentOpen(false)}
+        title={`Activate ${protocol?.name || 'protocol'}`}
+        footer={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, width: '100%' }}>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => {
+                setActivateIntentOpen(false);
+                if (onActivateProtocol) onActivateProtocol(protocol, 'stack');
+              }}
+            >
+              Stack on current
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => {
+                setActivateIntentOpen(false);
+                if (onActivateProtocol) onActivateProtocol(protocol, 'replace');
+              }}
+            >
+              Replace current
+            </Button>
+            <Button variant="tertiary" fullWidth onClick={() => setActivateIntentOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        }
+      >
+        <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
+          <strong style={{ color: theme.text.primary }}>Stack</strong> adds this protocol alongside your current actives.{' '}
+          <strong style={{ color: theme.text.primary }}>Replace</strong> archives your current actives first.
         </p>
       </Modal>
 
