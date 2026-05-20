@@ -215,7 +215,7 @@ export default function App() {
     return (
       <ThemeProvider>
         <DesignSystemPage />
-        <DevThemePicker />
+        {import.meta.env.DEV && <DevThemePicker />}
       </ThemeProvider>
     );
   }
