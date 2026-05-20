@@ -281,6 +281,16 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   // Pending received protocols (peer-to-peer sends not yet stacked/replaced/saved).
   // Drives the Library-icon badge in the mobile top bar.
   const [pendingReceivedCount, setPendingReceivedCount] = useState(0);
+  // Deep-link target: when a user taps a "Sofia sent you a protocol" push
+  // notification, the service worker passes the send_id here. We push the
+  // Library onto the screen stack and pass the id to ProtocolLibrary, which
+  // matches it to a row in its received list and opens the review modal.
+  // Cleared once consumed so subsequent refreshes don't re-trigger.
+  const [pendingDeepLinkSendId, setPendingDeepLinkSendId] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('send');
+  });
   const [supps, setSupps]                   = useState([]);
   const [pillTimes, setPillTimes]           = useState({});
   const [checked, setChecked]               = useState({});
@@ -598,6 +608,41 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   // Register service worker early so it's ready to receive pushes
   useEffect(() => { registerServiceWorker().catch(() => {}); }, []);
+
+  // Service-worker → page deep-link bridge. When a notification is tapped
+  // and Origin is already open in a tab, the SW posts a message instead of
+  // opening a new window. We capture the send_id and route to the review
+  // modal the same way as the URL-based path.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker) return;
+    const handler = (event) => {
+      const msg = event.data;
+      if (msg?.type === 'protocol_send_deeplink' && msg.send_id) {
+        setPendingDeepLinkSendId(msg.send_id);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
+  // Consume the pending deep link once data is loaded enough to act on it.
+  // Pushing manage_protocol opens the Library; the send_id passes through
+  // to ProtocolLibrary, which finds the matching row in its received list
+  // and pops the review modal. URL is cleaned so a manual refresh doesn't
+  // reopen the same modal.
+  useEffect(() => {
+    if (!pendingDeepLinkSendId || !user?.id) return;
+    if (!screenStack.some(s => s.name === 'manage_protocol')) {
+      pushScreen('manage_protocol');
+    }
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('send')) {
+        url.searchParams.delete('send');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+      }
+    }
+  }, [pendingDeepLinkSendId, user?.id]);
 
   // Recompute notifications when the user returns to the app in a different timezone
   // and refresh the pending-received-protocols count (in case a peer sent one
@@ -2091,6 +2136,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         token={token}
         onActivateReceived={activateReceived}
         onDeclineReceived={declineReceived}
+        deepLinkSendId={pendingDeepLinkSendId}
+        onDeepLinkConsumed={() => setPendingDeepLinkSendId(null)}
       />
       <ProtocolDetailScreen
         isOpen={screenStack.some(s => s.name === 'protocol_detail')}

@@ -118,7 +118,7 @@ const DURATION_UNITS = ["days", "weeks", "months"];
 //     it (user closes via X or after a successful create).
 // Used in the patient-view "Create new and send" flow where App.jsx
 // triggers create externally and reacts to the completion.
-export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived, onDeclineReceived, desktop = false, embedded = false, readOnly = false, adherenceMap = null, onPlusClick = null, controlledShowNew, onShowNewChange }) {
+export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements, onAddProtocol, onOpenDetail, onProtocolCreated, userId, token, onActivateReceived, onDeclineReceived, deepLinkSendId = null, onDeepLinkConsumed = null, desktop = false, embedded = false, readOnly = false, adherenceMap = null, onPlusClick = null, controlledShowNew, onShowNewChange }) {
   const { theme } = useTheme();
   const today = new Date().toISOString().split('T')[0];
 
@@ -150,6 +150,21 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
     if (!isOpen || !token || !userId) return;
     dbGetReceivedProtocols(userId, token).then(rows => setReceived(rows || [])).catch(() => {});
   }, [isOpen, userId, token]);
+
+  // Notification deep link — when the user taps a "Sofia sent you a protocol"
+  // push, App.jsx routes the send_id here. Match it against the loaded
+  // received list and pop the review modal for that exact send. The match
+  // may not exist yet on the first render (received fetch in flight), so the
+  // effect re-runs when `received` populates. Consumes (clears upstream)
+  // once matched so it can't re-trigger.
+  useEffect(() => {
+    if (!deepLinkSendId || !received.length) return;
+    const match = received.find(s => s.id === deepLinkSendId);
+    if (match) {
+      setActivateModalSend(match);
+      if (onDeepLinkConsumed) onDeepLinkConsumed();
+    }
+  }, [deepLinkSendId, received, onDeepLinkConsumed]);
 
   const activeProtocols   = protocols.filter(p => p.status === 'active');
   const archivedProtocols = protocols.filter(p => p.status !== 'active').sort((a, b) => a.name.localeCompare(b.name));
