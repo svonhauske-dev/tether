@@ -113,27 +113,32 @@ export default function ProtocolDetailScreen({
     if (action === 'delete')  { await onDeleteProtocol(protocol); onBack(); }
   };
 
-  // Overflow menu items — order matches iOS action-sheet conventions
-  // (lifecycle/state changes first, destructive last).
+  // Overflow menu items — order: lifecycle change → share → destructive
+  // (matches iOS action-sheet convention). Destructive last so it's never
+  // adjacent to a benign tap target.
   // In readOnly mode (clinician viewing a patient's protocol), the menu is
   // empty since the clinician can't modify patient-owned data.
   const menuItems = (() => {
     if (!protocol || readOnly) return [];
     const items = [];
+    // 1. Lifecycle change (always first)
     if (isActive) {
       items.push({ key: 'archive',  label: 'Archive protocol',  onSelect: () => { setMenuOpen(false); setConfirmAction('archive'); } });
     } else if (isArchived) {
       items.push({ key: 'activate', label: 'Activate protocol', onSelect: () => { setMenuOpen(false); setActivateIntentOpen(true); } });
-      items.push({ key: 'delete',   label: 'Delete protocol',   onSelect: () => { setMenuOpen(false); setConfirmAction('delete'); }, destructive: true });
     }
+    // 2. Share — clinician roster-send (dead path) or peer-to-peer send.
+    //    Peer-to-peer is available regardless of active/archived: you might
+    //    want to share something you ran last year that's now archived.
     if (isClinician && isActive) {
       items.push({ key: 'send', label: 'Send to patient', onSelect: () => { setMenuOpen(false); setSendModalOpen(true); } });
     }
-    // Peer-to-peer send — available to any user for any owned protocol
-    // (active or archived). You might want to share something you ran
-    // last year that's now archived, not just what you're running today.
     if (!isClinician && onSendToUser) {
       items.push({ key: 'send-user', label: 'Send to someone', onSelect: () => { setMenuOpen(false); setSendUserOpen(true); setSendUserEmail(''); setSendUserError(null); } });
+    }
+    // 3. Destructive (always last)
+    if (isArchived) {
+      items.push({ key: 'delete',   label: 'Delete protocol',   onSelect: () => { setMenuOpen(false); setConfirmAction('delete'); }, destructive: true });
     }
     return items;
   })();
