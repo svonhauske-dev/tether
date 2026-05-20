@@ -300,7 +300,9 @@ export const dbUpdateProfile = (userId, data, t) => supa("PATCH", `/rest/v1/user
 export async function getThemePreference(userId, token) {
   const rows = await supa("GET", `/rest/v1/user_profiles?id=eq.${userId}&select=theme_preference`, null, token);
   const pref = rows?.[0]?.theme_preference;
-  return (pref === "light" || pref === "dark" || pref === "system") ? pref : null;
+  // Mirrors VALID_PREFS in src/lib/theme.jsx — achromatic is the only valid
+  // production value. Returning null lets the caller fall back cleanly.
+  return pref === "achromatic" ? pref : null;
 }
 
 // Clinician helpers
