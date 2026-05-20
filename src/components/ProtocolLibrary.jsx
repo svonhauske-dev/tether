@@ -49,7 +49,7 @@ function ProtocolRow({ protocol, count, onTap, adherence }) {
         <div style={{ fontSize: typography.caption, color: theme.text.secondary }}>
           {count} {count === 1 ? "supplement" : "supplements"}
           {protocol.source === 'clinician' && " · From clinician"}
-          {protocol.status === 'archived' && " · Archived"}
+          {protocol.status === 'archived' && " · Saved"}
           {protocol.ends_at && protocol.status === 'active' && ` · Ends ${formatDate(protocol.ends_at)}`}
         </div>
       </div>
@@ -362,7 +362,7 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
         )}
 
         <TabBar
-          tabs={[{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Archived' }]}
+          tabs={[{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Saved' }]}
           active={tab}
           onChange={setTab}
           style={{ marginBottom: spacing.lg }}
@@ -406,10 +406,10 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
             <div style={{ textAlign: 'center', padding: `${spacing.xl}px ${spacing.md}px` }}>
               <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
               <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>
-                Nothing archived yet
+                Nothing saved yet
               </div>
               <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
-                Past protocols you've moved out of rotation will show up here.
+                Protocols you've saved for later or moved out of rotation will show up here.
               </div>
             </div>
           ) : (

@@ -161,6 +161,11 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
 
   const mobileSheetStyle = {
     position: "fixed",
+    // Explicit top: 'auto' defends against an inherited top:0 that would
+    // make the sheet stretch from top of body. With body's translateZ(0)
+    // containing-block trick on desktop (≥1024px), some renderers were
+    // mispositioning the sheet to the top of body instead of bottom.
+    top: "auto",
     left: 0,
     right: 0,
     bottom: 0,

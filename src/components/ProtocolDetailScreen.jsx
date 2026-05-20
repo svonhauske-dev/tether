@@ -20,10 +20,14 @@ function CategoryIcon({ category, color }) {
 // Confirm copy templates. `body` is a function so we can inject the protocol name.
 const CONFIRM_COPY = {
   archive: {
-    title: (name) => `Archive ${name}?`,
-    body:  () => "You can restore it from Archived anytime.",
-    cta:   "Archive",
-    variant: "destructive",
+    // "Archive" was renamed to "Save" since the same bucket holds both
+    // past protocols and protocols received via peer-to-peer that the user
+    // chose to save for later. DB column still uses status='archived' to
+    // avoid a migration — UI labels are what changed.
+    title: (name) => `Save ${name}?`,
+    body:  () => "You can restore it from Saved anytime.",
+    cta:   "Save",
+    variant: "primary",
   },
   delete: {
     title: () => "Delete protocol?",
@@ -123,7 +127,7 @@ export default function ProtocolDetailScreen({
     const items = [];
     // 1. Lifecycle change (always first)
     if (isActive) {
-      items.push({ key: 'archive',  label: 'Archive protocol',  onSelect: () => { setMenuOpen(false); setConfirmAction('archive'); } });
+      items.push({ key: 'archive',  label: 'Save protocol',  onSelect: () => { setMenuOpen(false); setConfirmAction('archive'); } });
     } else if (isArchived) {
       items.push({ key: 'activate', label: 'Activate protocol', onSelect: () => { setMenuOpen(false); setActivateIntentOpen(true); } });
     }
@@ -294,7 +298,7 @@ export default function ProtocolDetailScreen({
                   No supplements in this protocol
                 </div>
                 <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
-                  Archived protocols can stay empty — they're a record of what you ran.
+                  Saved protocols can stay empty — they're a record of what you ran or plan to.
                 </div>
               </div>
             ) : (

@@ -1241,7 +1241,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       }
       const rows = await dbAddProtocol({ ...data, status, user_id: user.id }, token);
       if (rows?.[0]) setProtocols(p => [...p, rows[0]]);
-      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} archived` : '';
+      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} saved` : '';
       showToast(`${data.name} created${suffix}`);
       return rows?.[0] ?? null;
     } catch (err) { showToast("Couldn't create protocol. Try again."); console.error(err); return null; }
@@ -1259,8 +1259,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       await dbArchiveProtocol(protocol.id, token);
       setProtocols(p => p.map(x => x.id === protocol.id ? { ...x, status: 'archived' } : x));
       setSupps(s => s.map(x => x.protocol_id === protocol.id ? { ...x, status: 'active', paused: false } : x));
-      showToast(`${protocol.name} archived`);
-    } catch (err) { showToast("Couldn't archive. Try again."); console.error(err); }
+      showToast(`${protocol.name} saved`);
+    } catch (err) { showToast("Couldn't save. Try again."); console.error(err); }
   };
 
   // Activate an archived protocol. `intent` controls what happens to the
@@ -1281,7 +1281,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       }
       await dbActivateProtocol(protocol.id, token);
       setProtocols(p => p.map(x => x.id === protocol.id ? { ...x, status: 'active' } : x));
-      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} archived` : '';
+      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} saved` : '';
       showToast(`${protocol.name} activated${suffix}`);
     } catch (err) { showToast("Couldn't activate. Try again."); console.error(err); }
   };
@@ -1363,7 +1363,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       await dbUpdateProtocolSend(send.id, { status: 'activated' }, token);
       setPendingReceivedCount(c => Math.max(0, c - 1));
       const verb = intent === 'save_later' ? 'saved' : 'activated';
-      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} archived` : '';
+      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} saved` : '';
       showToast(`${send.name} ${verb}${suffix}`);
     } catch (err) {
       console.error(err);
