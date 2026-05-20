@@ -18,8 +18,7 @@ import SupplementRow from '../SupplementRow';
 import { DayCell } from '../WeekStrip';
 import InsightsPanel from '../InsightsPanel';
 import InlineTip from '../InlineTip';
-import LogAtSheet from '../LogAtSheet';
-import { ModalPreview, PopoverPreview, SidePanelPreview } from './previews';
+import { ModalPreview, PopoverPreview, SidePanelPreview, LogAtSheetPreview } from './previews';
 
 // ── Stub helpers ───────────────────────────────────────────────────────────────
 
@@ -447,30 +446,20 @@ export const componentRegistry = {
     },
 
     LogAtSheet: {
-      component: LogAtSheet,
-      description: 'Bottom-sheet (mobile) / centered modal (desktop) time picker for logging a missed supplement at the actual time it was taken. Captures real-world adherence data without forcing the user into past-day edit mode. Opened from the "log at…" pill on missed SlotCard rows. Writes `{ checked: true, at: "HH:MM" }` to daily_logs.checked.',
+      component: LogAtSheetPreview,
+      description: 'Bottom-sheet (mobile) / centered modal (desktop) time picker for logging a missed supplement at the actual time it was taken. Captures real-world adherence data without forcing the user into past-day edit mode. Opened from the "log at…" pill on missed SlotCard rows. Writes `{ checked: true, at: "HH:MM" }` to daily_logs.checked. Each variant below renders a trigger button; click to open.',
       examples: [
         {
-          name: 'Open — Magnesium, due at 11:50, Lunch slot',
+          name: 'Magnesium, due at 11:50, Lunch slot',
           props: {
-            open: true,
             target: { sid: 'lunch', suppId: 'ds-mag', name: 'Magnesium Glycinate', dueTime: '11:50', slotLabel: 'Lunch' },
-            onClose: noop,
-            onConfirm: noop,
           },
         },
         {
-          name: 'Open — no due time (anytime slot)',
+          name: 'Vitamin D3, anytime slot (no due time)',
           props: {
-            open: true,
             target: { sid: 'anytime', suppId: 'ds-vit', name: 'Vitamin D3', dueTime: null, slotLabel: null },
-            onClose: noop,
-            onConfirm: noop,
           },
-        },
-        {
-          name: 'Closed (no target)',
-          props: { open: false, target: null, onClose: noop, onConfirm: noop },
         },
       ],
     },

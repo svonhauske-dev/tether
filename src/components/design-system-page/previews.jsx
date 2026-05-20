@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import Modal from "../Modal";
 import Popover, { PopoverItem, PopoverSection } from "../Popover";
 import SidePanel from "../SidePanel";
+import LogAtSheet from "../LogAtSheet";
 import Button from "../Button";
 
 // Portal-based components can't render meaningfully in a static showcase grid
@@ -67,6 +68,23 @@ export function PopoverPreview({ withSection = false, destructive = false }) {
           <PopoverItem destructive onClick={() => setOpen(false)}>Delete</PopoverItem>
         )}
       </Popover>
+    </>
+  );
+}
+
+export function LogAtSheetPreview({ target }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="secondary" size="compact" onClick={() => setOpen(true)}>
+        Open LogAtSheet
+      </Button>
+      <LogAtSheet
+        open={open}
+        target={target}
+        onClose={() => setOpen(false)}
+        onConfirm={() => setOpen(false)}
+      />
     </>
   );
 }
