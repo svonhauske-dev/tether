@@ -38,6 +38,7 @@ export default function ProtocolDetailScreen({
   onUpdateProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
   onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp,
   isClinician, patients = [], onSendToPatient,
+  onSendToUser,
   desktop = false,
   readOnly = false,
 }) {
@@ -50,6 +51,12 @@ export default function ProtocolDetailScreen({
   const [sending, setSending]               = useState(false);
   const [deletingSupp, setDeletingSupp]     = useState(null); // supp pending delete confirm
   const [menuOpen, setMenuOpen]             = useState(false); // overflow menu
+  // Peer-to-peer "Send to someone" — email-based send to any Origin user.
+  // Distinct from the clinician's roster-based send-to-patient flow above.
+  const [sendUserOpen, setSendUserOpen]     = useState(false);
+  const [sendUserEmail, setSendUserEmail]   = useState('');
+  const [sendUserError, setSendUserError]   = useState(null);
+  const [sendingUser, setSendingUser]       = useState(false);
   // Anchor element for the overflow + send-to-patient popovers. Both anchor
   // to the same ⋯ trigger so the picker visually replaces the menu in place.
   const [menuAnchor, setMenuAnchor]         = useState(null);
@@ -118,8 +125,36 @@ export default function ProtocolDetailScreen({
     if (isClinician && isActive) {
       items.push({ key: 'send', label: 'Send to patient', onSelect: () => { setMenuOpen(false); setSendModalOpen(true); } });
     }
+    // Peer-to-peer send — available to any user for active protocols.
+    if (!isClinician && isActive && onSendToUser) {
+      items.push({ key: 'send-user', label: 'Send to someone', onSelect: () => { setMenuOpen(false); setSendUserOpen(true); setSendUserEmail(''); setSendUserError(null); } });
+    }
     return items;
   })();
+
+  const submitSendToUser = async () => {
+    const email = sendUserEmail.trim();
+    if (!email || !email.includes('@')) {
+      setSendUserError('Enter a valid email');
+      return;
+    }
+    setSendingUser(true);
+    setSendUserError(null);
+    try {
+      const result = await onSendToUser(protocol, email);
+      if (result?.ok) {
+        setSendUserOpen(false);
+        setSendUserEmail('');
+      } else {
+        setSendUserError(result?.error || "Couldn't send. Try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      setSendUserError("Couldn't send. Try again.");
+    } finally {
+      setSendingUser(false);
+    }
+  };
 
   return (
     <div
@@ -534,6 +569,62 @@ export default function ProtocolDetailScreen({
         <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
           This permanently deletes <strong style={{ color: theme.text.primary }}>{deletingSupp?.name}</strong>. This cannot be undone.
         </p>
+      </Modal>
+
+      {/* Peer-to-peer send. The recipient (any Origin user) gets the protocol
+          in their Received queue and chooses Stack / Replace / Save when they
+          open it. */}
+      <Modal
+        open={sendUserOpen}
+        onClose={() => { if (!sendingUser) setSendUserOpen(false); }}
+        size="compact"
+        title={`Send ${protocol?.name || 'protocol'}`}
+        footer={
+          <div style={{ display: 'flex', gap: spacing.xs }}>
+            <Button variant="tertiary" fullWidth onClick={() => setSendUserOpen(false)} disabled={sendingUser}>
+              Cancel
+            </Button>
+            <Button variant="primary" fullWidth onClick={submitSendToUser} disabled={sendingUser || !sendUserEmail.trim()}>
+              {sendingUser ? 'Sending…' : 'Send'}
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+          <label style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontBody, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Recipient email
+          </label>
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="friend@example.com"
+            value={sendUserEmail}
+            onChange={(e) => { setSendUserEmail(e.target.value); if (sendUserError) setSendUserError(null); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !sendingUser && sendUserEmail.trim()) submitSendToUser(); }}
+            autoFocus
+            disabled={sendingUser}
+            style={{
+              width: '100%',
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              background: theme.surface.cardSubtle,
+              border: `${theme.borderWidth.default}px solid ${sendUserError ? theme.status.danger : theme.border.subtle}`,
+              color: theme.text.primary,
+              fontFamily: typography.fontBody,
+              fontSize: typography.body,
+              outline: 'none',
+            }}
+          />
+          {sendUserError ? (
+            <div style={{ fontSize: typography.caption, color: theme.status.danger, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
+              {sendUserError}
+            </div>
+          ) : (
+            <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
+              They'll get a notification and can choose to stack, replace, or save the protocol.
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

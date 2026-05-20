@@ -294,33 +294,39 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
           ? `${spacing.lg}px ${spacing.md}px ${spacing.md}px`
           : `${spacing.lg}px ${spacing.md}px max(80px, env(safe-area-inset-bottom))`,
       }}>
-        {/* Received protocols — hidden in readOnly (patient-context) view */}
+        {/* Received protocols — hidden in readOnly (patient-context) view.
+            Sent by another Origin user via peer-to-peer share. Tapping the
+            row opens a sheet with three intents (stack / replace / save). */}
         {!readOnly && received.length > 0 && (
           <div style={{ marginBottom: spacing.xl }}>
-            <Label style={{ marginBottom: spacing.xs }}>From your clinician</Label>
+            <Label style={{ marginBottom: spacing.xs }}>Received</Label>
             <div style={{
               border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
               borderRadius: theme.radius.surface, overflow: 'hidden',
               background: theme.surface.card,
             }}>
               {received.map((send, i) => (
-                <div key={send.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: `${spacing.sm}px ${spacing.md}px`,
-                  borderTop: i > 0 ? `${theme.borderWidth.default}px solid ${theme.border.subtle}` : 'none',
-                }}>
-                  <div>
+                <button
+                  key={send.id}
+                  onClick={() => setActivateModalSend(send)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md,
+                    width: '100%',
+                    padding: `${spacing.sm}px ${spacing.md}px`,
+                    borderTop: i > 0 ? `${theme.borderWidth.default}px solid ${theme.border.subtle}` : 'none',
+                    background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: typography.body, fontWeight: typography.medium, color: theme.text.primary }}>
                       {send.name}
                     </div>
                     <div style={{ fontSize: typography.caption, color: theme.text.secondary }}>
-                      {(send.supplements_snapshot || []).length} supplement{(send.supplements_snapshot || []).length !== 1 ? 's' : ''}
+                      {(send.supplements_snapshot || []).length} supplement{(send.supplements_snapshot || []).length !== 1 ? 's' : ''} · tap to review
                     </div>
                   </div>
-                  <Button variant="primary" size="compact" onClick={() => setActivateModalSend(send)}>
-                    Activate
-                  </Button>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -515,35 +521,91 @@ export default function ProtocolLibrary({ isOpen, onBack, protocols, supplements
         )}
       </Modal>
 
-      {/* Activate received protocol modal */}
+      {/* Received-protocol review sheet. Three intents:
+            stack    — keep current actives, add this one alongside
+            replace  — archive current actives, activate this one
+            save_later — stash as archived for later */}
       <Modal
         open={!!activateModalSend}
         onClose={() => { if (!activating) setActivateModalSend(null); }}
-        size="compact"
         title={activateModalSend?.name || ''}
         footer={
-          <div style={{ display: 'flex', gap: spacing.xs }}>
-            <Button variant="tertiary" fullWidth onClick={() => setActivateModalSend(null)} disabled={activating}>Cancel</Button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, width: '100%' }}>
             <Button
               variant="primary"
               fullWidth
               disabled={activating}
               onClick={async () => {
+                if (!activateModalSend) return;
                 setActivating(true);
-                await onActivateReceived(activateModalSend);
-                setReceived(r => r.filter(s => s.id !== activateModalSend.id));
+                const send = activateModalSend;
+                await onActivateReceived(send, 'stack');
+                setReceived(r => r.filter(s => s.id !== send.id));
                 setActivateModalSend(null);
                 setActivating(false);
               }}
             >
-              {activating ? 'Activating…' : 'Activate'}
+              {activating ? 'Saving…' : 'Stack on current'}
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={activating}
+              onClick={async () => {
+                if (!activateModalSend) return;
+                setActivating(true);
+                const send = activateModalSend;
+                await onActivateReceived(send, 'replace');
+                setReceived(r => r.filter(s => s.id !== send.id));
+                setActivateModalSend(null);
+                setActivating(false);
+              }}
+            >
+              Replace current
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={activating}
+              onClick={async () => {
+                if (!activateModalSend) return;
+                setActivating(true);
+                const send = activateModalSend;
+                await onActivateReceived(send, 'save_later');
+                setReceived(r => r.filter(s => s.id !== send.id));
+                setActivateModalSend(null);
+                setActivating(false);
+              }}
+            >
+              Save for later
+            </Button>
+            <Button variant="tertiary" fullWidth onClick={() => setActivateModalSend(null)} disabled={activating}>
+              Cancel
             </Button>
           </div>
         }
       >
-        <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
-          This will add <strong style={{ color: theme.text.primary }}>{activateModalSend?.name}</strong> with {(activateModalSend?.supplements_snapshot || []).length} supplement{(activateModalSend?.supplements_snapshot || []).length !== 1 ? 's' : ''} to your active protocols.
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+          <p style={{ fontSize: typography.body, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.6, margin: 0 }}>
+            {(activateModalSend?.supplements_snapshot || []).length} supplement{(activateModalSend?.supplements_snapshot || []).length !== 1 ? 's' : ''} included.
+          </p>
+          {(activateModalSend?.supplements_snapshot || []).length > 0 && (
+            <div style={{
+              border: `${theme.borderWidth.default}px solid ${theme.border.subtle}`,
+              borderRadius: theme.radius.surface,
+              padding: `${spacing.xs}px ${spacing.sm}px`,
+              maxHeight: 200,
+              overflowY: 'auto',
+            }}>
+              {(activateModalSend?.supplements_snapshot || []).map((s, i) => (
+                <div key={i} style={{ padding: `${spacing.xxs}px 0`, fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontBody }}>
+                  <span style={{ color: theme.text.primary }}>{s.name}</span>
+                  {s.dose ? ` · ${s.dose}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

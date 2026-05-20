@@ -315,6 +315,32 @@ export const dbSendProtocol     = (send, t)                     => supa("POST", 
 export const dbGetReceivedProtocols = (patientId, t)            => supa("GET", `/rest/v1/protocol_sends?patient_id=eq.${patientId}&status=eq.pending&select=*`, null, t);
 export const dbUpdateProtocolSend   = (id, data, t)             => supa("PATCH", `/rest/v1/protocol_sends?id=eq.${id}`, data, t);
 
+// Peer-to-peer protocol send: resolves an email to a user id via the
+// lookup_user_by_email RPC (SECURITY DEFINER server-side function, see
+// SQL migration in ORIGIN-HANDOFF.md). Returns { user_id, display_name }
+// for a match or null if no Origin user has that email. The trim/lowercase
+// happens server-side so casing/whitespace in the input doesn't miss matches.
+export const dbLookupUserByEmail = async (email, t) => {
+  const rows = await supa("POST", "/rest/v1/rpc/lookup_user_by_email", { target_email: email }, t);
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+};
+
+// Fire-and-forget notify edge function for peer-to-peer sends. Best-effort —
+// the send itself already succeeded before this is called; push failure
+// shouldn't undo the send. The function reads the protocol_send row,
+// fetches the recipient's push_subscriptions, and sends a one-shot web push.
+export const dbNotifyProtocolSent = (protocolSendId, senderName, t) => {
+  return fetch(`${SUPA_URL}/functions/v1/notify_protocol_sent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${t}`,
+    },
+    body: JSON.stringify({ protocol_send_id: protocolSendId, sender_name: senderName }),
+  });
+};
+
 // ── Clinician-private notes + archive (Phase 4) ─────────────────────────
 // The clinician_patient_notes table is RLS-restricted to the owning clinician.
 // Patients cannot read or write it. One row per (clinician, patient) pair.

@@ -51,7 +51,7 @@ import {
   dbGetDailyLogsRange,
   dbGetMyPatients,
   dbGetPatientLogs,
-  dbSendProtocol,
+  dbSendProtocol, dbLookupUserByEmail, dbNotifyProtocolSent,
   dbGetReceivedProtocols,
   dbUpdateProtocolSend,
   dbGetClinicianNote,
@@ -278,6 +278,9 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const ANYTIME_SLOT = { id: "anytime", label: "Anytime", sublabel: "No specific time", icon: "◦", color: theme.text.muted };
   const BG_GRADIENT = theme.gradients.bg;
   const [protocols, setProtocols]           = useState([]);
+  // Pending received protocols (peer-to-peer sends not yet stacked/replaced/saved).
+  // Drives the Library-icon badge in the mobile top bar.
+  const [pendingReceivedCount, setPendingReceivedCount] = useState(0);
   const [supps, setSupps]                   = useState([]);
   const [pillTimes, setPillTimes]           = useState({});
   const [checked, setChecked]               = useState({});
@@ -597,6 +600,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   useEffect(() => { registerServiceWorker().catch(() => {}); }, []);
 
   // Recompute notifications when the user returns to the app in a different timezone
+  // and refresh the pending-received-protocols count (in case a peer sent one
+  // while the app was backgrounded).
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
@@ -605,10 +610,15 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         lastTzRef.current = currentTz;
         recomputeNotifications(token);
       }
+      if (user?.id) {
+        dbGetReceivedProtocols(user.id, token)
+          .then(rows => setPendingReceivedCount((rows || []).length))
+          .catch(() => {});
+      }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [token]);
+  }, [token, user?.id]);
 
   // Desktop resize listener removed — isDesktop is now a hard-coded false
   // (mobile-only product, see comment at declaration). Re-introduce if/when
@@ -619,15 +629,17 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     (async () => {
       setLoading(true);
       try {
-        const [protos, s, log, sched, prof, histRows] = await Promise.all([
+        const [protos, s, log, sched, prof, histRows, received] = await Promise.all([
           dbGetProtocols(user.id, token).catch(() => []),
           dbGetSupps(user.id, token),
           dbGetLog(user.id, dk, token),
           dbGetSchedule(user.id, token),
           dbGetProfile(user.id, token).catch(() => null),
           dbGetSupplementHistory(user.id, token).catch(() => []),
+          dbGetReceivedProtocols(user.id, token).catch(() => []),
         ]);
         setProtocols(protos || []);
+        setPendingReceivedCount((received || []).length);
         setSupplementHistory((histRows || []).map(r => r.name));
         setProfile(prof);
         if (prof === null) setNeedsNamePrompt(true);
@@ -1230,14 +1242,32 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     } catch (err) { showToast("Couldn't delete. Try again."); console.error(err); }
   };
 
-  const activateReceived = async (send) => {
-    // Multi-step write: 1) create protocol, 2) bulk-insert supps, 3) mark send activated.
-    // If supps fail mid-batch we'd leave a created protocol with partial children AND a
-    // protocol_send still marked 'pending'. Roll back the protocol so the user can retry
-    // cleanly. Real fix would be a server-side transaction (RPC) — flagged for later.
+  // Activate or save a received protocol. `intent` controls what happens to
+  // the recipient's existing actives:
+  //   'stack'      — new protocol added as active, current actives untouched
+  //   'replace'    — current actives archived, new protocol added as active
+  //   'save_later' — new protocol added as archived (sits in their archived tab)
+  // Default 'stack' preserves the prior single-button behavior.
+  const activateReceived = async (send, intent = 'stack') => {
+    // Multi-step write: 1) (replace only) archive existing actives, 2) create
+    // protocol, 3) bulk-insert supps, 4) mark send activated. If supps fail
+    // mid-batch we roll back the new protocol so the user can retry cleanly.
+    // The archive step in 'replace' is intentionally not rolled back —
+    // archiving is non-destructive and the user can reactivate from their
+    // archived tab.
     let newProto = null;
+    let archivedNames = '';
     try {
-      const protoRows = await dbAddProtocol({ name: send.name, status: 'active', user_id: user.id, treatment_mode: 'indefinite', source: 'clinician' }, token);
+      if (intent === 'replace') {
+        const activeProtos = protocols.filter(p => p.status === 'active');
+        archivedNames = activeProtos.map(p => p.name).join(', ');
+        await Promise.all(activeProtos.map(p => dbArchiveProtocol(p.id, token)));
+        setProtocols(prev => prev.map(p => p.status === 'active' ? { ...p, status: 'archived' } : p));
+        const archivedIds = new Set(activeProtos.map(p => p.id));
+        setSupps(s => s.map(x => archivedIds.has(x.protocol_id) ? { ...x, status: 'active', paused: false } : x));
+      }
+      const newStatus = intent === 'save_later' ? 'archived' : 'active';
+      const protoRows = await dbAddProtocol({ name: send.name, status: newStatus, user_id: user.id, treatment_mode: 'indefinite', source: 'shared' }, token);
       newProto = protoRows?.[0];
       if (!newProto) throw new Error('Protocol creation failed');
       const snapshot = send.supplements_snapshot || [];
@@ -1247,7 +1277,10 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       setProtocols(p => [...p, newProto]);
       setSupps(s => [...s, ...suppRows.flatMap(r => r || []).map(x => ({ ...x, paused: x.paused ?? false }))]);
       await dbUpdateProtocolSend(send.id, { status: 'activated' }, token);
-      showToast(`${send.name} activated`);
+      setPendingReceivedCount(c => Math.max(0, c - 1));
+      const verb = intent === 'save_later' ? 'saved' : 'activated';
+      const suffix = intent === 'replace' && archivedNames ? ` · ${archivedNames} archived` : '';
+      showToast(`${send.name} ${verb}${suffix}`);
     } catch (err) {
       console.error(err);
       if (newProto) {
@@ -1262,7 +1295,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           console.error("activateReceived rollback also failed:", rollbackErr);
         }
       }
-      showToast("Couldn't activate. Try again.");
+      showToast("Couldn't save protocol. Try again.");
     }
   };
 
@@ -1272,6 +1305,45 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       await dbSendProtocol({ clinician_id: user.id, patient_id: patientId, source_protocol_id: protocol.id, name: protocol.name, supplements_snapshot: snapshot }, token);
       showToast(`${protocol.name} sent`);
     } catch (err) { showToast("Couldn't send protocol. Try again."); console.error(err); }
+  };
+
+  // Peer-to-peer protocol send. Resolves email to user id, writes the send
+  // row, fires the notify-recipient edge function. Returns a result object so
+  // the Send modal can show an inline error (e.g. "no Origin user with that
+  // email") instead of just a toast that the user might miss.
+  const sendProtocolToUser = async (protocol, email) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (cleanEmail === (user.email || '').toLowerCase()) {
+      return { ok: false, error: "That's your own email" };
+    }
+    try {
+      const match = await dbLookupUserByEmail(cleanEmail, token);
+      if (!match?.user_id) {
+        return { ok: false, error: 'No Origin user with that email' };
+      }
+      const snapshot = visibleSupps
+        .filter(s => s.protocol_id === protocol.id)
+        .map(s => ({ name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category }));
+      const rows = await dbSendProtocol({
+        clinician_id: user.id,
+        patient_id: match.user_id,
+        source_protocol_id: protocol.id,
+        name: protocol.name,
+        supplements_snapshot: snapshot,
+      }, token);
+      const sendRow = Array.isArray(rows) ? rows[0] : rows;
+      // Fire push notification — best-effort; failure doesn't undo the send.
+      if (sendRow?.id) {
+        const senderName = profile?.display_name?.trim().split(' ')[0] || 'Someone';
+        dbNotifyProtocolSent(sendRow.id, senderName, token).catch(e => console.warn('Push notify failed:', e));
+      }
+      const recipientLabel = match.display_name?.trim().split(' ')[0] || cleanEmail;
+      showToast(`Sent to ${recipientLabel}`);
+      return { ok: true };
+    } catch (err) {
+      console.error(err);
+      return { ok: false, error: "Couldn't send. Try again." };
+    }
   };
 
   const undoDelete = (suppId) => {
@@ -1849,9 +1921,30 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.xs, flexShrink: 0 }}>
-          <Button variant="icon" aria-label="Open Library" onClick={() => pushScreen('manage_protocol')}>
-            <Library size={18} />
-          </Button>
+          <div style={{ position: 'relative' }}>
+            <Button variant="icon" aria-label={pendingReceivedCount > 0 ? `Open Library — ${pendingReceivedCount} received` : "Open Library"} onClick={() => pushScreen('manage_protocol')}>
+              <Library size={18} />
+            </Button>
+            {pendingReceivedCount > 0 && (
+              <span
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', top: 2, right: 2,
+                  minWidth: 14, height: 14, padding: '0 4px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '999px',
+                  background: theme.accent.default,
+                  color: theme.accent.onDefault,
+                  fontFamily: typography.fontData,
+                  fontSize: 9, fontWeight: typography.semibold,
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                }}
+              >
+                {pendingReceivedCount > 9 ? '9+' : pendingReceivedCount}
+              </span>
+            )}
+          </div>
           {isPast ? (
             <Button
               variant="icon"
@@ -1972,6 +2065,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         isClinician={false}
         patients={patients}
         onSendToPatient={sendProtocol}
+        onSendToUser={sendProtocolToUser}
       />
       <SidePanel
         open={formOpen}
