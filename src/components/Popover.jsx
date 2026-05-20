@@ -116,15 +116,6 @@ export default function Popover({
   // Position calculation. Reads the anchor's rect when open changes.
   // We don't recalculate on scroll/resize for simplicity — popovers close
   // quickly enough that drift is unlikely to be visible.
-  //
-  // Phone-frame compensation: On desktop viewports (≥1024px) body has
-  // transform: translateZ(0) (see index.html) which makes body the
-  // containing block for position:fixed descendants. getBoundingClientRect
-  // returns viewport coordinates; if we pass those directly into a fixed
-  // popover under a transformed body, the popover lands at viewport-coords
-  // INTERPRETED as body-relative — visually shifted by body's offset.
-  // Subtract the body offset to translate viewport coords into the
-  // body-relative coords the renderer will use.
   useEffect(() => {
     if (!open || !anchorRef?.current) return;
     const rect = anchorRef.current.getBoundingClientRect();
@@ -150,13 +141,6 @@ export default function Popover({
     if (left < 8) left = 8;
     if (left + width > vw - 8) left = vw - 8 - width;
     if (top < 8) top = 8;
-
-    // Compensate for the phone-frame containing-block shift on desktop.
-    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
-      const bodyRect = document.body.getBoundingClientRect();
-      top -= bodyRect.top;
-      left -= bodyRect.left;
-    }
 
     setCoords({ top, left });
   }, [open, anchorRef, placement, width, gap]);

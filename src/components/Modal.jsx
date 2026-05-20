@@ -131,9 +131,13 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
     if (finalOffset > 100) onClose();
   };
 
+  // Combined transform — horizontal centering for the phone-frame (so the
+  // bottom sheet doesn't stretch across the full viewport on desktop ≥1024px)
+  // AND vertical slide. The X component is constant per state; the Y
+  // component handles open/close + drag.
   const mobileTransform = isDragging
-    ? `translateY(${dragOffset}px)`
-    : shown ? "translateY(0)" : "translateY(100%)";
+    ? `translateX(-50%) translateY(${dragOffset}px)`
+    : shown ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(100%)";
   const desktopTransform = shown
     ? "translate(-50%, -50%) scale(1)"
     : "translate(-50%, -50%) scale(0.96)";
@@ -161,14 +165,14 @@ export default function Modal({ open, onClose, title, children, footer, leftActi
 
   const mobileSheetStyle = {
     position: "fixed",
-    // Explicit top: 'auto' defends against an inherited top:0 that would
-    // make the sheet stretch from top of body. With body's translateZ(0)
-    // containing-block trick on desktop (≥1024px), some renderers were
-    // mispositioning the sheet to the top of body instead of bottom.
     top: "auto",
-    left: 0,
-    right: 0,
+    // Explicit horizontal centering with max-width keeps the sheet inside
+    // the phone-frame on desktop (≥1024px). The translateX(-50%) in the
+    // sheet's transform places the sheet's center at left: 50% of viewport.
+    left: "50%",
+    right: "auto",
     bottom: 0,
+    width: "min(440px, 100vw)",
     maxHeight: "90dvh",
     borderRadius: `${radius.xl}px ${radius.xl}px 0 0`,
     paddingBottom: "env(safe-area-inset-bottom)",

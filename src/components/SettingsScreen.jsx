@@ -198,8 +198,12 @@ export default function SettingsScreen({ isOpen, onBack, onSignOut, user, token,
       flexDirection: 'column',
     } : {
       position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+      // Centered phone-frame on desktop (≥1024px). 100vw closed-state shift
+      // ensures fully off-screen regardless of viewport. See
+      // ProtocolDetailScreen for the same pattern.
+      top: 0, left: '50%', bottom: 0,
+      width: 'min(440px, 100vw)',
+      transform: isOpen ? 'translateX(-50%)' : 'translateX(100vw)',
       transition: 'transform 0.3s ease-out',
       zIndex: 100,
       background: theme.surface.canvas,

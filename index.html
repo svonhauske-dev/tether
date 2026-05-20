@@ -33,26 +33,22 @@
         body {
           max-width: 440px;
           margin: 0 auto;
-          /* Belt-and-suspenders height enforcement. The base rule sets
-             `height: 100dvh` but in practice on desktop body sometimes
-             collapsed shorter, causing position:fixed children anchored
-             to body's bottom (Modal bottom-sheet etc.) to land mid-screen.
-             min-height + height both pinned. */
           height: 100dvh;
-          min-height: 100dvh;
           /* Phone-frame side edges painted INSIDE the content area via
              inset box-shadow (2px to survive subpixel slicing). */
           box-shadow: inset 2px 0 0 #2A2A2A, inset -2px 0 0 #2A2A2A;
           overflow: hidden;
-          /* clip-path enforces strict clipping of fixed-position descendants
-             (slide-in screens that translate off-body). transform: translateZ
-             makes body the containing block so fixed children (slide-in
-             screens, Modal bottom sheet, Toast) anchor inside the phone-frame
-             instead of stretching across the viewport. Popover uses
-             getBoundingClientRect (viewport coords) and compensates by
-             subtracting bodyRect offset on desktop — see Popover.jsx. */
-          clip-path: inset(0);
-          transform: translateZ(0);
+          /* IMPORTANT: NO transform / clip-path / contain on body.
+             Earlier attempts used translateZ(0) to make body a containing
+             block for position:fixed descendants (so modals + slide-ins
+             stayed inside the 440px column). It worked the first open but
+             accumulated state pollution across opens (modal mispositioned
+             on second open, blank screen on close) — body-as-containing-block
+             is fragile.
+             Instead, each overlay (Modal bottom sheet, SettingsScreen,
+             ProtocolLibrary, ProtocolDetailScreen) explicitly centers
+             itself with `left: 50%; transform: translateX(-50%); width: min(440px, 100vw)`.
+             Fixed-position anchoring to the viewport is back to normal. */
         }
       }
       /* Width-lock: invisible bold ghost prevents layout shift when selector weight changes */

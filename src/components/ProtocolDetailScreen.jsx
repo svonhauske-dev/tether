@@ -183,8 +183,14 @@ export default function ProtocolDetailScreen({
         display: 'flex',
         flexDirection: 'column',
       } : {
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+        // Centered on desktop (≥1024px) — sheet capped at 440px so it
+        // doesn't stretch viewport-wide. translateX(-50%) of own width puts
+        // the sheet center at left:50%; for the closed state we slide it
+        // by 100vw (full viewport width) so it ends fully off-screen on any
+        // viewport, regardless of the sheet's own width.
+        position: 'fixed', top: 0, left: '50%', bottom: 0,
+        width: 'min(440px, 100vw)',
+        transform: isOpen ? 'translateX(-50%)' : 'translateX(100vw)',
         transition: 'transform 0.3s ease-out',
         zIndex: 102,
         background: theme.surface.canvas,
