@@ -32,6 +32,7 @@ import EditForm from "./components/EditForm";
 import Hero from "./components/Hero";
 import Sidebar, { AccountAvatar } from "./components/Sidebar";
 import PatientRoster from "./components/PatientRoster";
+import Templates from "./components/Templates";
 import PatientDetailPanel from "./components/PatientDetailPanel";
 import WeekStrip from "./components/WeekStrip";
 import InlineTip from "./components/InlineTip";
@@ -41,6 +42,7 @@ import InsightsPanel from "./components/InsightsPanel";
 import {
   supa, getSession, signInPassword, signUp, signOut, refreshSession,
   dbGetProtocols, dbAddProtocol, dbUpdateProtocol, dbDeleteProtocol,
+  dbGetTemplates, dbGetTemplateSendCounts, dbCloneTemplateForOwner,
   dbArchiveProtocol, dbActivateProtocol,
   dbGetSupps, dbAddSupp, dbUpdateSupp, dbDeleteSupp, dbHardDeleteSupp,
   dbGetLog, dbUpsertLog,
@@ -281,6 +283,8 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
   const ANYTIME_SLOT = { id: "anytime", label: "Anytime", sublabel: "No specific time", icon: "◦", color: theme.text.muted };
   const BG_GRADIENT = theme.gradients.bg;
   const [protocols, setProtocols]           = useState([]);
+  const [templates, setTemplates]           = useState([]);
+  const [templateSendCounts, setTemplateSendCounts] = useState({}); // { templateId: count }
   const [supps, setSupps]                   = useState([]);
   const [pillTimes, setPillTimes]           = useState({});
   const [checked, setChecked]               = useState({});
@@ -632,6 +636,20 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
         setSupplementHistory((histRows || []).map(r => r.name));
         setProfile(prof);
         if (prof === null) setNeedsNamePrompt(true);
+
+        // Templates are clinician-only. Load them alongside protocols and
+        // batch-fetch per-template send counts so the Templates surface can
+        // render the "Sent to N patients" caption without a per-row query.
+        if (prof?.is_clinician) {
+          const tmpls = await dbGetTemplates(user.id, token).catch(() => []);
+          setTemplates(tmpls || []);
+          if (tmpls?.length) {
+            const sendRows = await dbGetTemplateSendCounts(tmpls.map(t => t.id), token).catch(() => []);
+            const counts = {};
+            for (const r of (sendRows || [])) counts[r.source_protocol_id] = (counts[r.source_protocol_id] ?? 0) + 1;
+            setTemplateSendCounts(counts);
+          }
+        }
         // IF v2 users have already had `fasted` renamed to mean something else (pre-window slot).
         // Guard the old fasted→pre_breakfast migration so it doesn't fire for v2 users.
         const isIFv2 = sched?.schedule_type === "fasting" && !!sched?.offsets?._if_v2_migrated;
@@ -1195,6 +1213,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     try {
       await dbUpdateProtocol(protocol, token);
       setProtocols(p => p.map(x => x.id === protocol.id ? protocol : x));
+      setTemplates(t => t.map(x => x.id === protocol.id ? protocol : x));
     } catch (err) { showToast("Couldn't save. Try again."); console.error(err); }
   };
 
@@ -1202,6 +1221,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     try {
       await dbArchiveProtocol(protocol.id, token);
       setProtocols(p => p.map(x => x.id === protocol.id ? { ...x, status: 'archived' } : x));
+      setTemplates(t => t.map(x => x.id === protocol.id ? { ...x, status: 'archived' } : x));
       setSupps(s => s.map(x => x.protocol_id === protocol.id ? { ...x, status: 'active', paused: false } : x));
       showToast(`${protocol.name} archived`);
     } catch (err) { showToast("Couldn't archive. Try again."); console.error(err); }
@@ -1211,6 +1231,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     try {
       await dbActivateProtocol(protocol.id, token);
       setProtocols(p => p.map(x => x.id === protocol.id ? { ...x, status: 'active' } : x));
+      setTemplates(t => t.map(x => x.id === protocol.id ? { ...x, status: 'active' } : x));
       showToast(`${protocol.name} activated`);
     } catch (err) { showToast("Couldn't activate. Try again."); console.error(err); }
   };
@@ -1227,6 +1248,7 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       await dbDeleteProtocol(protocol.id, token);
       setSupps(s => s.filter(x => x.protocol_id !== protocol.id));
       setProtocols(p => p.filter(x => x.id !== protocol.id));
+      setTemplates(t => t.filter(x => x.id !== protocol.id));
       showToast(`${protocol.name} deleted`);
     } catch (err) { showToast("Couldn't delete. Try again."); console.error(err); }
   };
@@ -1272,7 +1294,52 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
       const snapshot = visibleSupps.filter(s => s.protocol_id === protocol.id).map(s => ({ name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category }));
       await dbSendProtocol({ clinician_id: user.id, patient_id: patientId, source_protocol_id: protocol.id, name: protocol.name, supplements_snapshot: snapshot }, token);
       showToast(`${protocol.name} sent`);
+      // Bump the send-count map so the Templates row caption updates without
+      // a refetch. Idempotent if the template wasn't in the map yet.
+      setTemplateSendCounts(c => ({ ...c, [protocol.id]: (c[protocol.id] ?? 0) + 1 }));
     } catch (err) { showToast("Couldn't send protocol. Try again."); console.error(err); }
+  };
+
+  // Templates surface — sibling to ProtocolLibrary. Templates live in the
+  // same `protocols` table (is_template=true) so creation reuses dbAddProtocol;
+  // we keep them in their own `templates` state to avoid leaking into the
+  // personal cockpit. Detail editing reuses ProtocolDetailScreen unchanged —
+  // adding supps via openAddToProtocol writes them with the template's
+  // protocol_id, same as any other protocol.
+  const createTemplate = async () => {
+    try {
+      const rows = await dbAddProtocol({
+        name: "Untitled template",
+        status: "active",
+        treatment_mode: "indefinite",
+        is_template: true,
+        user_id: user.id,
+      }, token);
+      const created = rows?.[0];
+      if (!created) throw new Error("No row returned");
+      setTemplates(t => [...t, created]);
+      setSelectedProtocol(created);
+      pushScreen('protocol_detail');
+      // Mirror the protocol-creation UX: drop the user straight into the
+      // add-supp form so the new template isn't an empty shell.
+      openAddToProtocol(created);
+      return created;
+    } catch (err) { showToast("Couldn't create template. Try again."); console.error(err); return null; }
+  };
+
+  const useTemplateForMyself = async (template) => {
+    try {
+      const templateSupps = visibleSupps.filter(s => s.protocol_id === template.id);
+      const newProto = await dbCloneTemplateForOwner(template, templateSupps, token);
+      // Add the new protocol to local state and refetch its supps so they
+      // appear in the cockpit immediately. We refetch instead of mapping
+      // templateSupps because the clone wrote new ids server-side and
+      // there's no return payload for the inserted supps.
+      setProtocols(p => [...p, newProto]);
+      const newSupps = await dbGetSupps(user.id, token).catch(() => null);
+      if (newSupps) setSupps(newSupps.map(s => ({ ...s, paused: s.paused ?? false })));
+      showToast(`${template.name} added to your protocols`);
+    } catch (err) { showToast("Couldn't clone template. Try again."); console.error(err); }
   };
 
   const undoDelete = (suppId) => {
@@ -1460,6 +1527,11 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
     // activeNavItem='home' which falls back to the personal cockpit.
     // Non-clinicians never hit this branch — they always see their cockpit.
     const showRoster = isClinician && !selectedPatient && activeNavItem === 'roster';
+    // Templates surface mirrors the roster's main-column-only layout, but the
+    // aside reappears when the user drills into a template (protocol_detail
+    // pushed onto the stack) so the existing right-column detail view hosts it.
+    const showTemplates = isClinician && !selectedPatient && activeNavItem === 'templates';
+    const asideVisible = !showRoster && (!showTemplates || rightColumnView === 'protocol_detail');
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100dvh", overflow: "hidden", background: theme.surface.canvas, padding: spacing.lg, gap: spacing.md, boxSizing: "border-box", fontFamily: typography.fontBody, color: theme.text.primary, WebkitFontSmoothing: "antialiased" }}>
 
@@ -1537,6 +1609,17 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
               patients={activePatients}
               patientStats={patientStats}
               onPatientSelect={(p) => setSelectedPatient(p)}
+            />
+          ) : showTemplates ? (
+            <Templates
+              templates={templates}
+              supplements={visibleSupps}
+              patients={activePatients}
+              sendCountsByTemplateId={templateSendCounts}
+              onCreateTemplate={createTemplate}
+              onOpenTemplate={(t) => { setSelectedProtocol(t); pushScreen('protocol_detail'); }}
+              onSendToPatient={sendProtocol}
+              onUseForMyself={useTemplateForMyself}
             />
           ) : selectedPatient ? (
             <>
@@ -1636,11 +1719,11 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
           </>)}
         </main>
 
-        {/* Right aside collapses on the clinician roster — there's no
-            patient-scoped content to host there. Reappears when a patient
-            is selected (their protocols / settings / detail) or when the
-            clinician explicitly enters personal mode via My Origin. */}
-        {!showRoster && (
+        {/* Right aside collapses on the clinician roster and Templates surface
+            — neither has patient-scoped content to host there. On Templates,
+            the aside reappears when the user drills into a template so the
+            existing protocol_detail view can host it. */}
+        {asideVisible && (
         <aside style={{
           width: 420,
           flexShrink: 0,

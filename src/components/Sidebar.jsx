@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, LayoutDashboard } from 'lucide-react';
+import { Search, LayoutDashboard, FileText } from 'lucide-react';
 import { spacing, typography, touch } from '../design-system';
 import { useTheme } from '../lib/theme';
 import Sparkline from './Sparkline';
@@ -153,6 +153,7 @@ export default function Sidebar({
   const [query, setQuery] = useState('');
   const myOriginActive = activeNavItem === 'home' && !selectedPatient;
   const overviewActive = activeNavItem === 'roster' && !selectedPatient;
+  const templatesActive = activeNavItem === 'templates' && !selectedPatient;
 
   const filteredPatients = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -345,6 +346,29 @@ export default function Sidebar({
         }}
       >
         My Origin
+      </button>
+
+      {/* Templates — sibling surface to Protocol Library. Shareable protocol
+          shells (is_template = true). Sent to patients or cloned into the
+          clinician's own running protocols via "Use for myself". */}
+      <button
+        onClick={() => { onPatientSelect?.(null); onNavChange?.('templates'); }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: spacing.sm,
+          padding: `${spacing.sm}px ${spacing.sm}px`,
+          background: templatesActive ? theme.surface.cardSubtle : 'transparent',
+          border: 'none', borderRadius: theme.radius.surface,
+          color: templatesActive ? theme.text.primary : theme.text.secondary,
+          fontFamily: typography.fontBody, fontSize: typography.caption,
+          fontWeight: templatesActive ? typography.semibold : typography.regular,
+          textAlign: 'left', width: '100%',
+          cursor: 'pointer',
+          transition: 'background 150ms ease, color 150ms ease',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <FileText size={14} />
+        <span>Templates</span>
       </button>
     </aside>
   );

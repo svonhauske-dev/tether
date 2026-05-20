@@ -171,8 +171,61 @@ export function signOut() {
 }
 
 // Protocols
-export const dbGetProtocols    = (userId, t) => supa("GET",  `/rest/v1/protocols?user_id=eq.${userId}&select=*&order=created_at.asc`, null, t);
+// Running protocols only (is_template=false). Templates live in their own
+// surface and are fetched via dbGetTemplates.
+export const dbGetProtocols    = (userId, t) => supa("GET",  `/rest/v1/protocols?user_id=eq.${userId}&is_template=is.false&select=*&order=created_at.asc`, null, t);
 export const dbAddProtocol     = (p, t)    => supa("POST",   "/rest/v1/protocols", p, t);
+
+// Templates (shareable protocol shells, distinct from running protocols).
+// Clinician-owned, is_template=true. Sibling surface to dbGetProtocols.
+export const dbGetTemplates    = (userId, t) => supa("GET",  `/rest/v1/protocols?user_id=eq.${userId}&is_template=is.true&select=*&order=created_at.asc`, null, t);
+
+// Per-template patient-send count. Returns one row per send; client groups by
+// source_protocol_id to render the "N patients sent" stat in the Templates list.
+export const dbGetTemplateSendCounts = (templateIds, t) => {
+  if (!templateIds?.length) return Promise.resolve([]);
+  return supa("GET", `/rest/v1/protocol_sends?source_protocol_id=in.(${templateIds.join(',')})&select=source_protocol_id`, null, t);
+};
+
+// Clone a template into a new owned protocol with is_template=false. Used by
+// "Use for myself" — clinician takes their own template into rotation. Caller
+// passes the already-loaded template supps; we copy each into a new supp row
+// under the new protocol_id with status='active'.
+export const dbCloneTemplateForOwner = async (template, templateSupps, t) => {
+  const proto = await supa("POST", "/rest/v1/protocols?select=*", {
+    user_id:         template.user_id,
+    name:            template.name,
+    status:          "active",
+    treatment_mode:  template.treatment_mode ?? "indefinite",
+    starts_at:       template.starts_at ?? null,
+    ends_at:         template.ends_at ?? null,
+    is_template:     false,
+  }, t);
+  const newProto = Array.isArray(proto) ? proto[0] : proto;
+  if (!newProto?.id) throw new Error("Clone failed: missing new protocol id");
+  if (templateSupps?.length) {
+    const rows = templateSupps.map(s => ({
+      user_id:          s.user_id,
+      protocol_id:      newProto.id,
+      name:             s.name,
+      dose:             s.dose ?? null,
+      notes:            s.notes ?? null,
+      slots:            s.slots ?? [],
+      days:             s.days ?? [0,1,2,3,4,5,6],
+      category:         s.category ?? "Oral",
+      treatment_mode:   s.treatment_mode ?? "indefinite",
+      starts_at:        s.starts_at ?? null,
+      ends_at:          s.ends_at ?? null,
+      cycle_on_value:   s.cycle_on_value ?? null,
+      cycle_on_unit:    s.cycle_on_unit ?? null,
+      cycle_off_value:  s.cycle_off_value ?? null,
+      cycle_off_unit:   s.cycle_off_unit ?? null,
+      status:           "active",
+    }));
+    await supa("POST", "/rest/v1/supplements", rows, t);
+  }
+  return newProto;
+};
 // Defense-in-depth: filter by both id AND user_id so a client can't PATCH a
 // protocol owned by someone else even if the server's RLS policy is wrong
 // or absent. The `id=eq` is the natural key; `user_id=eq` is the guard.
