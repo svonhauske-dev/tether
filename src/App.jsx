@@ -1288,27 +1288,22 @@ function ProtocolApp({ user, token, onSignOut, onProtocolLoadEnd }) {
 
   const deleteProtocol = async (protocol) => {
     try {
-      // Hard-delete supplements that belonged to the protocol first so they
-      // don't become orphans (they'd stay in supps, still count toward
-      // adherence, but never render anywhere since their protocol_id no longer
-      // exists). Cascade cleanup uses the hard-delete path so we don't litter
-      // the DB with soft-deleted ghost rows for a protocol that no longer exists.
-      const orphans = supps.filter(s => s.protocol_id === protocol.id);
-      await Promise.all(orphans.map(s => dbHardDeleteSupp(s.id, token)));
+      // Cascade cleanup. Critical: query the DB for ALL supps with this
+      // protocol_id (not just the local `supps` cache, which excludes
+      // soft-deleted rows). Soft-deleted supps still reference the protocol
+      // via foreign key, so leaving them in place trips
+      // supplements_protocol_id_fkey when we try to delete the protocol.
+      // Use hard-delete because the protocol they pointed at no longer
+      // exists — no reason to leave orphan deleted_at-stamped ghosts.
+      const allSupps = await supa("GET", `/rest/v1/supplements?protocol_id=eq.${protocol.id}&select=id`, null, token).catch(() => []);
+      await Promise.all((allSupps || []).map(s => dbHardDeleteSupp(s.id, token)));
       await dbDeleteProtocol(protocol.id, token);
       setSupps(s => s.filter(x => x.protocol_id !== protocol.id));
       setProtocols(p => p.filter(x => x.id !== protocol.id));
       showToast(`${protocol.name} deleted`);
     } catch (err) {
       console.error(err);
-      // DIAGNOSTIC: surface the real error so Sofia can debug without
-      // devtools. supa() attaches the parsed REST error body to err.detail
-      // (e.g. {code, message, hint, details} from PostgREST) — that's the
-      // signal we need to identify RLS/FK/constraint failures. Revert to a
-      // generic toast once root cause is found.
-      const restMsg = err?.detail?.message || err?.detail?.hint || err?.detail?.code;
-      const detail = (restMsg || err?.message || err?.toString() || 'unknown').toString().slice(0, 160);
-      showToast(`Delete failed: ${detail}`);
+      showToast("Couldn't delete. Try again.");
     }
   };
 

@@ -288,8 +288,14 @@ export default function ProtocolDetailScreen({
               Active / Paused: Active / Paused tabs. */}
           {isArchived ? (
             protocolSupps.length === 0 ? (
-              <div style={{ fontSize: typography.body, color: theme.text.secondary, paddingBottom: spacing.xl }}>
-                No supplements yet. Tap + to add one.
+              <div style={{ textAlign: 'center', padding: `${spacing.xl}px ${spacing.md}px ${spacing.xxl}px` }}>
+                <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
+                <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>
+                  No supplements in this protocol
+                </div>
+                <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
+                  Archived protocols can stay empty — they're a record of what you ran.
+                </div>
               </div>
             ) : (
               <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, marginBottom: spacing.xl }}>
@@ -347,8 +353,21 @@ export default function ProtocolDetailScreen({
               {/* ── Active tab ── */}
               {tab === 'active' && (
                 activeSupps.length === 0 ? (
-                  <div style={{ fontSize: typography.body, color: theme.text.secondary, paddingBottom: spacing.xl }}>
-                    {isActive ? 'No supplements yet. Tap + to add one.' : 'No supplements.'}
+                  <div style={{ textAlign: 'center', padding: `${spacing.xl}px ${spacing.md}px ${spacing.xxl}px` }}>
+                    <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
+                    <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>
+                      {isActive ? 'Add your first supplement' : 'No supplements'}
+                    </div>
+                    <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5, marginBottom: isActive && !readOnly ? spacing.lg : 0 }}>
+                      {isActive
+                        ? 'Pick a name, dose, and when in the day it goes. You can edit anything later.'
+                        : 'This protocol has no active supplements.'}
+                    </div>
+                    {isActive && !readOnly && onAddSupp && (
+                      <Button variant="primary" fullWidth onClick={onAddSupp}>
+                        Add supplement
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, marginBottom: spacing.xl }}>
@@ -403,8 +422,14 @@ export default function ProtocolDetailScreen({
                   Play resumes (status='active'; row moves to the Active tab). */}
               {tab === 'paused' && (
                 pausedSupps.length === 0 ? (
-                  <div style={{ fontSize: typography.body, color: theme.text.secondary, paddingBottom: spacing.xl }}>
-                    Nothing paused.
+                  <div style={{ textAlign: 'center', padding: `${spacing.xl}px ${spacing.md}px ${spacing.xxl}px` }}>
+                    <div style={{ fontSize: typography.display, color: theme.text.secondary, marginBottom: spacing.md, fontFamily: typography.fontHeading, lineHeight: 1 }}>◯</div>
+                    <div style={{ fontSize: typography.body, fontWeight: typography.semibold, color: theme.text.primary, marginBottom: spacing.xs }}>
+                      Nothing paused
+                    </div>
+                    <div style={{ fontSize: typography.caption, color: theme.text.secondary, fontFamily: typography.fontHeading, lineHeight: 1.5 }}>
+                      Pause a supplement from the Active tab to keep it in this protocol without tracking it for now.
+                    </div>
                   </div>
                 ) : (
                   <div style={{ borderTop: `${theme.borderWidth.default}px solid ${theme.border.subtle}`, marginBottom: spacing.xl }}>
