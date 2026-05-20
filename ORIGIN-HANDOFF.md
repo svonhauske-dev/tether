@@ -916,32 +916,27 @@ All three commits pushed to `origin/main` (range `730a3e4..2ce9af7`).
 
 ---
 
-## Known Stale / Legacy Items (Discovered May 11 Diagnostic)
+## Known Stale / Legacy Items (Updated May 20 cleanup pass)
 
 Real debt that exists in the codebase and DB. Not blocking, but worth tracking so future sessions don't get confused or duplicate effort.
 
-**Database stale defaults:**
+**Database stale defaults (still present):**
 - `user_schedule.schedule_type` DB default is `'medication_anchored'` — but app writes `medication` / `wakeup` / `fasting` / `fixed` / `none`. Stale DB default never gets used since app always provides a value.
 - `user_profiles.theme_preference` DB default is `'system'` — but production is now Achromatic-only. Stale.
 
-**API layer mismatch:**
-- `api.js:getThemePreference()` validates only `light` / `dark` / `system` — doesn't recognize `achromatic`. Low severity since app always falls back to achromatic regardless. Real fix worth shipping during HIG pass.
+**Legacy schema columns still present (DB migration needed):**
+- `supplements.timePreference` (text, default `'Anytime'`) — original pre-slot system. Stripped from `dbUpdateSupp` May 18; column can be dropped via `ALTER TABLE supplements DROP COLUMN "timePreference";` when convenient.
+- `supplements.paused` (boolean) — superseded by `status` column. Currently both exist. Could be dropped via `ALTER TABLE supplements DROP COLUMN paused;`.
 
-**Legacy schema columns still present:**
-- `supplements.timePreference` (text, default `'Anytime'`) — was the original "when to take it" pre-slot system. Not used in current UI; replaced by `slots` array. **May 18:** stripped from `dbUpdateSupp` PATCH body so we no longer write to it; column still exists in DB and can be dropped in a future migration pass when convenient.
-- `supplements.paused` (boolean) — superseded by `status` column. Currently both exist. Could be dropped.
+**Config legacy (code change needed):**
+- `config.js FIXED_SLOTS` includes `injectable` and `topical` keys with their own time inputs in Onboarding Fixed Times configuration (renders extra time-picker rows users don't need). Removing requires verification that no existing schedules rely on these keys; deferred to a UI-test session.
 
-**Config legacy:**
-- `config.js FIXED_SLOTS` includes `injectable` and `topical` — kept for config compatibility even though removed from notification SLOTS. Real cleanup candidate.
-- `DEFAULT_CONFIG.offsets` includes legacy `fasted` key — pre-IF-mode rename.
+**Cleared in May 20 cleanup pass (`b7dd146`):**
+- ✅ `api.js:getThemePreference()` now validates `achromatic` (was returning null for the only valid production theme — silently broke DB sync). Mirrors `VALID_PREFS` in `lib/theme.jsx`.
+- ✅ 8 `supabase/.temp/*` files untracked from git (already in `.gitignore` since `2ce9af7` but tracked from before). Files stay on disk for local Supabase CLI use.
+- ✅ Reviewed handoff entry "`DEFAULT_CONFIG.offsets` includes legacy `fasted` key — pre-IF-mode rename" — actually still actively used by IF v2 (`computeIFSlotTimes` references it at config.js line 98). Entry was wrong; removed.
 
-**Real cleanup approach when bandwidth allows:**
-1. Drop `timePreference` and `paused` columns via Supabase Dashboard migration
-2. Update `getThemePreference()` to validate `achromatic` only (mirroring `VALID_PREFS`)
-3. Update DB defaults to match production reality (or leave as harmless drift)
-4. Remove `injectable`/`topical` from FIXED_SLOTS if confirmed unused
-
-None of these are blocking. All are real debt.
+None of the remaining items are blocking. All are real debt.
 
 ---
 
